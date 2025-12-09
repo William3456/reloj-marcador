@@ -13,16 +13,17 @@ class CheckRole
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $roles=null): Response
+    public function handle(Request $request, Closure $next, $roles = null): Response
     {
         $user = $request->user();
+    
+        // Convertir roles permitidos en array
+        $roles = array_filter(array_map('trim', explode('-', $roles)));
         
-        // Convierte roles en array si es un solo valor
-        $roles = is_array($roles) ? $roles : explode(',', $roles);
-
-        if (!$user || !in_array($user->id_rol, $roles)) {
+        if (! $user || ! in_array($user->id_rol, $roles)) {
             abort(403, 'No autorizado');
         }
+
         return $next($request);
     }
 }

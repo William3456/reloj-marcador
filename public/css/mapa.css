@@ -1,0 +1,17 @@
+.pin-label {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #000000;
+    font-weight: 600;
+    font-size: 14px;
+    text-shadow: 0 0 2px #fff;
+}
+
+#btnMiUbicacion {
+    transition: all 0.2s ease;
+}
+
+#btnMiUbicacion:hover {
+    transform: scale(1.05);
+}

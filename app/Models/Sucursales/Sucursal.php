@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Models\Sucursales;
+
+use App\Models\Empresa\Empresa;
+use Illuminate\Database\Eloquent\Model;
+
+class Sucursal extends Model
+{
+    protected $table = 'sucursales';
+
+    protected $fillable = [
+        'nombre',
+        'direccion',
+        'correo_encargado',
+        'id_empresa',
+        'id_horario',
+        'cant_empleados',
+        'rango_marcacion_mts',
+        'dias_laborales',
+        'estado',
+        'latitud',
+        'longitud',
+    ];
+    protected $casts = [
+        'dias_laborales' => 'array',
+    ];
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'id_empresa');
+    }
+}

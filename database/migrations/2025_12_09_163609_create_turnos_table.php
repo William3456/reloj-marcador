@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('puestos_trabajos', function (Blueprint $table) {
+        Schema::create('turnos', function (Blueprint $table) {
             $table->id();
-            $table->string('cod_puesto', 10);
-            $table->string('desc_puesto', 150);
-            $table->integer('estado');
-            $table->unsignedBigInteger('sucursal_id');
+            $table->string('nombre_turno');
+            $table->time('hora_ini');
+            $table->time('hora_fin');
             $table->timestamps();
         });
     }
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('puestos_trabajos');
+        Schema::dropIfExists('turnos');
     }
 };

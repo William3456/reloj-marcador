@@ -13,11 +13,14 @@ return new class extends Migration
     {
         Schema::create('horarios', function (Blueprint $table) {
             $table->id();
-            $table->integer('turno'); // 1-Mañana, 2-Tarde, 3-Noche, 4 madrugrada
+            $table->unsignedBigInteger('turno'); // Relacionada con tabla turno 
+            $table->string('turno_txt',100); 
             $table->time('hora_ini');
             $table->time('hora_fin');
             $table->integer('permitido_marcacion')->default(1); //(0=No, En este caso es para empleados 1= Sí, En este caso es para lapsos en los cuales la sucursal permite marcacion por el empleado)
             $table->integer('estado')->default(1);
+            $table->integer('tolerancia_minutos');
+            $table->integer('requiere_salida')->comment('0=No, 1=Sí');
             $table->timestamps();
         });
     }

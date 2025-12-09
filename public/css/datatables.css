@@ -1,0 +1,24 @@
+/* Fuerza el label del length a usar flex */
+div.dt-length label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    line-height: 1 !important;
+}
+
+/* Fuerza que el select no se superponga */
+div.dt-length select {
+    position: relative !important;
+    display: inline-block !important;
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    background: white !important;
+}
+/* Restaurar flecha del select */
+div.dt-length select {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+    -moz-appearance: auto !important;
+}
