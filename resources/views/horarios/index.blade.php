@@ -17,7 +17,7 @@
                     {{ session('error') }}
                 </div>
             @endif
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-gray-100 shadow rounded-lg p-6">
 
                 {{-- Botón agregar --}}
                 <div class="flex justify-end mb-4">
@@ -72,7 +72,7 @@
                                             </a>
 
                                             <form action="{{ route('horarios.delete', $h->id) }}" method="POST"
-                                                onsubmit="return confirm('¿Seguro que deseas inactivar este horario?')">
+                                                onsubmit="return confirm('¿Seguro que deseas eliminar este horario?')">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="text-red-600 hover:underline" title="Inactivar">

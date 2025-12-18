@@ -1,6 +1,6 @@
-<x-app-layout title="Crear empleado">
+<x-app-layout title="Editar empleado">
     <x-slot name="header">
-        <x-encabezado :crearEdit="'Crear nuevo empleado'" />
+        <x-encabezado :crearEdit="'Editando empleado '. $empleado->cod_trabajador " />
     </x-slot>
 
     <div class="py-6">
@@ -17,11 +17,13 @@
                     </div>
                 @endif
 
-                <form action="{{ route('empleados.store') }}" method="POST">
+                <form action="{{ route('empleados.update', $empleado->id) }}" method="POST">
                     @csrf
-
+                    @method('PUT')
                     @include('empleados._form', [
-                        'empleado' => null
+                        'empleado' => $empleado,
+                        'sucursales' => $sucursales,
+                        'empresas' => $empresas,
                     ])
 
                     <div class="mt-6 flex justify-end">

@@ -1,0 +1,21 @@
+    /* Fade In */
+    .modal-fade-in {
+        opacity: 1 !important;
+    }
+
+    /* Slide suave hacia abajo */
+    .modal-slide-in {
+        opacity: 1 !important;
+        transform: translateY(0px) !important;
+    }
+
+    /* Fade Out */
+    .modal-fade-out {
+        opacity: 0 !important;
+    }
+
+    /* Slide Out */
+    .modal-slide-out {
+        opacity: 0 !important;
+        transform: translateY(-10px) !important;
+    }

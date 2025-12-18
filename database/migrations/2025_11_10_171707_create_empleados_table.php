@@ -13,15 +13,19 @@ return new class extends Migration
     {
         Schema::create('empleados', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_user')->nullable(); // Si tendrá login en app
-            $table->string('cod_trabajador', 20);
+            $table->string('cod_trabajador', 20)->comment('Formado por ID+IDSuc.+Iniciales');
+            $table->string('correo', length: 150)->unique();
+            $table->string('direccion', 200);
+            $table->string('edad', 200);
+            $table->string('documento', 200)->unique();
             $table->string('nombres', 100);
             $table->string('apellidos', 100);
             $table->unsignedBigInteger('id_puesto');
             $table->unsignedBigInteger('id_depto');
             $table->unsignedBigInteger('id_sucursal');
             $table->unsignedBigInteger('id_empresa');
-            $table->integer('login')->default(0); // Puede o no marcar desde dispositivo
+            $table->unsignedBigInteger('creado_por_usuario');
+            $table->integer('login')->default(0); // Para logearse en la app de empleados
             $table->integer('estado');
             $table->timestamps();
         });

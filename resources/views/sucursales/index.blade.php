@@ -17,7 +17,7 @@
                     {{ session('error') }}
                 </div>
             @endif
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-gray-100 shadow rounded-lg p-6">
 
                 {{-- Botón agregar --}}
                 <div class="flex justify-end mb-4">

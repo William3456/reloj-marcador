@@ -2,6 +2,7 @@
 
 namespace App\Models\Horario;
 
+use App\Models\Empleado\Empleado;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
@@ -49,7 +50,7 @@ class horario extends Model
             }
         );
     }
-
+protected $appends = ['horas_laborales'];
     protected function horasLaborales(): Attribute
     {
         return Attribute::make(
@@ -73,6 +74,15 @@ class horario extends Model
 
                 return sprintf('%02dh %02dm', $horas, $min);
             }
+        );
+    }
+        public function empleados()
+    {
+        return $this->belongsToMany(
+            Empleado::class,
+            'horarios_trabajadores',
+            'id_horario',
+            'id_empleado'
         );
     }
 }

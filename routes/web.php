@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\DeptosPuestosController;
 use App\Http\Controllers\Empleados\EmpleadoController;
 use App\Http\Controllers\Empresa\EmpresaController;
 use App\Http\Controllers\Horarios\HorarioController;
+use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Sucursales\SucursalController;
 use App\Models\Turnos\Turnos;
@@ -47,7 +49,7 @@ Route::middleware('auth')->group(function () {
         ->name('sucursales.delete')
         ->middleware('check.role:1-2');
 
-        // Para horarios
+    // Para horarios
     Route::get('horarios/create', [HorarioController::class, 'create'])
         ->name('horarios.create')
         ->middleware('check.role:1-2');
@@ -67,7 +69,7 @@ Route::middleware('auth')->group(function () {
         ->name('horarios.delete')
         ->middleware('check.role:1-2');
 
-            // Para Empleados
+    // Para Empleados
     Route::get('empleados/create', [EmpleadoController::class, 'create'])
         ->name('empleados.create')
         ->middleware('check.role:1-2');
@@ -86,11 +88,33 @@ Route::middleware('auth')->group(function () {
     Route::delete('empleados/delete/{id}', [EmpleadoController::class, 'destroy'])
         ->name('empleados.delete')
         ->middleware('check.role:1-2');
-        
+    Route::get('/empleados/{id}/info', [EmpleadoController::class, 'show'])->name('empleados.info');
+
+    // Asignaciones de horarios
+    
+    // Guardar asignación de horario
+    Route::post('/horario-trabajador/store', [HorarioEmpleadoController::class, 'store'])
+        ->name('horario_trabajador.store')->middleware('check.role:1-2');
+
+    Route::get('/horario-trabajador', [HorarioEmpleadoController::class, 'index'])
+        ->name('empleadoshorarios.asign');
 });
+
 Route::middleware('api')->prefix('api')->group(function () {
     Route::get('/turnos', function () {
         return Turnos::all();
+    });
+    Route::get('/puestosDptosBySucId/{sucursalId}', [DeptosPuestosController::class, 'puestosAndDeptos']);
+    //Detalles de sucursal
+    Route::get('/sucursal/details/{id}', [HorarioEmpleadoController::class, 'getSucursalDetails']);
+
+    //Detalles de empleados por sucursa
+    Route::get('/empleados/sucursal/{id}', [HorarioEmpleadoController::class, 'getEmpleadosBySucursal']);
+});
+
+Route::get('/test-mail', function () {
+    \Illuminate\Support\Facades\Mail::raw('Correo funcionando!', function ($m) {
+        $m->to('tu_correo@gmail.com')->subject('Prueba');
     });
 });
 require __DIR__.'/auth.php';

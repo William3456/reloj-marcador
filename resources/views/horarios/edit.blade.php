@@ -6,7 +6,7 @@
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-gray-100 shadow rounded-lg p-6">
                 @if (session('success'))
                     <div class="mb-4 p-3 rounded-md bg-green-100 border border-green-300 text-green-800">
                         {{ session('success') }}
