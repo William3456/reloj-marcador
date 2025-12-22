@@ -30,11 +30,11 @@
                         </div>
                     </div>
                 @endif
-                <form action="{{ route('permisos.store') }}" method="POST">
+                <form action="{{ route('permisos.update', $permiso->id) }}" method="POST">
                     @csrf
-
+                    @method('PUT')
                     @include('permisos._form', [
-                        'permiso' => null
+                        'permiso' => $permiso
                     ])
 
                     <div class="mt-6 flex justify-end">

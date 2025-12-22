@@ -5,7 +5,7 @@ namespace App\Models\Empleado;
 use App\Models\Departamento\Departamento;
 use App\Models\Empresa\Empresa;
 use App\Models\Horario\horario;
-use App\Models\HorarioEmpleado\HorarioEmpleado;
+use App\Models\Permiso\Permiso;
 use App\Models\Puesto\Puesto;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Model;
@@ -48,7 +48,8 @@ class Empleado extends Model
     {
         return $this->belongsTo(Empresa::class, 'id_empresa');
     }
-public function horarios()
+
+    public function horarios()
     {
         return $this->belongsToMany(
             horario::class,
@@ -56,5 +57,10 @@ public function horarios()
             'id_empleado',
             'id_horario'
         );
+    }
+
+    public function permisos()
+    {
+        return $this->hasMany(Permiso::class, 'id_empleado');
     }
 }

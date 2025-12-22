@@ -275,11 +275,23 @@ $(document).ready(function () {
                 let data = row.data();
 
                 // Evitar duplicados
-                
-                if(!horarioDentroDeSucursal(horario.hora_ini, horario.hora_fin)){
-                    alertify.error('El horario '+ horario.hora_ini + ' - ' + horario.hora_fin +' está fuera del rango laboral de la sucursal.');
+
+                if (!horarioDentroDeSucursal(horario.hora_ini, horario.hora_fin)) {
+                    alertify.error('El horario ' + horario.hora_ini + ' - ' + horario.hora_fin + ' está fuera del rango laboral de la sucursal.');
                     return;
                 }
+                // Validar solapamiento
+                let hayCruce = data.horarios.some(h =>
+                    horariosSeSobreponen(horario.hora_ini,horario.hora_fin,h.hora_ini, h.hora_fin)
+                );
+
+                if (hayCruce) {
+                    alertify.error(
+                        `El horario ${horario.hora_ini} - ${horario.hora_fin} se sobrepone con uno ya asignado al trabajador: ` + data.cod_trabajador
+                    );
+                    return;
+                }
+
                 let existe = data.horarios.some(h => h.id == horario.id);
                 if (!existe) {
                     alertify.success('Horario agregado al trabajador: ' + data.cod_trabajador);
@@ -296,27 +308,30 @@ $(document).ready(function () {
             alertify.error('Se debe seleccionar al menos a un empleado');
         }
     });
-function horarioDentroDeSucursal(horaIni, horaFin) {
+    function horariosSeSobreponen(ini1, fin1, ini2, fin2) {
+        return ini1 < fin2 && fin1 > ini2;
+    }
+    function horarioDentroDeSucursal(horaIni, horaFin) {
 
-    let rangoSucursal = document.getElementById('horario_laboral_hidd').value; // "07:00:00-19:00:00"
+        let rangoSucursal = document.getElementById('horario_laboral_hidd').value; // "07:00:00-19:00:00"
 
-    if (!rangoSucursal) return false;
+        if (!rangoSucursal) return false;
 
-    let [sucIni, sucFin] = rangoSucursal.split('-');
+        let [sucIni, sucFin] = rangoSucursal.split('-');
 
-    // Convertir HH:mm:ss a minutos
-    const toMinutes = (h) => {
-        let [hh, mm, ss] = h.split(':').map(Number);
-        return hh * 60 + mm + (ss / 60);
-    };
+        // Convertir HH:mm:ss a minutos
+        const toMinutes = (h) => {
+            let [hh, mm, ss] = h.split(':').map(Number);
+            return hh * 60 + mm + (ss / 60);
+        };
 
-    let sucIniMin = toMinutes(sucIni);
-    let sucFinMin = toMinutes(sucFin);
-    let horIniMin = toMinutes(horaIni);
-    let horFinMin = toMinutes(horaFin);
+        let sucIniMin = toMinutes(sucIni);
+        let sucFinMin = toMinutes(sucFin);
+        let horIniMin = toMinutes(horaIni);
+        let horFinMin = toMinutes(horaFin);
 
-    return horIniMin >= sucIniMin && horFinMin <= sucFinMin;
-}
+        return horIniMin >= sucIniMin && horFinMin <= sucFinMin;
+    }
 
     $('#tablaTrabajadores tbody').on('click', '.btnEliminarHorario', function () {
 

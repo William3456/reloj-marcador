@@ -5,6 +5,7 @@ use App\Http\Controllers\Empleados\EmpleadoController;
 use App\Http\Controllers\Empresa\EmpresaController;
 use App\Http\Controllers\Horarios\HorarioController;
 use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
+use App\Http\Controllers\Permiso\PermisoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Sucursales\SucursalController;
 use App\Models\Turnos\Turnos;
@@ -90,8 +91,29 @@ Route::middleware('auth')->group(function () {
         ->middleware('check.role:1-2');
     Route::get('/empleados/{id}/info', [EmpleadoController::class, 'show'])->name('empleados.info');
 
-    // Asignaciones de horarios
+        // Para permisos de Empleados
+    Route::get('permisos/create', [PermisoController::class, 'create'])
+        ->name('permisos.create')
+        ->middleware('check.role:1-2');
+    Route::post('permisos/create', [PermisoController::class, 'store'])
+        ->name('permisos.store')
+        ->middleware('check.role:1-2');
+    Route::get('permisos/index', [PermisoController::class, 'index'])
+        ->name('permisos.index')
+        ->middleware(['check.role:1-2']);
+    Route::get('permisos/edit/{id}', [PermisoController::class, 'edit'])
+        ->name('permisos.edit')
+        ->middleware('check.role:1-2');
+    Route::put('permisos/update/{id}', [PermisoController::class, 'update'])
+        ->name('permisos.update')
+        ->middleware('check.role:1-2');
+    Route::delete('permisos/delete/{id}', [PermisoController::class, 'destroy'])
+        ->name('permisos.delete')
+        ->middleware('check.role:1-2');
     
+
+    // Asignaciones de horarios
+
     // Guardar asignación de horario
     Route::post('/horario-trabajador/store', [HorarioEmpleadoController::class, 'store'])
         ->name('horario_trabajador.store')->middleware('check.role:1-2');
@@ -105,10 +127,10 @@ Route::middleware('api')->prefix('api')->group(function () {
         return Turnos::all();
     });
     Route::get('/puestosDptosBySucId/{sucursalId}', [DeptosPuestosController::class, 'puestosAndDeptos']);
-    //Detalles de sucursal
+    // Detalles de sucursal
     Route::get('/sucursal/details/{id}', [HorarioEmpleadoController::class, 'getSucursalDetails']);
 
-    //Detalles de empleados por sucursa
+    // Detalles de empleados por sucursa
     Route::get('/empleados/sucursal/{id}', [HorarioEmpleadoController::class, 'getEmpleadosBySucursal']);
 });
 

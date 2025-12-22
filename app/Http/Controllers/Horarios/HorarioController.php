@@ -42,11 +42,24 @@ class HorarioController extends Controller
             'turno_txt' => ['required', 'string'],
             'turno' => ['required', 'integer'],
         ]);
+        $contaErrr = 0;
+        if (horario::where('hora_ini', $validated['hora_ini'])->exists() && 
+            horario::where('hora_fin', $validated['hora_fin'])->exists() && 
+            horario::where('permitido_marcacion', $validated['permitido_marcacion'])->exists() &&
+            horario::where('tolerancia', $validated['tolerancia'])->exists() &&
+            horario::where('requiere_salida', $validated['requiere_salida'])->exists() &&
+            horario::where('estado', $validated['estado'])->exists()) {
+            $contaErrr++;
+        } 
 
-        horario::create($validated);
 
-        return redirect()->route('horarios.create')->with('success', 'Horario creado correctamente.');
+        if ($contaErrr > 0) {
+            return back()->with('error', 'No se puede crear un horario con los mismos parámetros')->withInput();
+        } else {
+            horario::create($validated);
 
+            return redirect()->route('horarios.create')->with('success', 'Horario creado correctamente.');
+        }
     }
 
     /**
@@ -72,7 +85,7 @@ class HorarioController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        
+
         $validated = $request->validate([
             'hora_ini' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
             'hora_fin' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/', 'different:hora_ini'],

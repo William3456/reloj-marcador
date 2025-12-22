@@ -2,6 +2,7 @@
 
 namespace App\Models\Sucursales;
 
+use App\Models\Empleado\Empleado;
 use App\Models\Empresa\Empresa;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,11 +23,18 @@ class Sucursal extends Model
         'latitud',
         'longitud',
     ];
+
     protected $casts = [
         'dias_laborales' => 'array',
     ];
+
     public function empresa()
     {
         return $this->belongsTo(Empresa::class, 'id_empresa');
+    }
+
+    public function empleados()
+    {
+        return $this->hasMany(Empleado::class, 'id_sucursal');
     }
 }
