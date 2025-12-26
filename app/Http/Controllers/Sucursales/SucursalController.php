@@ -8,6 +8,7 @@ use App\Models\Estado\Estado;
 use App\Models\Horario\horario;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SucursalController extends Controller
 {
@@ -16,7 +17,8 @@ class SucursalController extends Controller
      */
     public function index()
     {
-        $sucursales = Sucursal::with('empresa')->get();
+        $sucursales = Sucursal::visiblePara(Auth::user())
+        ->with('empresa')->get();
 
         return view('sucursales.index', compact('sucursales'));
     }
@@ -77,7 +79,7 @@ class SucursalController extends Controller
     public function edit(string $id)
     {
 
-        $sucursal = Sucursal::findOrFail($id);
+        $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
         $horarios = horario::where('permitido_marcacion', '=', 1)->get();
         $estados = collect([
             (object) ['id' => 1, 'nombre_estado' => 'activo'],

@@ -37,4 +37,18 @@ class Sucursal extends Model
     {
         return $this->hasMany(Empleado::class, 'id_sucursal');
     }
+
+    public function scopeVisiblePara($query, $user)
+    {
+        if ($user->rol->id == 1) {
+            return $query; // admin ve todo
+        }
+
+        if ($user->rol->id == 2) {
+
+            return $query->where('id', $user->empleado->id_sucursal);
+        }
+
+        return $query;
+    }
 }

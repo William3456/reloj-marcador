@@ -3,6 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Models\Empleado\Empleado;
+use App\Models\Rol\Rol;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -46,5 +49,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+        public function empleado()
+    {
+        return $this->belongsTo(Empleado::class, 'id_empleado');
+    }
+
+public function rol()
+    {
+        return $this->belongsTo(Rol::class, 'id_rol');
     }
 }

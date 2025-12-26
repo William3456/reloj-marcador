@@ -21,6 +21,7 @@ return new class extends Migration
             $table->integer('estado')->default(1);
             $table->integer('tolerancia_minutos');
             $table->integer('requiere_salida')->comment('0=No, 1=Sí');
+            $table->unsignedBigInteger('sucursal_creacion')->comment('donde se creo el horario');
             $table->timestamps();
         });
     }

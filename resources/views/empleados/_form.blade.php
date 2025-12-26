@@ -92,13 +92,23 @@
     {{-- Login --}}
     <div>
         <x-input-label value="¿Requiere login?" />
-        <select name="login" class="w-full border-gray-300 rounded-md" required>
+        <select name="login" class="w-full border-gray-300 rounded-md" required id="login">
             <option value="0" {{ old('login', $empleado->login ?? '') == 0 ? 'selected' : '' }}>No</option>
             <option value="1" {{ old('login', $empleado->login ?? '') == 1 ? 'selected' : '' }}>Sí</option>
         </select>
         @error('login') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
     </div>
-
+    {{-- rol --}}
+    <div>
+        <x-input-label value="Rol del usuario en el sistema" />
+        <select name="id_rol" class="w-full border-gray-300 rounded-md" required>
+            <option value="2" {{ old('login', $empleado->user?->rol?->id ?? '') == 2 ? 'selected' : '' }}>Admin. Sucursal
+            </option>
+            <option value="3" {{ old('login', $empleado->user?->rol?->id ?? '') == 3 ? 'selected' : '' }}>Empleado
+            </option>
+        </select>
+        @error('id_rol') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
+    </div>
     {{-- Estado --}}
     <div>
         <x-input-label value="Estado" />
@@ -112,7 +122,29 @@
 <script>
     $(document).ready(function () {
 
-        // Bloquear al inicio
+        const opcionesRoles = $('select[name="id_rol"]').html();
+        const rolSelect = $('select[name="id_rol"]');
+
+        $('#login').change(function () {
+            let valorLogin = $(this).val();
+
+            if (valorLogin == '0') {
+                let opcionSinRol = '<option value="0" selected>Sin rol</option>';
+                rolSelect.html(opcionSinRol);
+
+                
+                rolSelect.prop('disabled', true);
+
+            } else {
+            
+                rolSelect.prop('disabled', false);
+
+            
+                rolSelect.html(opcionesRoles);
+            }
+        });
+        $('#login').trigger('change')
+
         $('#departamento').prop('disabled', true);
         $('#puesto').prop('disabled', true);
 
@@ -138,7 +170,7 @@
                         // Departamentos
                         let dep = '<option value="">Seleccione</option>';
                         data.departamentos.forEach(d => {
-                            dep += `<option value="${d.id}" ${d.id == empleadoDepto ? 'selected' : ''}>${d.nombre_depto}</option>`;
+                            dep += `<option value="${d.id}" ${d.id == empleadoDepto ? 'selected' : ''}>${d.nombre_depto} - ${d.cod_depto}</option>`;
                         });
                         $('#departamento').html(dep);
 
@@ -178,6 +210,8 @@
         if ($('#sucursal').val()) {
             $('#sucursal').trigger('change');
         }
+        $('#puesto').trigger('change');
+        $('#departamento').trigger('change');
     });
 
 </script>

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('departamentos', function (Blueprint $table) {
             $table->id();
-            $table->string('cod_depto', 10);
+            $table->string('cod_depto', 20);
             $table->string('nombre_depto', 100);
             $table->integer('estado');
             $table->unsignedBigInteger('sucursal_id');

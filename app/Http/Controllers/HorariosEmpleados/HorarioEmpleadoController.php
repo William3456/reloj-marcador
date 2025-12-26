@@ -8,6 +8,7 @@ use App\Models\Horario\horario;
 use App\Models\HorarioEmpleado\HorarioEmpleado;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class HorarioEmpleadoController extends Controller
@@ -17,8 +18,8 @@ class HorarioEmpleadoController extends Controller
      */
     public function index()
     {
-        $sucursales = Sucursal::where('estado', '=', 1)->get();
-        $horarios = horario::where('estado', 1)
+        $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', '=', 1)->get();
+        $horarios = horario::visiblePara(Auth::user())->where('estado', 1)
             ->where('permitido_marcacion', 0)
             ->orderBy('turno_txt')
             ->get();
@@ -29,8 +30,8 @@ class HorarioEmpleadoController extends Controller
     public function getSucursalDetails($id)
     {
         try {
-            $sucursal = Sucursal::findOrFail($id);
-            $horarios = horario::where('id', $sucursal->id_horario)->first();
+            $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
+            $horarios = horario::visiblePara(Auth::user())->where('id', $sucursal->id_horario)->first();
             $data = [
                 'sucursal' => $sucursal,
                 'horarios' => $horarios,

@@ -1,12 +1,13 @@
-<x-app-layout title="Crear permiso">
+<x-app-layout title="Crear departamento">
     <x-slot name="header">
-        <x-encabezado :crearEdit="'Editando permiso'" />
+        <x-encabezado :crearEdit="'Crear nuevo departamento'" />
     </x-slot>
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
             <div class="bg-gray-100 shadow rounded-lg p-6">
+                
                 @if (session('success'))
                     <div class="mb-4 p-3 rounded-lg bg-green-50 border border-green-300 text-green-800 shadow-sm">
                         <div class="flex items-center text-sm">
@@ -30,11 +31,12 @@
                         </div>
                     </div>
                 @endif
-                <form action="{{ route('permisos.update', $permiso->id) }}" method="POST">
+                <form action="{{ route('departamentos.store') }}" method="POST">
                     @csrf
-                    @method('PUT')
-                    @include('permisos._form', [
-                        'permiso' => $permiso
+
+                    @include('departamentos._form', [
+                        'departamento' => null,
+                        'sucursales' => $sucursales,
                     ])
 
                     <div class="mt-6 flex justify-end">

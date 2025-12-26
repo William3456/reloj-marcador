@@ -8,6 +8,7 @@ use App\Models\Horario\horario;
 use App\Models\Permiso\Permiso;
 use App\Models\Puesto\Puesto;
 use App\Models\Sucursales\Sucursal;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Empleado extends Model
@@ -62,5 +63,24 @@ class Empleado extends Model
     public function permisos()
     {
         return $this->hasMany(Permiso::class, 'id_empleado');
+    }
+
+    public function user()
+    {
+        return $this->hasOne(User::class, 'id_empleado');
+    }
+
+    public function scopeVisiblePara($query, $user)
+    {
+        if ($user->rol->id == 1) {
+            return $query; // admin ve todo
+        }
+
+        if ($user->rol->id  == 2) {
+            
+            return $query->where('id_sucursal', $user->empleado->id_sucursal);
+        }
+
+        return $query;
     }
 }

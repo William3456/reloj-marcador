@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\DeptosPuestosController;
+use App\Http\Controllers\Departamentos\DepartamentosController;
 use App\Http\Controllers\Empleados\EmpleadoController;
 use App\Http\Controllers\Empresa\EmpresaController;
 use App\Http\Controllers\Horarios\HorarioController;
@@ -120,6 +121,28 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/horario-trabajador', [HorarioEmpleadoController::class, 'index'])
         ->name('empleadoshorarios.asign');
+
+
+        // Para departamentos
+    Route::get('departamentos/create', [DepartamentosController::class, 'create'])
+        ->name('departamentos.create')
+        ->middleware('check.role:1-2');
+    Route::post('departamentos/create', [DepartamentosController::class, 'store'])
+        ->name('departamentos.store')
+        ->middleware('check.role:1-2');
+    Route::get('departamentos/index', [DepartamentosController::class, 'index'])
+        ->name('departamentos.index')
+        ->middleware(['check.role:1-2']);
+    Route::get('departamentos/edit/{id}', [DepartamentosController::class, 'edit'])
+        ->name('departamentos.edit')
+        ->middleware('check.role:1-2');
+    Route::put('departamentos/update/{id}', [DepartamentosController::class, 'update'])
+        ->name('departamentos.update')
+        ->middleware('check.role:1-2');
+    Route::delete('departamentos/delete/{id}', [DepartamentosController::class, 'destroy'])
+        ->name('departamentos.delete')
+        ->middleware('check.role:1-2');
+
 });
 
 Route::middleware('api')->prefix('api')->group(function () {

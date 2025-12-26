@@ -20,7 +20,7 @@
                     </x-nav-link>
                 </div>
 
-                @if ($role == 1)
+                @if ($role == 1 || $role == 2)
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                         <x-nav-link :href="route('empresas.home')" :active="request()->routeIs('empresas.home')">
                             {{ __('Empresas') }}
@@ -145,6 +145,35 @@
                             </x-slot>
                         </x-dropdown>
                     </div>
+
+                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button
+                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
+                                    <div>{{ __('Departamentos') }}</div>
+                                    <div class="ms-1">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            </x-slot>
+
+                            <x-slot name="content">
+                                <x-dropdown-link :href="route('departamentos.index')">
+                                    {{ __('Ver departamentos') }}
+                                </x-dropdown-link>
+
+                                <x-dropdown-link :href="route('departamentos.create')">
+                                    {{ __('Crear departamentos') }}
+                                </x-dropdown-link>
+                            </x-slot>
+                        </x-dropdown>
+                    </div>
                 @endif
 
             </div>
@@ -208,7 +237,7 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            @if ($role == 1)
+            @if ($role == 1 || $role == 2)
                 <x-responsive-nav-link>
                     <span class="font-semibold">Sucursales</span>
                 </x-responsive-nav-link>
@@ -230,13 +259,11 @@
                 </x-responsive-nav-link>
 
                 <div class="ps-6">
-                    <x-responsive-nav-link :href="route('horarios.index')"
-                        :active="request()->routeIs('horarios.index')">
+                    <x-responsive-nav-link :href="route('horarios.index')" :active="request()->routeIs('horarios.index')">
                         Listado de horarios
                     </x-responsive-nav-link>
 
-                    <x-responsive-nav-link :href="route('horarios.create')"
-                        :active="request()->routeIs('horarios.create')">
+                    <x-responsive-nav-link :href="route('horarios.create')" :active="request()->routeIs('horarios.create')">
                         Crear horario
                     </x-responsive-nav-link>
                 </div>
@@ -246,8 +273,7 @@
                 </x-responsive-nav-link>
 
                 <div class="ps-6">
-                    <x-responsive-nav-link :href="route('empleados.index')"
-                        :active="request()->routeIs('empleados.index')">
+                    <x-responsive-nav-link :href="route('empleados.index')" :active="request()->routeIs('empleados.index')">
                         Listado de empleados
                     </x-responsive-nav-link>
 
@@ -260,6 +286,34 @@
                         Asignación de horarios
                     </x-responsive-nav-link>
                 </div>
+                <x-responsive-nav-link>
+                    <span class="font-semibold">Permisos</span>
+                </x-responsive-nav-link>
+                <div class="ps-6">
+                    <x-responsive-nav-link :href="route('permisos.index')" :active="request()->routeIs('permisos.index')">
+                        Ver permisos
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link :href="route('permisos.create')" :active="request()->routeIs('permisos.create')">
+                        Crear permiso
+                    </x-responsive-nav-link>
+
+                </div>
+                <x-responsive-nav-link>
+                    <span class="font-semibold">Departamentos</span>
+                </x-responsive-nav-link>
+                <div class="ps-6">
+                    <x-responsive-nav-link :href="route('departamentos.index')"
+                        :active="request()->routeIs('departamentos.index')">
+                        Ver departamentos
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link :href="route('departamentos.create')"
+                        :active="request()->routeIs('departamentos.create')">
+                        Crear departamento
+                    </x-responsive-nav-link>
+                </div>
+
             @endif
         </div>
 

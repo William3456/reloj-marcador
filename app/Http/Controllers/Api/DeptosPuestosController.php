@@ -13,7 +13,7 @@ class DeptosPuestosController extends Controller
     {
         return response()->json([
             'departamentos' => Departamento::where('sucursal_id', $sucursalId)
-                ->select('id', 'nombre_depto')
+                ->select('id', 'nombre_depto', 'cod_depto')
                 ->orderBy('nombre_depto')
                 ->get(),
 

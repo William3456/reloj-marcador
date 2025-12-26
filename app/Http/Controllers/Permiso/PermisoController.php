@@ -9,6 +9,7 @@ use App\Models\Permiso\TipoPermiso;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class PermisoController extends Controller
 {
@@ -17,7 +18,7 @@ class PermisoController extends Controller
      */
     public function index()
     {
-        $sucursales = Sucursal::whereHas('empleados.permisos')
+        $sucursales = Sucursal::visiblePara(Auth::user())->whereHas('empleados.permisos')
             ->with([
                 'empleados' => function ($q) {
                     $q->whereHas('permisos')
@@ -69,7 +70,7 @@ class PermisoController extends Controller
      */
     public function edit(string $id)
     {
-        $permiso = Permiso::with('empleado.sucursal')->findOrFail($id);
+        $permiso = Permiso::visiblePara(Auth::user())->with('empleado.sucursal')->findOrFail($id);
 
         $tiposPermiso = TipoPermiso::where('estado', 1)->get();
         $sucursales = Sucursal::where('estado', 1)->get();

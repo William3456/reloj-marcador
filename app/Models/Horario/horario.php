@@ -19,6 +19,7 @@ class horario extends Model
         'requiere_salida',
         'turno_txt',
         'turno',
+        'sucursal_creacion',
     ];
 
     protected function tipoHorario(): Attribute
@@ -50,7 +51,9 @@ class horario extends Model
             }
         );
     }
-protected $appends = ['horas_laborales'];
+
+    protected $appends = ['horas_laborales'];
+
     protected function horasLaborales(): Attribute
     {
         return Attribute::make(
@@ -76,7 +79,8 @@ protected $appends = ['horas_laborales'];
             }
         );
     }
-        public function empleados()
+
+    public function empleados()
     {
         return $this->belongsToMany(
             Empleado::class,
@@ -84,5 +88,19 @@ protected $appends = ['horas_laborales'];
             'id_horario',
             'id_empleado'
         );
+    }
+
+    public function scopeVisiblePara($query, $user)
+    {
+        if ($user->rol->id == 1) {
+            return $query; // admin ve todo
+        }
+
+        if ($user->rol->id == 2) {
+
+            return $query->where('sucursal_creacion', $user->empleado->id_sucursal);
+        }
+
+        return $query;
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Horario\horario;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class HorarioController extends Controller
 {
@@ -15,7 +16,7 @@ class HorarioController extends Controller
     public function index()
     {
         return view('horarios.index', [
-            'horarios' => horario::all(),
+            'horarios' => horario::visiblePara(Auth::user())->get(),
         ]);
     }
 
@@ -42,6 +43,9 @@ class HorarioController extends Controller
             'turno_txt' => ['required', 'string'],
             'turno' => ['required', 'integer'],
         ]);
+        $user = Auth::user();
+        $validated['sucursal_creacion'] = $user->empleado->id_sucursal;
+
         $contaErrr = 0;
         if (horario::where('hora_ini', $validated['hora_ini'])->exists() && 
             horario::where('hora_fin', $validated['hora_fin'])->exists() && 
@@ -75,7 +79,7 @@ class HorarioController extends Controller
      */
     public function edit(string $id)
     {
-        $horario = horario::findOrFail($id);
+        $horario = horario::visiblePara(Auth::user())->findOrFail($id);
 
         return view('horarios.edit', compact('horario'));
     }

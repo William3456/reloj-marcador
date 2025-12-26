@@ -23,10 +23,13 @@ class EmpleadoController extends Controller
      */
     public function index()
     {
-        $empleados = Empleado::with(['puesto', 'departamento', 'sucursal', 'empresa'])
+        $user = Auth::user();
+        
+        $empleados = Empleado::visiblePara($user)
+        ->with(['puesto', 'departamento', 'sucursal', 'empresa',  'user.rol'])
             ->orderBy('id', 'desc')
             ->get();
-
+        
         return view('empleados.index', compact('empleados'));
     }
 
@@ -35,7 +38,7 @@ class EmpleadoController extends Controller
      */
     public function create()
     {
-        $sucursales = Sucursal::all();
+        $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
 
         $empresas = Empresa::all();
 
@@ -53,7 +56,7 @@ class EmpleadoController extends Controller
         $validated = $request->validate([
             'nombres' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
-            'documento' => 'required|string|max:50',
+            'documento' => 'required|string|max:50|unique:empleados,documento',
             'edad' => 'required|integer|min:18|max:90',
             'correo' => 'required|email|max:150|unique:empleados,correo|unique:users,email',
             'direccion' => 'required|string|max:255',
@@ -63,6 +66,7 @@ class EmpleadoController extends Controller
             'id_empresa' => 'required|exists:empresas,id',
             'login' => 'required|in:0,1',
             'estado' => 'required|in:0,1',
+            'id_rol' => 'required_if:login,1|exists:roles,id',
         ], [
             'nombres.required' => 'El campo nombres es obligatorio.',
             'apellidos.required' => 'El campo apellidos es obligatorio.',
@@ -126,7 +130,7 @@ class EmpleadoController extends Controller
                 'name' => $empleado->nombres.' '.$empleado->apellidos,
                 'email' => $empleado->correo,
                 'password' => Hash::make($passwordTemporal),
-                'id_rol' => 3,
+                'id_rol' => $validated['id_rol'],
                 'id_empleado' => $empleado->id,
             ]);
 
@@ -192,7 +196,7 @@ class EmpleadoController extends Controller
      */
     public function edit(string $id)
     {
-        $empleado = Empleado::findOrFail($id);
+        $empleado = Empleado::visiblePara(Auth::user())->findOrFail($id);
         $sucursales = Sucursal::all();
         $empresas = Empresa::all();
 
@@ -221,6 +225,7 @@ class EmpleadoController extends Controller
             'id_empresa' => 'required|exists:empresas,id',
             'login' => 'required|in:0,1',
             'estado' => 'required|in:0,1',
+            'id_rol' => 'required_if:login,1|exists:roles,id',
         ], [
             'nombres.required' => 'El campo nombres es obligatorio.',
             'apellidos.required' => 'El campo apellidos es obligatorio.',
@@ -265,7 +270,7 @@ class EmpleadoController extends Controller
                     'name' => $empleado->nombres.' '.$empleado->apellidos,
                     'email' => $empleado->correo,
                     'password' => Hash::make($passwordTemporal),
-                    'id_rol' => 3,
+                    'id_rol' => $validated['id_rol'],
                     'id_empleado' => $empleado->id,
                 ]);
 
@@ -275,6 +280,13 @@ class EmpleadoController extends Controller
                         $user->email,
                         $passwordTemporal
                     ));
+            }else{
+                // Actualizar rol si ya tiene usuario
+                $user->update([
+                    'id_rol' => $validated['id_rol'],
+                    'email' => $empleado->correo,
+                    'name' => $empleado->nombres.' '.$empleado->apellidos,
+                ]);
             }
         }
         return redirect()
