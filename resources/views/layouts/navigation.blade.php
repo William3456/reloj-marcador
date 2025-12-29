@@ -21,11 +21,6 @@
                 </div>
 
                 @if ($role == 1 || $role == 2)
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                        <x-nav-link :href="route('empresas.home')" :active="request()->routeIs('empresas.home')">
-                            {{ __('Empresas') }}
-                        </x-nav-link>
-                    </div>
 
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
                         <x-dropdown align="left" width="48">
@@ -174,6 +169,35 @@
                             </x-slot>
                         </x-dropdown>
                     </div>
+
+                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button
+                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
+                                    <div>{{ __('Puestos') }}</div>
+                                    <div class="ms-1">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            </x-slot>
+
+                            <x-slot name="content">
+                                <x-dropdown-link :href="route('puestos.index')">
+                                    {{ __('Ver puestos') }}
+                                </x-dropdown-link>
+
+                                <x-dropdown-link :href="route('puestos.create')">
+                                    {{ __('Crear puestos') }}
+                                </x-dropdown-link>
+                            </x-slot>
+                        </x-dropdown>
+                    </div>
                 @endif
 
             </div>
@@ -314,6 +338,20 @@
                     </x-responsive-nav-link>
                 </div>
 
+                <x-responsive-nav-link>
+                    <span class="font-semibold">Puestos</span>
+                </x-responsive-nav-link>
+                <div class="ps-6">
+                    <x-responsive-nav-link :href="route('puestos.index')"
+                        :active="request()->routeIs('puestos.index')">
+                        Ver puestos
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link :href="route('puestos.create')"
+                        :active="request()->routeIs('puestos.create')">
+                        Crear puesto
+                    </x-responsive-nav-link>
+                </div>
             @endif
         </div>
 

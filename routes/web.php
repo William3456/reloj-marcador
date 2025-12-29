@@ -8,6 +8,7 @@ use App\Http\Controllers\Horarios\HorarioController;
 use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\Permiso\PermisoController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Puestos\PuestosController;
 use App\Http\Controllers\Sucursales\SucursalController;
 use App\Models\Turnos\Turnos;
 use Illuminate\Support\Facades\Route;
@@ -143,6 +144,25 @@ Route::middleware('auth')->group(function () {
         ->name('departamentos.delete')
         ->middleware('check.role:1-2');
 
+        // Para puestos
+    Route::get('puestos/create', [PuestosController::class, 'create'])
+        ->name('puestos.create')
+        ->middleware('check.role:1-2');
+    Route::post('puestos/create', [PuestosController::class, 'store'])
+        ->name('puestos.store')
+        ->middleware('check.role:1-2');
+    Route::get('puestos/index', [PuestosController::class, 'index'])
+        ->name('puestos.index')
+        ->middleware(['check.role:1-2']);
+    Route::get('puestos/edit/{id}', [PuestosController::class, 'edit'])
+        ->name('puestos.edit')
+        ->middleware('check.role:1-2');
+    Route::put('puestos/update/{id}', [PuestosController::class, 'update'])
+        ->name('puestos.update')
+        ->middleware('check.role:1-2');
+    Route::delete('puestos/delete/{id}', [PuestosController::class, 'destroy'])
+        ->name('puestos.delete')
+        ->middleware('check.role:1-2');        
 });
 
 Route::middleware('api')->prefix('api')->group(function () {

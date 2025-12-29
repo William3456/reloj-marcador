@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('puestos_trabajos', function (Blueprint $table) {
             $table->id();
-            $table->string('cod_puesto', 10);
+            $table->string('cod_puesto', 20);
             $table->string('desc_puesto', 150);
             $table->integer('estado');
             $table->unsignedBigInteger('sucursal_id');
