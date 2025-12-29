@@ -32,75 +32,123 @@
 
                 {{-- Tabla --}}
                 <div class="overflow-x-auto">
+
                     <table id="tablaEmpleados" class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Código</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Nombre</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Apell.</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Documento</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Correo</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Puesto</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Departamento</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Sucursal</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Login</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Estado</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Visualizar</th>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Acción</th>
+                                <th
+                                    class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-12">
+                                    ID</th>
+                                <th
+                                    class="px-2 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Código</th>
+                                <th
+                                    class="px-2 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Nombre completo</th>
+                                <th
+                                    class="px-2 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Puesto</th>
+                                <th
+                                    class="px-2 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Depto.</th>
+                                <th
+                                    class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Sucursal</th>
+                                <th
+                                    class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Login</th>
+                                <th
+                                    class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Estado</th>
+                                <th
+                                    class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Ver</th>
+                                <th
+                                    class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Acción</th>
                             </tr>
                         </thead>
 
-                        <tbody class="divide-y divide-gray-200">
+                        <tbody class="bg-white divide-y divide-gray-200 text-sm">
                             @foreach ($empleados as $e)
-                                <tr>
-                                    <td class="px-4 py-2">{{ $e->id }}</td>
-                                    <td class="px-4 py-2">{{ $e->cod_trabajador }}</td>
-                                    <td class="px-4 py-2">{{ $e->nombres }}</td>
-                                    <td class="px-4 py-2">{{ $e->apellidos }}</td>
-                                    <td class="px-4 py-2">{{ $e->documento }}</td>
-                                    <td class="px-4 py-2">{{ $e->correo }}</td>
-                                    <td class="px-4 py-2">{{ $e->puesto->desc_puesto ?? '—' }}</td>
-                                    <td class="px-4 py-2">{{ $e->departamento->nombre_depto ?? '—' }}</td>
-                                    <td class="px-4 py-2">{{ $e->sucursal->nombre ?? '—' }}</td>
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-2 py-2 text-center font-medium text-gray-900">{{ $e->id }}</td>
 
-                                    <td class="px-4 py-2">
+                                    <td class="px-2 py-2 text-gray-600">{{ $e->cod_trabajador }}</td>
+
+                                    <td class="px-2 py-2">
+                                        <div class="flex flex-col">
+                                            <span class="font-medium text-gray-900">
+                                                {{ $e->nombres }} {{ $e->apellidos }}
+                                            </span>
+                                            @if(auth()->user()?->empleado?->id === $e->id)
+                                                <span
+                                                    class="mt-0.5 w-fit px-1.5 py-0.5 text-[10px] leading-tight rounded bg-blue-100 text-blue-700 font-semibold border border-blue-200">
+                                                    Tú
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
+
+                                    <td class="px-2 py-2 text-gray-600 truncate max-w-[150px]"
+                                        title="{{ $e->puesto->desc_puesto ?? '' }}">
+                                        {{ $e->puesto->desc_puesto ?? '—' }}
+                                    </td>
+
+                                    <td class="px-2 py-2 text-gray-600 truncate max-w-[150px]"
+                                        title="{{ $e->departamento->nombre_depto ?? '' }}">
+                                        {{ $e->departamento->nombre_depto ?? '—' }}
+                                    </td>
+
+                                    <td class="px-2 py-2 text-center text-gray-600">{{ $e->sucursal->nombre ?? '—' }}</td>
+
+                                    <td class="px-2 py-2 text-center">
                                         <span
-                                            class="px-2 py-1 text-xs rounded 
-                                                                                                    {{ $e->login == 1 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">
+                                            class="px-2 py-0.5 text-xs rounded-full font-medium border
+                                {{ $e->login == 1 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200' }}">
                                             {{ $e->login == 1 ? 'Sí' : 'No' }}
                                         </span>
                                     </td>
 
-                                    <td class="px-4 py-2">
+                                    <td class="px-2 py-2 text-center">
                                         <span
-                                            class="px-2 py-1 text-xs rounded 
-                                                                                                    {{ $e->estado == 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                            class="px-2 py-0.5 text-xs rounded-full font-medium border
+                                {{ $e->estado == 1 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200' }}">
                                             {{ $e->estado == 1 ? 'Activo' : 'Inactivo' }}
                                         </span>
                                     </td>
 
-                                    <td class="text-center">
-                                        <button type="button" class="text-gray-600 hover:text-blue-600" title="Ver detalles"
-                                            onclick="verEmpleado({{ $e->id }})">
+                                    <td class="px-2 py-2 text-center">
+                                        <button type="button"
+                                            class="text-gray-500 hover:text-blue-600 transition-colors p-1"
+                                            title="Ver detalles" onclick="verEmpleado({{ $e->id }})">
                                             <i class="fa-solid fa-eye"></i>
                                         </button>
                                     </td>
 
-                                    <td class="px-4 py-2 text-center whitespace-nowrap">
-                                        <div class="inline-flex items-center gap-3">
+                                    <td class="px-2 py-2 text-center">
+                                        <div class="flex items-center justify-center gap-2">
                                             <a href="{{ route('empleados.edit', $e->id) }}"
-                                                class="text-blue-600 hover:underline" title="Editar">
+                                                class="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                                                title="Editar">
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
 
                                             <form action="{{ route('empleados.delete', $e->id) }}" method="POST"
-                                                onsubmit="return confirm('¿Seguro que deseas inactivar este empleado?')">
+                                                onsubmit="return confirm('¿Seguro que deseas inactivar este empleado?')"
+                                                class="inline">
                                                 @csrf @method('DELETE')
-                                                <button class="text-red-600 hover:underline" title="Inactivar">
-                                                    <i class="fa-solid fa-ban"></i>
-
-                                                </button>
+                                                @if(auth()->user()?->empleado?->id !== $e->id)
+                                                    <button class="text-red-500 hover:text-red-700 transition-colors p-1"
+                                                        title="Inactivar">
+                                                        <i class="fa-solid fa-ban"></i>
+                                                    </button>
+                                                @else
+                                                    <span class="text-gray-300 cursor-not-allowed p-1"
+                                                        title="No puedes desactivarte a ti mismo">
+                                                        <i class="fa-solid fa-ban"></i>
+                                                    </span>
+                                                @endif
                                             </form>
                                         </div>
                                     </td>
@@ -108,6 +156,7 @@
                             @endforeach
                         </tbody>
                     </table>
+
                     <div id="modalEmpleado"
                         class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 hidden z-50 transition-opacity duration-300">
 
@@ -168,74 +217,74 @@
 
                         let estadoColor = e.estado == 1 ? "text-green-600" : "text-red-600";
                         let estadoTexto = e.estado == 1 ? "Activo" : "Inactivo";
-let horariosHTML = '';
+                        let horariosHTML = '';
 
-if (e.horarios && e.horarios.length > 0) {
+                        if (e.horarios && e.horarios.length > 0) {
 
-    horariosHTML = '<div class="space-y-1">';
+                            horariosHTML = '<div class="space-y-1">';
 
-    e.horarios.forEach(h => {
-        horariosHTML += `
-            <div class="flex items-center justify-between
-                        bg-white border border-gray-200
-                        rounded-lg px-3 py-1 text-sm">
-                
-                <div class="flex items-center gap-2">
-                    <span class="font-medium text-gray-800">
-                        ${h.hora_ini} – ${h.hora_fin}
-                    </span>
-                    <span class="px-2 py-0.5 rounded-full text-xs 
-                                bg-blue-200 text-blue-800">
-                        ${h.turno_txt}
-                    </span>
-                </div>
-            </div>
-        `;
-    });
+                            e.horarios.forEach(h => {
+                                horariosHTML += `
+                        <div class="flex items-center justify-between
+                                    bg-white border border-gray-200
+                                    rounded-lg px-3 py-1 text-sm">
 
-    horariosHTML += '</div>';
-
-} else {
-    horariosHTML = `
-        <span class="text-gray-400 italic text-sm">
-            Sin horarios asignados
-        </span>
-    `;
-}
-
-                        let html = `
-                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                            <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
-                            <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
-                            <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
-                            <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
-                            <p><strong>Edad:</strong> ${e.edad ?? ''}</p>
-                            <p><strong>DUI:</strong> ${e.documento ?? ''}</p>
-                            <p><strong>Correo:</strong> ${e.correo ?? ''}</p>
-                            <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
-                        </div>
-
-                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                            <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
-                            <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
-                            <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
-                            <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
-                            <p><strong>Empresa:</strong> ${e.empresa?.nombre ?? ''}</p>
-                            <p><strong>Login:</strong> ${e.login == 1 ? "Sí" : "No"}</p>
-
-                            <p><strong>Estado:</strong> 
-                                <span class="${estadoColor} font-semibold">${estadoTexto}</span>
-                            </p>
-                        </div>
-
-                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                            <h3 class="font-semibold text-gray-700 mb-2 text-sm">Horarios asignados</h3>
-                            ${horariosHTML}
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-800">
+                                    ${h.hora_ini} – ${h.hora_fin}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full text-xs 
+                                            bg-blue-200 text-blue-800">
+                                    ${h.turno_txt}
+                                </span>
+                            </div>
                         </div>
                     `;
-                    e.horarios.forEach(h => {
-                        console.log(h.hora_ini, h.hora_fin, h.turno_txt);
-                    });
+                            });
+
+                            horariosHTML += '</div>';
+
+                        } else {
+                            horariosHTML = `
+                    <span class="text-gray-400 italic text-sm">
+                        Sin horarios asignados
+                    </span>
+                `;
+                        }
+
+                        let html = `
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                        <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
+                                        <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
+                                        <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
+                                        <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
+                                        <p><strong>Edad:</strong> ${e.edad ?? ''}</p>
+                                        <p><strong>DUI:</strong> ${e.documento ?? ''}</p>
+                                        <p><strong>Correo:</strong> ${e.correo ?? ''}</p>
+                                        <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
+                                    </div>
+
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                        <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
+                                        <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
+                                        <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
+                                        <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
+                                        <p><strong>Empresa:</strong> ${e.empresa?.nombre ?? ''}</p>
+                                        <p><strong>Login:</strong> ${e.login == 1 ? "Sí" : "No"}</p>
+                                        <p><strong>Rol:</strong>  ${e.user?.rol?.rol_name ?? "Sin Rol"}</p>
+                                        <p><strong>Estado:</strong> 
+                                            <span class="${estadoColor} font-semibold">${estadoTexto}</span>
+                                        </p>
+                                    </div>
+
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                        <h3 class="font-semibold text-gray-700 mb-2 text-sm">Horarios asignados</h3>
+                                        ${horariosHTML}
+                                    </div>
+                                `;
+                        e.horarios.forEach(h => {
+                            console.log(h.hora_ini, h.hora_fin, h.turno_txt);
+                        });
 
                         document.getElementById("contenidoEmpleado").innerHTML = html;
 

@@ -46,26 +46,40 @@
     <script src="https://kit.fontawesome.com/b52b18aa29.js" crossorigin="anonymous"></script>
 </head>
 
-<body class="font-sans antialiased">
-    <div class="min-h-screen bg-gray-200">
+<body class="font-sans antialiased bg-gray-200">
+<body class="font-sans antialiased bg-gray-200">
+    <div x-data="{ 
+            sidebarOpen: false, 
+            sidebarExpanded: JSON.parse(localStorage.getItem('sidebarExpanded') || 'true')
+        }" 
+        x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebarExpanded', value))"
+        class="flex h-screen overflow-hidden">
+
+        
         @include('layouts.navigation')
 
-        <!-- Page Heading -->
-        @isset($header)
-            <header class="bg-gray-100 shadow">
-                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    {{ $header }}
-                </div>
-            </header>
-        @endisset
+        <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+            
+            <div class="bg-white border-b border-gray-200 h-16 flex items-center px-4 shadow-sm lg:hidden shrink-0 z-30">
+                <button @click="sidebarOpen = !sidebarOpen" class="text-gray-500 hover:text-gray-700 focus:outline-none p-2 rounded-md hover:bg-gray-100">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <span class="ml-4 font-bold text-gray-700">{{config('app.name') }}</span>
+            </div>
+            @isset($header)
+                <header class="bg-gray-100 shadow-sm border-b border-gray-300 z-20">
+                    <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                        {{ $header }}
+                    </div>
+                </header>
+            @endisset
 
-        <!-- Page Content -->
-        <main>
-            {{ $slot }}
-        </main>
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
+                {{ $slot }}
+            </main>
+        </div>
     </div>
     @stack('scripts')
-
 </body>
 
 </html>

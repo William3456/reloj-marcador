@@ -1,382 +1,243 @@
 @php
     $role = Auth::user()->id_rol;
+    // Estilos reutilizables
+    $activeBtnClass = "text-blue-700 bg-blue-50";
+    $inactiveBtnClass = "text-gray-600 hover:bg-blue-50 hover:text-blue-700";
+    $activeLinkClass = "font-semibold text-blue-700";
+    $inactiveLinkClass = "text-gray-600 hover:text-blue-700";
 @endphp
-<nav x-data="{ open: false }" class="bg-gray-100 border-b border-gray-100 ">
-    <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
-                    </a>
-                </div>
 
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Inicio') }}
-                    </x-nav-link>
-                </div>
+<aside 
+    class="fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 flex flex-col transform lg:static lg:translate-x-0 shadow-lg lg:shadow-none transition-all duration-300"
+    :class="{
+        'translate-x-0': sidebarOpen,
+        '-translate-x-full': !sidebarOpen,
+        'w-64': sidebarExpanded, 
+        'w-20': !sidebarExpanded,
+        'transition-all duration-300': sidebarReady
+    }">
+    
+    <div class="flex items-center h-16 border-b border-gray-200 shrink-0 transition-all duration-300"
+         :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center'">
+        
+        <a href="{{ route('dashboard') }}" class="flex items-center space-x-2 overflow-hidden whitespace-nowrap">
+            <x-application-logo class="block h-8 w-auto fill-current text-blue-600 shrink-0" />
+            
+            <span x-show="sidebarExpanded" 
+                  x-cloak
+                  x-transition:enter="transition ease-out duration-200"
+                  x-transition:enter-start="opacity-0 transform scale-90"
+                  x-transition:enter-end="opacity-100 transform scale-100"
+                  class="text-lg font-bold text-gray-800 tracking-wider uppercase ml-2">
+                {{ config('app.name') }}
+            </span>
+        </a>
 
-                @if ($role == 1 || $role == 2)
+        <button @click="sidebarExpanded = !sidebarExpanded" 
+                class="hidden lg:block text-gray-500 hover:text-blue-600 focus:outline-none bg-gray-100 p-1 rounded-md transition-colors"
+                :class="!sidebarExpanded ? 'absolute -right-3 top-6 shadow-md border border-gray-200' : ''">
+            <i class="fas" :class="sidebarExpanded ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
+        </button>
+    </div>
 
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
-                        <x-dropdown align="left" width="48">
-                            <x-slot name="trigger">
-                                <button
-                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                    <div>{{ __('Sucursales') }}</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('sucursales.index')">
-                                    {{ __('Lista sucursales') }}
-                                </x-dropdown-link>
-
-                                <x-dropdown-link :href="route('sucursales.create')">
-                                    {{ __('Añadir sucursal') }}
-                                </x-dropdown-link>
-                            </x-slot>
-                        </x-dropdown>
-                    </div>
-
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
-                        <x-dropdown align="left" width="48">
-                            <x-slot name="trigger">
-                                <button
-                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                    <div>{{ __('Horarios') }}</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('horarios.index')">
-                                    {{ __('Listado de horarios') }}
-                                </x-dropdown-link>
-
-                                <x-dropdown-link :href="route('horarios.create')">
-                                    {{ __('Crear horario') }}
-                                </x-dropdown-link>
-                            </x-slot>
-                        </x-dropdown>
-                    </div>
-
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
-                        <x-dropdown align="left" width="48">
-                            <x-slot name="trigger">
-                                <button
-                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                    <div>{{ __('Empleados') }}</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('empleados.index')">
-                                    {{ __('Listado de empleados') }}
-                                </x-dropdown-link>
-
-                                <x-dropdown-link :href="route('empleados.create')">
-                                    {{ __('Crear empleado') }}
-                                </x-dropdown-link>
-                                <x-dropdown-link :href="route('empleadoshorarios.asign')">
-                                    {{ __('Asignación de horarios') }}
-                                </x-dropdown-link>
-                            </x-slot>
-                        </x-dropdown>
-                    </div>
-
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
-                        <x-dropdown align="left" width="48">
-                            <x-slot name="trigger">
-                                <button
-                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                    <div>{{ __('Permisos') }}</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('permisos.index')">
-                                    {{ __('Ver permisos') }}
-                                </x-dropdown-link>
-
-                                <x-dropdown-link :href="route('permisos.create')">
-                                    {{ __('Crear permisos') }}
-                                </x-dropdown-link>
-                            </x-slot>
-                        </x-dropdown>
-                    </div>
-
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
-                        <x-dropdown align="left" width="48">
-                            <x-slot name="trigger">
-                                <button
-                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                    <div>{{ __('Departamentos') }}</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('departamentos.index')">
-                                    {{ __('Ver departamentos') }}
-                                </x-dropdown-link>
-
-                                <x-dropdown-link :href="route('departamentos.create')">
-                                    {{ __('Crear departamentos') }}
-                                </x-dropdown-link>
-                            </x-slot>
-                        </x-dropdown>
-                    </div>
-
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-center">
-                        <x-dropdown align="left" width="48">
-                            <x-slot name="trigger">
-                                <button
-                                    class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                    <div>{{ __('Puestos') }}</div>
-                                    <div class="ms-1">
-                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('puestos.index')">
-                                    {{ __('Ver puestos') }}
-                                </x-dropdown-link>
-
-                                <x-dropdown-link :href="route('puestos.create')">
-                                    {{ __('Crear puestos') }}
-                                </x-dropdown-link>
-                            </x-slot>
-                        </x-dropdown>
-                    </div>
-                @endif
-
+    <div class="border-b border-gray-200 bg-gray-50 shrink-0 transition-all duration-300"
+         :class="sidebarExpanded ? 'px-6 py-4' : 'p-2 py-4 flex flex-col items-center'">
+        
+        <p x-show="sidebarExpanded" x-cloak class="text-xs text-gray-500 uppercase tracking-wider mb-1">Hola,</p>
+        
+        <a href="{{ route('profile.edit') }}" class="group block cursor-pointer overflow-hidden">
+            <div class="flex items-center" :class="sidebarExpanded ? 'justify-between' : 'justify-center'">
+                <span x-show="sidebarExpanded" x-cloak class="font-semibold text-gray-800 truncate group-hover:text-blue-700 transition-colors" title="{{ Auth::user()->name }}">
+                    {{ implode(' ', array_slice(explode(' ', Auth::user()->name), 0, 2)) }}
+                </span>
+                
+                <i class="fas fa-user-cog text-gray-400 group-hover:text-blue-700 transition-colors text-sm"
+                   :class="sidebarExpanded ? '' : 'text-lg'"></i>
             </div>
+            
+            <p x-show="sidebarExpanded" x-cloak class="text-xs text-gray-500 font-medium mt-0.5 truncate">
+                {{ optional(Auth::user()->rol)->rol_name ?? 'Sin Rol' }}
+            </p>
+        </a>
+    </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100 hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-
-                            <x-dropdown-link :href="route('logout')" onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
+    <nav class="flex-1 py-4 space-y-2 custom-scrollbar"
+         :class="sidebarExpanded ? 'px-4 overflow-y-auto overflow-x-hidden' : 'px-2 overflow-visible'">
+        
+        <a href="{{ route('dashboard') }}" 
+           class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
+           {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+           :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
+            
+            <i class="fas fa-home w-5 text-center shrink-0"></i>
+            
+            <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap transition-opacity duration-200">Inicio</span>
+            
+            <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                Inicio
             </div>
+        </a>
 
-            <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open"
-                    class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{ 'hidden': open, 'inline-flex': !open }" class="inline-flex"
-                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{ 'hidden': !open, 'inline-flex': open }" class="hidden" stroke-linecap="round"
-                            stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+        @if ($role == 1 || $role == 2)
+        
+            <div x-data="{ open: {{ request()->routeIs('horarios.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('horarios.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-clock w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Horarios</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+                    
+                    <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Horarios
+                    </div>
                 </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('horarios.index') }}" class="block py-2 text-sm {{ request()->routeIs('horarios.index') ? $activeLinkClass : $inactiveLinkClass }}">Listado</a>
+                    <a href="{{ route('horarios.create') }}" class="block py-2 text-sm {{ request()->routeIs('horarios.create') ? $activeLinkClass : $inactiveLinkClass }}">Crear</a>
+                </div>
             </div>
-        </div>
+            
+            <div x-data="{ open: {{ request()->routeIs('sucursales.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('sucursales.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-store w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Sucursales</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+
+                     <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Sucursales
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('sucursales.index') }}" class="block py-2 text-sm {{ request()->routeIs('sucursales.index') ? $activeLinkClass : $inactiveLinkClass }}">Lista sucursales</a>
+                    <a href="{{ route('sucursales.create') }}" class="block py-2 text-sm {{ request()->routeIs('sucursales.create') ? $activeLinkClass : $inactiveLinkClass }}">Añadir sucursal</a>
+                </div>
+            </div>
+
+            <div x-data="{ open: {{ request()->routeIs('empleados.*') || request()->routeIs('empleadoshorarios.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('empleados.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-users w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Empleados</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+
+                    <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Empleados
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('empleados.index') }}" class="block py-2 text-sm {{ request()->routeIs('empleados.index') ? $activeLinkClass : $inactiveLinkClass }}">Listado</a>
+                    <a href="{{ route('empleados.create') }}" class="block py-2 text-sm {{ request()->routeIs('empleados.create') ? $activeLinkClass : $inactiveLinkClass }}">Crear empleado</a>
+                    <a href="{{ route('empleadoshorarios.asign') }}" class="block py-2 text-sm {{ request()->routeIs('empleadoshorarios.asign') ? $activeLinkClass : $inactiveLinkClass }}">Asignar horarios</a>
+                </div>
+            </div>
+
+            <div x-data="{ open: {{ request()->routeIs('permisos.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('permisos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-user-shield w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Permisos</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+
+                     <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Permisos
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('permisos.index') }}" class="block py-2 text-sm {{ request()->routeIs('permisos.index') ? $activeLinkClass : $inactiveLinkClass }}">Ver permisos</a>
+                    <a href="{{ route('permisos.create') }}" class="block py-2 text-sm {{ request()->routeIs('permisos.create') ? $activeLinkClass : $inactiveLinkClass }}">Crear permisos</a>
+                </div>
+            </div>
+
+            <div x-data="{ open: {{ request()->routeIs('departamentos.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('departamentos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-building w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Departamentos</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+
+                     <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Departamentos
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('departamentos.index') }}" class="block py-2 text-sm {{ request()->routeIs('departamentos.index') ? $activeLinkClass : $inactiveLinkClass }}">Ver departamentos</a>
+                    <a href="{{ route('departamentos.create') }}" class="block py-2 text-sm {{ request()->routeIs('departamentos.create') ? $activeLinkClass : $inactiveLinkClass }}">Crear departamento</a>
+                </div>
+            </div>
+
+            <div x-data="{ open: {{ request()->routeIs('puestos.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('puestos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-briefcase w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Puestos</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+
+                    <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Puestos
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('puestos.index') }}" class="block py-2 text-sm {{ request()->routeIs('puestos.index') ? $activeLinkClass : $inactiveLinkClass }}">Ver puestos</a>
+                    <a href="{{ route('puestos.create') }}" class="block py-2 text-sm {{ request()->routeIs('puestos.create') ? $activeLinkClass : $inactiveLinkClass }}">Crear puesto</a>
+                </div>
+            </div>
+        @endif
+    </nav>
+
+    <div class="border-t border-gray-200 bg-gray-50 shrink-0 transition-all duration-300"
+         :class="sidebarExpanded ? 'p-4' : 'p-2'">
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" 
+                class="flex items-center w-full text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all group relative"
+                :class="sidebarExpanded ? 'px-4 py-2' : 'justify-center py-3'">
+                
+                <i class="fas fa-sign-out-alt w-5 text-center shrink-0"></i>
+                <span x-show="sidebarExpanded" x-cloak class="ml-3 whitespace-nowrap">Cerrar Sesión</span>
+
+                <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-red-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                    Salir
+                </div>
+            </button>
+        </form>
     </div>
+</aside>
 
-    <!-- Responsive Navigation Menu -->
-    <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-            @if ($role == 1 || $role == 2)
-                <x-responsive-nav-link>
-                    <span class="font-semibold">Sucursales</span>
-                </x-responsive-nav-link>
+<div x-show="sidebarOpen" 
+     @click="sidebarOpen = false" 
+     class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+     style="display: none;">
+</div>
 
-                <div class="ps-6">
-                    <x-responsive-nav-link :href="route('sucursales.index')"
-                        :active="request()->routeIs('sucursales.index')">
-                        Lista sucursales
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('sucursales.create')"
-                        :active="request()->routeIs('sucursales.create')">
-                        Añadir sucursal
-                    </x-responsive-nav-link>
-                </div>
-
-                <x-responsive-nav-link>
-                    <span class="font-semibold">Horarios</span>
-                </x-responsive-nav-link>
-
-                <div class="ps-6">
-                    <x-responsive-nav-link :href="route('horarios.index')" :active="request()->routeIs('horarios.index')">
-                        Listado de horarios
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('horarios.create')" :active="request()->routeIs('horarios.create')">
-                        Crear horario
-                    </x-responsive-nav-link>
-                </div>
-
-                <x-responsive-nav-link>
-                    <span class="font-semibold">Empleados</span>
-                </x-responsive-nav-link>
-
-                <div class="ps-6">
-                    <x-responsive-nav-link :href="route('empleados.index')" :active="request()->routeIs('empleados.index')">
-                        Listado de empleados
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('empleados.create')"
-                        :active="request()->routeIs('empleados.create')">
-                        Crear empleado
-                    </x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('empleadoshorarios.asign')"
-                        :active="request()->routeIs('empleadoshorarios.asign')">
-                        Asignación de horarios
-                    </x-responsive-nav-link>
-                </div>
-                <x-responsive-nav-link>
-                    <span class="font-semibold">Permisos</span>
-                </x-responsive-nav-link>
-                <div class="ps-6">
-                    <x-responsive-nav-link :href="route('permisos.index')" :active="request()->routeIs('permisos.index')">
-                        Ver permisos
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('permisos.create')" :active="request()->routeIs('permisos.create')">
-                        Crear permiso
-                    </x-responsive-nav-link>
-
-                </div>
-                <x-responsive-nav-link>
-                    <span class="font-semibold">Departamentos</span>
-                </x-responsive-nav-link>
-                <div class="ps-6">
-                    <x-responsive-nav-link :href="route('departamentos.index')"
-                        :active="request()->routeIs('departamentos.index')">
-                        Ver departamentos
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('departamentos.create')"
-                        :active="request()->routeIs('departamentos.create')">
-                        Crear departamento
-                    </x-responsive-nav-link>
-                </div>
-
-                <x-responsive-nav-link>
-                    <span class="font-semibold">Puestos</span>
-                </x-responsive-nav-link>
-                <div class="ps-6">
-                    <x-responsive-nav-link :href="route('puestos.index')"
-                        :active="request()->routeIs('puestos.index')">
-                        Ver puestos
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('puestos.create')"
-                        :active="request()->routeIs('puestos.create')">
-                        Crear puesto
-                    </x-responsive-nav-link>
-                </div>
-            @endif
-        </div>
-
-        <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
-                </x-responsive-nav-link>
-
-                <!-- Authentication -->
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-
-                    <x-responsive-nav-link :href="route('logout')" onclick="event.preventDefault();
-                                        this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
-                </form>
-            </div>
-        </div>
-    </div>
-</nav>
+<style>
+    [x-cloak] { display: none !important; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+</style>

@@ -185,7 +185,7 @@ class EmpleadoController extends Controller
      */
     public function show(string $id)
     {
-        $empleado = Empleado::with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios'])
+        $empleado = Empleado::with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios', 'user.rol'])
             ->findOrFail($id);
 
         return response()->json($empleado);
