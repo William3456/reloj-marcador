@@ -1,6 +1,5 @@
 @php
     $role = Auth::user()->id_rol;
-    // Estilos reutilizables
     $activeBtnClass = "text-blue-700 bg-blue-50";
     $inactiveBtnClass = "text-gray-600 hover:bg-blue-50 hover:text-blue-700";
     $activeLinkClass = "font-semibold text-blue-700";
@@ -8,7 +7,7 @@
 @endphp
 
 <aside 
-    class="fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 flex flex-col transform lg:static lg:translate-x-0 shadow-lg lg:shadow-none transition-all duration-300"
+    class="fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 flex flex-col transform xl:static xl:translate-x-0 shadow-lg xl:shadow-none transition-all duration-300"
     :class="{
         'translate-x-0': sidebarOpen,
         '-translate-x-full': !sidebarOpen,
@@ -34,7 +33,7 @@
         </a>
 
         <button @click="sidebarExpanded = !sidebarExpanded" 
-                class="hidden lg:block text-gray-500 hover:text-blue-600 focus:outline-none bg-gray-100 p-1 rounded-md transition-colors"
+                class="hidden xl:block text-gray-500 hover:text-blue-600 focus:outline-none bg-gray-100 p-1 rounded-md transition-colors"
                 :class="!sidebarExpanded ? 'absolute -right-3 top-6 shadow-md border border-gray-200' : ''">
             <i class="fas" :class="sidebarExpanded ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
         </button>
@@ -68,11 +67,8 @@
            class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
            {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
            :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
-            
             <i class="fas fa-home w-5 text-center shrink-0"></i>
-            
             <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap transition-opacity duration-200">Inicio</span>
-            
             <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
                 Inicio
             </div>
@@ -206,6 +202,26 @@
                     <a href="{{ route('puestos.create') }}" class="block py-2 text-sm {{ request()->routeIs('puestos.create') ? $activeLinkClass : $inactiveLinkClass }}">Crear puesto</a>
                 </div>
             </div>
+            <div x-data="{ open: {{ request()->routeIs('reportes.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                        class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                        {{ request()->routeIs('reportes.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                        :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-file w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Reportes</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak class="fas fa-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+
+                    <div x-show="!sidebarExpanded" x-cloak class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Reportes
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('reportes.empleados.empleados_rep') }}" class="block py-2 text-sm {{ request()->routeIs('reportes.empleados.sucursal') ? $activeLinkClass : $inactiveLinkClass }}">Empleados</a>
+                    
+                </div>
+            </div>
         @endif
     </nav>
 
@@ -226,11 +242,12 @@
             </button>
         </form>
     </div>
+
 </aside>
 
 <div x-show="sidebarOpen" 
      @click="sidebarOpen = false" 
-     class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+     class="fixed inset-0 bg-black bg-opacity-50 z-30 xl:hidden"
      style="display: none;">
 </div>
 

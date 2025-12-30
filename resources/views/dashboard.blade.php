@@ -91,20 +91,6 @@
                                                     value="{{ $empresa->correo ?? '' }}"
                                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </div>
-
-                                            <div>
-                                                <label class="block text-gray-700 mb-1" for="latitud">Latitud</label>
-                                                <input type="number" step="0.0000001" id="latitud" name="latitud"
-                                                    value="{{ $empresa->latitud ?? '' }}"
-                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-gray-700 mb-1" for="longitud">Longitud</label>
-                                                <input type="number" step="0.0000001" id="longitud" name="longitud"
-                                                    value="{{ $empresa->longitud ?? '' }}"
-                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                            </div>
                                         </div>
 
                                         <div class="flex justify-end mt-6 space-x-3">
@@ -215,8 +201,6 @@
                             $('#nit').val(e.nit ?? '');
                             $('#dui').val(e.dui ?? '');
                             $('#correo').val(e.correo ?? '');
-                            $('#latitud').val(e.latitud ?? '');
-                            $('#longitud').val(e.longitud ?? '');
 
                             //console.log("Empresa cargada correctamente.");
                         } else {

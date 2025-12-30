@@ -37,8 +37,6 @@ class EmpresaController extends Controller
             'nit' => 'required|string|max:15',
             'dui' => 'required|string|max:10',
             'correo' => 'required|email|max:150',
-            'latitud' => 'required|numeric',
-            'longitud' => 'required|numeric',
         ]);
 
         // Si existe una empresa con el mismo NIT, actualiza; si no, crea una nueva

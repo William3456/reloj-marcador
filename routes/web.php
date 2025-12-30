@@ -9,6 +9,7 @@ use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\Permiso\PermisoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Puestos\PuestosController;
+use App\Http\Controllers\Reportes\ReporteEmpleadoController;
 use App\Http\Controllers\Sucursales\SucursalController;
 use App\Models\Turnos\Turnos;
 use Illuminate\Support\Facades\Route;
@@ -93,7 +94,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('check.role:1-2');
     Route::get('/empleados/{id}/info', [EmpleadoController::class, 'show'])->name('empleados.info');
 
-        // Para permisos de Empleados
+    // Para permisos de Empleados
     Route::get('permisos/create', [PermisoController::class, 'create'])
         ->name('permisos.create')
         ->middleware('check.role:1-2');
@@ -112,7 +113,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('permisos/delete/{id}', [PermisoController::class, 'destroy'])
         ->name('permisos.delete')
         ->middleware('check.role:1-2');
-    
 
     // Asignaciones de horarios
 
@@ -123,8 +123,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/horario-trabajador', [HorarioEmpleadoController::class, 'index'])
         ->name('empleadoshorarios.asign');
 
-
-        // Para departamentos
+    // Para departamentos
     Route::get('departamentos/create', [DepartamentosController::class, 'create'])
         ->name('departamentos.create')
         ->middleware('check.role:1-2');
@@ -144,7 +143,7 @@ Route::middleware('auth')->group(function () {
         ->name('departamentos.delete')
         ->middleware('check.role:1-2');
 
-        // Para puestos
+    // Para puestos
     Route::get('puestos/create', [PuestosController::class, 'create'])
         ->name('puestos.create')
         ->middleware('check.role:1-2');
@@ -162,7 +161,15 @@ Route::middleware('auth')->group(function () {
         ->middleware('check.role:1-2');
     Route::delete('puestos/delete/{id}', [PuestosController::class, 'destroy'])
         ->name('puestos.delete')
-        ->middleware('check.role:1-2');        
+        ->middleware('check.role:1-2');
+
+    // Para reportes - Empleados
+    Route::get('reportes/empleados/rep-empleados', [ReporteEmpleadoController::class, 'porSucursal'])
+        ->name('reportes.empleados.empleados_rep')
+        ->middleware('check.role:1-2');
+
+    Route::get('/reportes/empleados/pdf', [ReporteEmpleadoController::class, 'generarPdf'])
+    ->name('empleados.pdf');
 });
 
 Route::middleware('api')->prefix('api')->group(function () {
