@@ -1,290 +1,257 @@
 <x-app-layout title="Permisos">
 
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Permisos de Empleados') }}
+        <h2 class="font-bold text-xl text-gray-800 leading-tight">
+            {{ __('Gestión de Permisos') }}
         </h2>
     </x-slot>
 
-    <div class="py-6">
+    <div class="py-6 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-                @if (session('success'))
-                    <div class="mb-4 p-3 rounded-lg bg-green-50 border border-green-300 text-green-800 shadow-sm">
-                        <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <p class="font-medium">{{ session('success') }}</p>
+            {{-- Alertas Compactas --}}
+            @if (session('success'))
+                <div class="mb-4 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 shadow-sm flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-check-circle"></i>
+                    <p class="font-medium">{{ session('success') }}</p>
+                </div>
+            @elseif (session('error'))
+                <div class="mb-4 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 shadow-sm flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <p class="font-medium">{{ session('error') }}</p>
+                </div>
+            @endif
+
+            <div class="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
+                
+                {{-- Toolbar Compacto --}}
+                <div class="px-4 py-3 border-b border-gray-100 bg-white flex flex-col md:flex-row items-center justify-between gap-3">
+                    <div class="relative w-full md:w-80 group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-search text-gray-400 text-xs"></i>
                         </div>
-                    </div>
-                @elseif (session('error'))
-                    <div class="mb-4 p-3 rounded-lg bg-red-50 border border-red-300 text-red-800 shadow-sm">
-                        <div class="flex items-center text-sm">
-                            <svg class="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <p class="font-medium">{{ session('error') }}</p>
-                        </div>
-                    </div>
-                @endif
-            <div class="bg-gray-100 shadow rounded-lg p-6">
-                {{-- Botón agregar --}}
-                <div class="flex items-center mb-6">
-                    {{-- Buscador centrado --}}
-                    <div class="flex-1 flex justify-center">
-                        <input type="text" id="buscadorEmpleados" placeholder="Buscar.."
-                            class="w-2/3 md:w-1/4 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
+                        <input type="text" id="buscadorEmpleados" placeholder="Buscar empleado..."
+                            class="block w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                     </div>
 
-                    {{-- Botón a la derecha --}}
-                    <div class="ml-4 flex-shrink-0">
-                        <a href="{{ route('permisos.create') }}"
-                            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                            + Añadir nuevo
-                        </a>
-                    </div>
+                    <a href="{{ route('permisos.create') }}"
+                        class="inline-flex items-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wide rounded-lg shadow-sm transition-all">
+                        <i class="fa-solid fa-plus mr-1.5"></i> Nuevo
+                    </a>
                 </div>
 
-                {{-- Acordeones de sucursales --}}
-                <div class="space-y-4">
+                {{-- Contenedor de Listas --}}
+                <div class="p-4 bg-gray-50 space-y-3">
 
                     @foreach($sucursales as $index => $sucursal)
                         <div x-data="{ open: {{ $index === 0 ? 'true' : 'false' }} }" x-ref="accordion"
-                            class="bg-white border border-gray-200 rounded-lg shadow sucursal-accordion">
+                             class="bg-white border border-gray-200 rounded-lg shadow-sm sucursal-accordion">
 
-                            {{-- Header del acordeón --}}
+                            {{-- Header Acordeón Compacto --}}
                             <button type="button"
-                                class="w-full flex justify-between items-center px-5 py-4 text-left font-semibold text-gray-700 hover:bg-gray-50"
+                                class="w-full flex justify-between items-center px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
                                 @click="open = !open">
-                                <span>
-                                    {{ $sucursal->nombre }}
-                                    <span class="ml-2 text-sm text-gray-500">
-                                        ({{ $sucursal->empleados->count() }} empleados)
-                                    </span>
-                                </span>
-
-                                <i class="fa-solid fa-chevron-down transition-transform duration-200"
-                                    :class="open ? 'rotate-180' : ''">
-                                </i>
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-building text-blue-500 text-sm"></i>
+                                    <span class="text-gray-800 font-bold text-sm">{{ $sucursal->nombre }}</span>
+                                    <span class="text-xs text-gray-400">({{ $sucursal->empleados->count() }})</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-gray-400 text-xs transition-transform duration-200"
+                                   :class="open ? 'rotate-180' : ''"></i>
                             </button>
 
-                            {{-- Contenido del acordeón --}}
-                            <div x-show="open" x-collapse class="px-5 pb-5 sucursal-content">
-                                {{-- Cards de empleados --}}
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {{-- Contenido Acordeón --}}
+                            <div x-show="open" x-collapse class="border-t border-gray-100 sucursal-content">
+                                <div class="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                                     @foreach($sucursal->empleados as $empleado)
-                                        <div class="empleado-card bg-white shadow rounded-lg p-4 border border-gray-200 flex flex-col justify-between"
-                                            data-nombre="{{ $empleado->nombres }} {{ $empleado->apellidos }}"
-                                            data-codigo="{{ $empleado->cod_trabajador }}">
+                                        
+                                        {{-- CARD COMPACTA --}}
+<div class="empleado-card group bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md hover:border-blue-400 transition-all duration-200 cursor-pointer"
+     data-nombre="{{ $empleado->nombres }} {{ $empleado->apellidos }}"
+     data-codigo="{{ $empleado->cod_trabajador }}"
+     x-data="{ showModal: false }"
+     @click="showModal = true"> 
 
-                                            <div>
-                                                <p class="text-gray-800 font-semibold text-lg">
-                                                    {{ $empleado->nombres }} {{ $empleado->apellidos }}
-                                                </p>
-                                                <p class="text-gray-500 text-sm">
-                                                    Código: {{ $empleado->cod_trabajador }}
-                                                </p>
-                                            </div>
+    <div class="flex items-center gap-3 mb-2">
+        {{-- Avatar pequeño corregido --}}
+        <div class="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold text-xs border border-gray-200 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors uppercase">
+            {{ substr(preg_replace('/[^A-Za-z0-9\-]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $empleado->nombres)), 0, 1) }}{{ substr(preg_replace('/[^A-Za-z0-9\-]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $empleado->apellidos)), 0, 1) }}
+        </div>
+        <div class="overflow-hidden">
+            <h4 class="text-gray-900 font-bold text-sm truncate leading-tight" title="{{ $empleado->nombres }} {{ $empleado->apellidos }}">
+                {{ $empleado->nombres }}
+            </h4>
+            <p class="text-gray-500 text-[10px] uppercase tracking-wide">{{ $empleado->apellidos }}</p>
+        </div>
+    </div>
 
-                                            <div class="mt-4 flex justify-between items-center">
-                                                <div class="flex gap-2 text-xs">
-                                                    @php
-                                                        $activos = $empleado->permisos->where('estado', 1)->count();
-                                                        $inactivos = $empleado->permisos->where('estado', 0)->count();
-                                                    @endphp
+    <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
+        <div class="flex gap-1">
+            @php
+                $activos = $empleado->permisos->where('estado', 1)->count();
+                $inactivos = $empleado->permisos->where('estado', 0)->count();
+            @endphp
 
-                                                    @if($activos > 0)
-                                                        <span
-                                                            class="px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
-                                                            {{ $activos }} activo{{ $activos > 1 ? 's' : '' }}
-                                                        </span>
-                                                    @endif
+            @if($activos > 0)
+                <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[10px] font-bold flex items-center">
+                    <div class="w-1 h-1 bg-emerald-500 rounded-full mr-1"></div>{{ $activos }}
+                </span>
+            @endif
+            @if($inactivos > 0)
+                <span class="px-1.5 py-0.5 bg-gray-50 text-gray-600 border border-gray-200 rounded text-[10px] font-bold flex items-center">
+                    <div class="w-1 h-1 bg-gray-400 rounded-full mr-1"></div>{{ $inactivos }}
+                </span>
+            @endif
+        </div>
 
-                                                    @if($inactivos > 0)
-                                                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full font-medium">
-                                                            {{ $inactivos }} inactivo{{ $inactivos > 1 ? 's' : '' }}
-                                                        </span>
-                                                    @endif
-                                                </div>
+        <span class="text-blue-600 text-[10px] font-bold uppercase tracking-tight">
+            Ver detalles <i class="fa-solid fa-chevron-right ml-0.5"></i>
+        </span>
+    </div>
 
-                                                <button onclick="openModal('modal-{{ $empleado->id }}')"
-                                                    class="px-3 py-1 text-white text-sm rounded-lg hover:opacity-90"
-                                                    style="background-color: #67d1ff;">
-                                                    Ver permisos
-                                                </button>
-                                            </div>
-                                        </div>
+    {{-- MODAL CON X-TELEPORT (SOLUCIÓN AL BUG) --}}
+    <template x-teleport="body">
+        <div x-show="showModal" 
+             style="display: none;"
+             class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/40 backdrop-blur-[2px] p-4"
+             x-transition:enter="ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
 
+            {{-- Añadimos @click.stop aquí para que clics internos no afecten a la card --}}
+            <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col transform transition-all"
+                 @click.away="showModal = false"
+                 @click.stop>
+                
+                {{-- Header Modal --}}
+                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-lg">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold uppercase">
+                            {{ substr(preg_replace('/[^A-Za-z0-9\-]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $empleado->nombres)), 0, 1) }}
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">{{ $empleado->nombres }} {{ $empleado->apellidos }}</h3>
+                            <p class="text-[10px] text-gray-500 uppercase">{{ $empleado->cod_trabajador }}</p>
+                        </div>
+                    </div>
+                    <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
 
-                                        {{-- Modal de permisos --}}
-                                        <div id="modal-{{ $empleado->id }}"
-                                            class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto">
-                                            <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative mx-4 my-12">
-                                                <button onclick="closeModal('modal-{{ $empleado->id }}')"
-                                                    class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-                                                    <i class="fa-solid fa-xmark text-lg"></i>
-                                                </button>
-                                                <h3 class="text-lg font-semibold mb-4 text-center">Permisos de
-                                                    {{ $empleado->nombres }}
-                                                    {{ $empleado->apellidos }}
-                                                </h3>
+                {{-- Body Modal --}}
+                <div class="p-4 overflow-y-auto custom-scrollbar bg-gray-50/30">
+                    @forelse($empleado->permisos as $permiso)
+                        <div class="bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:border-blue-300 transition-colors">
+                            <div class="flex justify-between items-start gap-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-bold text-xs text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded uppercase">
+                                            {{ $permiso->tipo->nombre }}
+                                        </span>
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $permiso->estado ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                                    </div>
+                                    <p class="text-gray-600 text-xs italic mb-1.5 leading-snug">"{{ $permiso->motivo }}"</p>
+                                    
+                                    <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+                                        @if($permiso->fecha_inicio)
+                                            <span class="flex items-center bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                                                <i class="fa-regular fa-calendar mr-1"></i> {{ $permiso->fecha_inicio }}
+                                            </span>
+                                        @endif
+                                        @if($permiso->valor) 
+                                            <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded">
+                                                <i class="fa-regular fa-clock mr-1"></i> {{ $permiso->valor }} mins
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
 
-                                                <div class="space-y-3 max-h-[400px] overflow-y-auto">
-                                                    @forelse($empleado->permisos as $permiso)
-                                                        <div class="border rounded-lg p-3 bg-gray-50 w-full flex flex-col gap-2">
-                                                            <div
-                                                                class="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
-                                                                <div class="flex-1 space-y-1">
-                                                                    <p><span class="font-semibold">Tipo:</span>
-                                                                        {{ $permiso->tipo->nombre }}</p>
-                                                                    <p><span class="font-semibold">Motivo:</span>
-                                                                        {{ $permiso->motivo }}</p>
-                                                                    @if($permiso->valor || $permiso->cantidad_mts)
-                                                                        <p><span class="font-semibold">Valor/Mts:</span>
-                                                                            @if($permiso->valor) {{ $permiso->valor }} mins
-                                                                            @else {{ $permiso->cantidad_mts }} mts @endif
-                                                                        </p>
-                                                                    @endif
-                                                                    @if($permiso->fecha_inicio || $permiso->fecha_fin)
-                                                                        <p><span class="font-semibold">Fechas:</span>
-                                                                            {{ $permiso->fecha_inicio ?? '-' }}
-                                                                            @if($permiso->fecha_fin) - {{ $permiso->fecha_fin }} @endif
-                                                                        </p>
-                                                                    @endif
-                                                                    @if($permiso->dias_activa)
-                                                                        <p><span class="font-semibold">Días activo:</span>
-                                                                            {{ $permiso->dias_activa }}</p>
-                                                                    @endif
-                                                                    <p><span class="font-semibold">Estado:</span>
-                                                                        @if($permiso->estado) Activo
-                                                                        @else Inactivo @endif</p>
-                                                                </div>
-
-                                                                <div class="flex-shrink-0 flex items-start gap-2 mt-2 md:mt-0">
-                                                                    <a href="{{ route('permisos.edit', $permiso->id) }}"
-                                                                        class="text-blue-600 hover:underline" title="Editar">
-                                                                        <i class="fa-solid fa-pen-to-square"></i>
-                                                                    </a>
-                                                                    <form action="{{ route('permisos.delete', $permiso->id) }}"
-                                                                        method="POST"
-                                                                        onsubmit="return confirm('¿Seguro que deseas eliminar este permiso?')">
-                                                                        @csrf
-                                                                        @method('DELETE')
-                                                                        <button class="text-red-600 hover:underline"
-                                                                            title="Inactivar">
-                                                                            <i class="fa-solid fa-trash"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @empty
-                                                        <p class="text-gray-500">No tiene permisos registrados.</p>
-                                                    @endforelse
-                                                </div>
-                                            </div>
-                                        </div>
+                                {{-- Acciones --}}
+                                <div class="flex flex-col gap-1">
+                                    {{-- Usamos @click.stop para que no interfiera el clic de la card al editar --}}
+                                    <a href="{{ route('permisos.edit', $permiso->id) }}" 
+                                       @click.stop
+                                       class="w-6 h-6 flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors text-xs">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <button type="button"
+                                        @click.stop="showModal = false; $dispatch('open-confirm-modal', { 
+                                            url: '{{ route('permisos.delete', $permiso->id) }}',
+                                            title: '¿Eliminar permiso?',
+                                            message: 'Esta acción es irreversible.',
+                                            buttonText: 'Eliminar'
+                                        })"
+                                        class="w-6 h-6 flex items-center justify-center text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors text-xs">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-6 text-xs text-gray-400">Sin permisos registrados</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
                                     @endforeach
                                 </div>
                             </div>
                         </div>
                     @endforeach
-                    <div id="mensajeSinResultados" class="hidden text-center py-4 text-gray-500">
-                        <p>No se encontraron resultados.</p>
-                    </div>
-                </div>
 
+                    <div id="mensajeSinResultados" class="hidden text-center py-8">
+                        <p class="text-sm text-gray-500">No se encontraron empleados.</p>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
 
+    {{-- Script de búsqueda (Igual que antes, funciona perfecto) --}}
     <script>
-        function openModal(id) {
-            document.getElementById(id).classList.remove('hidden');
-            document.getElementById(id).classList.add('flex');
-        }
-        function closeModal(id) {
-            document.getElementById(id).classList.remove('flex');
-            document.getElementById(id).classList.add('hidden');
-        }
         const buscador = document.getElementById('buscadorEmpleados');
         const acordeones = document.querySelectorAll('.sucursal-accordion');
 
-        // FUNCIÓN CORREGIDA: Detecta la versión de Alpine y fuerza el cambio
         function setAccordion(acordeon, estadoOpen) {
-            if (acordeon._x_dataStack) {
-                //  Para Alpine.js v3
-                acordeon._x_dataStack[0].open = estadoOpen;
-            } else if (acordeon.__x) {
-                // Para Alpine.js v2 (Antiguo)
-                acordeon.__x.$data.open = estadoOpen;
-            } else {
-                // Fallback: Si no detecta Alpine, intenta buscar el botón y hacerle click si es necesario
-                // Esto es útil si la estructura HTML es muy compleja
-                console.warn('No se detectó la instancia de Alpine en:', acordeon);
-            }
+            if (acordeon._x_dataStack) acordeon._x_dataStack[0].open = estadoOpen;
         }
 
         buscador.addEventListener('input', function () {
             const texto = this.value.toLowerCase().trim();
+            const mensajeSinResultados = document.getElementById('mensajeSinResultados');
 
-            //  1. SI EL BUSCADOR ESTÁ VACÍO
             if (texto === '') {
                 acordeones.forEach((acordeon, index) => {
                     acordeon.classList.remove('hidden');
-
-                    // Muestra todas las tarjetas internas
-                    acordeon.querySelectorAll('.empleado-card').forEach(card => {
-                        card.classList.remove('hidden');
-                    });
-
-                    // Resetea estado: Abre el primero, cierra los demás
+                    acordeon.querySelectorAll('.empleado-card').forEach(card => card.classList.remove('hidden'));
                     setAccordion(acordeon, index === 0);
                 });
+                mensajeSinResultados.classList.add('hidden');
                 return;
             }
-            let totalCoincidenciasGlobales = 0;
-            // 2. SI HAY TEXTO (BUSCAR)
+            
+            let totalCoincidencias = 0;
             acordeones.forEach(acordeon => {
                 const cards = acordeon.querySelectorAll('.empleado-card');
-                let coincidenciasEnGrupo = 0;
-
+                let count = 0;
                 cards.forEach(card => {
-                    // Usamos '|| ""' para evitar error si el dataset está vacío
-                    const nombre = (card.dataset.nombre || '').toLowerCase();
-                    const codigo = (card.dataset.codigo || '').toLowerCase();
-
-                    if (nombre.includes(texto) || codigo.includes(texto)) {
-                        card.classList.remove('hidden');
-                        coincidenciasEnGrupo++;
-                    } else {
-                        card.classList.add('hidden');
-                    }
+                    const match = (card.dataset.nombre || '').toLowerCase().includes(texto) || (card.dataset.codigo || '').toLowerCase().includes(texto);
+                    card.classList.toggle('hidden', !match);
+                    if(match) count++;
                 });
-                totalCoincidenciasGlobales += coincidenciasEnGrupo;
-                if (coincidenciasEnGrupo > 0) {
-                    // HAY COINCIDENCIA:
-                    // 1. Quitamos la clase hidden del contenedor principal
-                    acordeon.classList.remove('hidden');
-                    // 2. Forzamos a Alpine a poner la variable 'open' en true
-                    setAccordion(acordeon, true);
-                } else {
-                    // NO HAY COINCIDENCIA:
-                    acordeon.classList.add('hidden');
-                    setAccordion(acordeon, false);
-                }
+                totalCoincidencias += count;
+                acordeon.classList.toggle('hidden', count === 0);
+                if(count > 0) setAccordion(acordeon, true);
             });
-            if (totalCoincidenciasGlobales === 0) {
-                mensajeSinResultados.classList.remove('hidden');
-            } else {
-                mensajeSinResultados.classList.add('hidden');
-            }
+            
+            mensajeSinResultados.classList.toggle('hidden', totalCoincidencias > 0);
         });
     </script>
-
 </x-app-layout>

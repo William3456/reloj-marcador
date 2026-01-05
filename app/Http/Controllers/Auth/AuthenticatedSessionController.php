@@ -27,6 +27,10 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        
+        if ($request->user()->id_rol == 3) {
+            return redirect()->route('marcacion.inicio');
+        }
 
         return redirect()->intended(route('dashboard', absolute: false));
     }

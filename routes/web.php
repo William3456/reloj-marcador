@@ -1,192 +1,201 @@
 <?php
 
-use App\Http\Controllers\Api\DeptosPuestosController;
-use App\Http\Controllers\Departamentos\DepartamentosController;
-use App\Http\Controllers\Empleados\EmpleadoController;
-use App\Http\Controllers\Empresa\EmpresaController;
-use App\Http\Controllers\Horarios\HorarioController;
-use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
-use App\Http\Controllers\Permiso\PermisoController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Puestos\PuestosController;
-use App\Http\Controllers\Reportes\ReporteEmpleadoController;
-use App\Http\Controllers\Sucursales\SucursalController;
-use App\Models\Turnos\Turnos;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail; // Para el test de correo
 
+// Importación de Controladores
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Empresa\EmpresaController;
+use App\Http\Controllers\Sucursales\SucursalController;
+use App\Http\Controllers\Horarios\HorarioController;
+use App\Http\Controllers\Empleados\EmpleadoController;
+use App\Http\Controllers\Permiso\PermisoController;
+use App\Http\Controllers\Departamentos\DepartamentosController;
+use App\Http\Controllers\Puestos\PuestosController;
+use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
+use App\Http\Controllers\Reportes\ReporteEmpleadoController;
+use App\Http\Controllers\MarcacionApp\MarcacionController;
+use App\Http\Controllers\Api\DeptosPuestosController; // Para la API interna
+use App\Models\Turnos\Turnos;
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS PÚBLICAS Y DE REDIRECCIÓN INICIAL
+|--------------------------------------------------------------------------
+*/
+
+// Ruta Raíz Inteligente: Decide qué mostrar según el rol
 Route::get('/', function () {
-    return view('dashboard');
-    // Route::get('/empresa/show', [EmpresaController::class, 'show'])->name('empresas.show')->middleware('check.role:1');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    $user = Auth::user();
+    
+    // Si es Empleado (Rol 3), ir directo a marcación
+    if ($user->id_rol == 3) {
+        return redirect()->route('marcacion.inicio');
+    }
 
-Route::get('/dashboard', function () {
+    // Si es Admin o Gerente (Rol 1 o 2), mostrar Dashboard
     return view('dashboard');
-    // Route::get('/empresa/show', [EmpresaController::class, 'show'])->name('empresas.show')->middleware('check.role:1');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'verified'])->name('home');
 
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS PARA EMPLEADOS (ROL 3) - LA APP MÓVIL
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified', 'check.role:3'])->group(function () {
+    
+    Route::controller(MarcacionController::class)->prefix('marcacion')->name('marcacion.')->group(function () {
+        Route::get('/inicio', 'index')->name('inicio');
+        Route::post('/store', 'store')->name('store'); 
+    });
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS ADMINISTRATIVAS (ROLES 1 y 2) - GESTIÓN
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
+
+    // Dashboard Administrativo
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    // --- SUCURSALES ---
+    Route::controller(SucursalController::class)->prefix('sucursales')->name('sucursales.')->group(function () {
+        Route::get('/index', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // --- HORARIOS ---
+    Route::controller(HorarioController::class)->prefix('horarios')->name('horarios.')->group(function () {
+        Route::get('/index', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // --- EMPLEADOS ---
+    Route::controller(EmpleadoController::class)->prefix('empleados')->name('empleados.')->group(function () {
+        Route::get('/index', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::get('/{id}/info', 'show')->name('info');
+    });
+
+    // --- PERMISOS ---
+    Route::controller(PermisoController::class)->prefix('permisos')->name('permisos.')->group(function () {
+        Route::get('/index', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // --- DEPARTAMENTOS ---
+    Route::controller(DepartamentosController::class)->prefix('departamentos')->name('departamentos.')->group(function () {
+        Route::get('/index', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // --- PUESTOS ---
+    Route::controller(PuestosController::class)->prefix('puestos')->name('puestos.')->group(function () {
+        Route::get('/index', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/create', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // --- ASIGNACIÓN DE HORARIOS ---
+    Route::controller(HorarioEmpleadoController::class)->group(function () {
+        Route::get('/horario-trabajador', 'index')->name('empleadoshorarios.asign');
+        Route::post('/horario-trabajador/store', 'store')->name('horario_trabajador.store');
+    });
+
+    // --- REPORTES ---
+    Route::controller(ReporteEmpleadoController::class)->prefix('reportes/empleados')->name('reportes.empleados.')->group(function () {
+        Route::get('/rep-empleados', 'porSucursal')->name('empleados_rep');
+    });
+    
+    // Generación de PDF (Se deja fuera del grupo 'prefix' anterior para mantener tu nombre de ruta exacto si lo usas en JS)
+    Route::get('/reportes/empleados/pdf', [ReporteEmpleadoController::class, 'generarPdf'])->name('empleados.pdf');
+    
+    // --- EMPRESAS (LISTADO SOLO PARA ROL 2 SEGÚN TU CÓDIGO ANTERIOR) ---
+    Route::view('/empresas', 'empresas.lista')->name('empresas.home')->middleware('check.role:2');
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS SUPER ADMIN (SOLO ROL 1)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified', 'check.role:1'])->group(function () {
+    Route::controller(EmpresaController::class)->prefix('empresa')->name('empresas.')->group(function () {
+        Route::post('/', 'store')->name('store');
+        Route::get('/show', 'show')->name('show');
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| PERFIL DE USUARIO (COMÚN PARA TODOS)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->group(function () {
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::view('/empresas', 'empresas.lista')->name('empresas.home')->middleware('check.role:2'); // Para listado, por ahorita no
-    Route::post('/empresa', [EmpresaController::class, 'store'])->name('empresas.store')->middleware('check.role:1');
-    Route::get('/empresa/show', [EmpresaController::class, 'show'])->name('empresas.show')->middleware('check.role:1');
-
-    // Para sucurusales
-    Route::get('sucursales/create', [SucursalController::class, 'create'])
-        ->name('sucursales.create')
-        ->middleware('check.role:1-2');
-    Route::post('sucursales/create', [SucursalController::class, 'store'])
-        ->name('sucursales.store')
-        ->middleware('check.role:1-2');
-    Route::get('sucursales/index', [SucursalController::class, 'index'])
-        ->name('sucursales.index')
-        ->middleware(['check.role:1-2']);
-    Route::get('sucursales/edit/{id}', [SucursalController::class, 'edit'])
-        ->name('sucursales.edit')
-        ->middleware('check.role:1-2');
-    Route::put('sucursales/update/{id}', [SucursalController::class, 'update'])
-        ->name('sucursales.update')
-        ->middleware('check.role:1-2');
-    Route::delete('sucursales/delete/{id}', [SucursalController::class, 'destroy'])
-        ->name('sucursales.delete')
-        ->middleware('check.role:1-2');
-
-    // Para horarios
-    Route::get('horarios/create', [HorarioController::class, 'create'])
-        ->name('horarios.create')
-        ->middleware('check.role:1-2');
-    Route::post('horarios/create', [HorarioController::class, 'store'])
-        ->name('horarios.store')
-        ->middleware('check.role:1-2');
-    Route::get('horarios/index', [HorarioController::class, 'index'])
-        ->name('horarios.index')
-        ->middleware(['check.role:1-2']);
-    Route::get('horarios/edit/{id}', [HorarioController::class, 'edit'])
-        ->name('horarios.edit')
-        ->middleware('check.role:1-2');
-    Route::put('horarios/update/{id}', [HorarioController::class, 'update'])
-        ->name('horarios.update')
-        ->middleware('check.role:1-2');
-    Route::delete('horarios/delete/{id}', [HorarioController::class, 'destroy'])
-        ->name('horarios.delete')
-        ->middleware('check.role:1-2');
-
-    // Para Empleados
-    Route::get('empleados/create', [EmpleadoController::class, 'create'])
-        ->name('empleados.create')
-        ->middleware('check.role:1-2');
-    Route::post('empleados/create', [EmpleadoController::class, 'store'])
-        ->name('empleados.store')
-        ->middleware('check.role:1-2');
-    Route::get('empleados/index', [EmpleadoController::class, 'index'])
-        ->name('empleados.index')
-        ->middleware(['check.role:1-2']);
-    Route::get('empleados/edit/{id}', [EmpleadoController::class, 'edit'])
-        ->name('empleados.edit')
-        ->middleware('check.role:1-2');
-    Route::put('empleados/update/{id}', [EmpleadoController::class, 'update'])
-        ->name('empleados.update')
-        ->middleware('check.role:1-2');
-    Route::delete('empleados/delete/{id}', [EmpleadoController::class, 'destroy'])
-        ->name('empleados.delete')
-        ->middleware('check.role:1-2');
-    Route::get('/empleados/{id}/info', [EmpleadoController::class, 'show'])->name('empleados.info');
-
-    // Para permisos de Empleados
-    Route::get('permisos/create', [PermisoController::class, 'create'])
-        ->name('permisos.create')
-        ->middleware('check.role:1-2');
-    Route::post('permisos/create', [PermisoController::class, 'store'])
-        ->name('permisos.store')
-        ->middleware('check.role:1-2');
-    Route::get('permisos/index', [PermisoController::class, 'index'])
-        ->name('permisos.index')
-        ->middleware(['check.role:1-2']);
-    Route::get('permisos/edit/{id}', [PermisoController::class, 'edit'])
-        ->name('permisos.edit')
-        ->middleware('check.role:1-2');
-    Route::put('permisos/update/{id}', [PermisoController::class, 'update'])
-        ->name('permisos.update')
-        ->middleware('check.role:1-2');
-    Route::delete('permisos/delete/{id}', [PermisoController::class, 'destroy'])
-        ->name('permisos.delete')
-        ->middleware('check.role:1-2');
-
-    // Asignaciones de horarios
-
-    // Guardar asignación de horario
-    Route::post('/horario-trabajador/store', [HorarioEmpleadoController::class, 'store'])
-        ->name('horario_trabajador.store')->middleware('check.role:1-2');
-
-    Route::get('/horario-trabajador', [HorarioEmpleadoController::class, 'index'])
-        ->name('empleadoshorarios.asign');
-
-    // Para departamentos
-    Route::get('departamentos/create', [DepartamentosController::class, 'create'])
-        ->name('departamentos.create')
-        ->middleware('check.role:1-2');
-    Route::post('departamentos/create', [DepartamentosController::class, 'store'])
-        ->name('departamentos.store')
-        ->middleware('check.role:1-2');
-    Route::get('departamentos/index', [DepartamentosController::class, 'index'])
-        ->name('departamentos.index')
-        ->middleware(['check.role:1-2']);
-    Route::get('departamentos/edit/{id}', [DepartamentosController::class, 'edit'])
-        ->name('departamentos.edit')
-        ->middleware('check.role:1-2');
-    Route::put('departamentos/update/{id}', [DepartamentosController::class, 'update'])
-        ->name('departamentos.update')
-        ->middleware('check.role:1-2');
-    Route::delete('departamentos/delete/{id}', [DepartamentosController::class, 'destroy'])
-        ->name('departamentos.delete')
-        ->middleware('check.role:1-2');
-
-    // Para puestos
-    Route::get('puestos/create', [PuestosController::class, 'create'])
-        ->name('puestos.create')
-        ->middleware('check.role:1-2');
-    Route::post('puestos/create', [PuestosController::class, 'store'])
-        ->name('puestos.store')
-        ->middleware('check.role:1-2');
-    Route::get('puestos/index', [PuestosController::class, 'index'])
-        ->name('puestos.index')
-        ->middleware(['check.role:1-2']);
-    Route::get('puestos/edit/{id}', [PuestosController::class, 'edit'])
-        ->name('puestos.edit')
-        ->middleware('check.role:1-2');
-    Route::put('puestos/update/{id}', [PuestosController::class, 'update'])
-        ->name('puestos.update')
-        ->middleware('check.role:1-2');
-    Route::delete('puestos/delete/{id}', [PuestosController::class, 'destroy'])
-        ->name('puestos.delete')
-        ->middleware('check.role:1-2');
-
-    // Para reportes - Empleados
-    Route::get('reportes/empleados/rep-empleados', [ReporteEmpleadoController::class, 'porSucursal'])
-        ->name('reportes.empleados.empleados_rep')
-        ->middleware('check.role:1-2');
-
-    Route::get('/reportes/empleados/pdf', [ReporteEmpleadoController::class, 'generarPdf'])
-    ->name('empleados.pdf');
 });
 
-Route::middleware('api')->prefix('api')->group(function () {
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS API INTERNAS (Consumidas por AJAX/JS en el mismo dominio)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['api'])->prefix('api')->group(function () {
     Route::get('/turnos', function () {
         return Turnos::all();
     });
     Route::get('/puestosDptosBySucId/{sucursalId}', [DeptosPuestosController::class, 'puestosAndDeptos']);
-    // Detalles de sucursal
     Route::get('/sucursal/details/{id}', [HorarioEmpleadoController::class, 'getSucursalDetails']);
-
-    // Detalles de empleados por sucursa
     Route::get('/empleados/sucursal/{id}', [HorarioEmpleadoController::class, 'getEmpleadosBySucursal']);
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| UTILIDADES / PRUEBAS
+|--------------------------------------------------------------------------
+*/
 Route::get('/test-mail', function () {
-    \Illuminate\Support\Facades\Mail::raw('Correo funcionando!', function ($m) {
+    Mail::raw('Correo funcionando!', function ($m) {
         $m->to('tu_correo@gmail.com')->subject('Prueba');
     });
 });
+
 require __DIR__.'/auth.php';

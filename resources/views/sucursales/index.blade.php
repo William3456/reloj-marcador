@@ -66,14 +66,16 @@
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
 
-                                            <form action="{{ route('sucursales.delete', $s->id) }}" method="POST"
-                                                onsubmit="return confirm('¿Seguro que deseas inactivar esta sucursal?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="text-red-600 hover:underline" title="Inactivar">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button"
+                                                @click="$dispatch('open-confirm-modal', { 
+                                                    url: '{{ route('sucursales.delete', $s->id) }}',
+                                                    title: 'Inactivar sucursal?',
+                                                    message: 'La sucursal será inactivada',
+                                                    buttonText: 'Inactivar'
+                                                })"
+                                                class="text-red-500 hover:text-red-700 p-1" title="Inactivar">
+                                                <i class="fa-solid fa-ban"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

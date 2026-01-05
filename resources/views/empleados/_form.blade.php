@@ -165,8 +165,8 @@
                     dataType: 'json',
                     success: function (data) {
                         console.log("OK:", data);
-                        const empleadoDepto = {{ $empleado->id_depto ?? 'null' }};
-                        const empleadoPuesto = {{ $empleado->id_puesto ?? 'null' }};
+                        const empleadoDepto = {{ old('id_depto', $empleado->id_depto ?? 'null') }};
+                        const empleadoPuesto = {{ old('id_puesto', $empleado->id_puesto ?? 'null') }};
                         // Departamentos
                         let dep = '<option value="">Seleccione</option>';
                         data.departamentos.forEach(d => {

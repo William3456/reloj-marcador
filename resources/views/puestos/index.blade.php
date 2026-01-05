@@ -77,14 +77,16 @@
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
 
-                                            <form action="{{ route('puestos.delete', $d->id) }}" method="POST"
-                                                onsubmit="return confirm('¿Seguro que deseas eliminar este horario?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="text-red-600 hover:underline" title="Inactivar">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button"
+                                                @click="$dispatch('open-confirm-modal', { 
+                                                    url: '{{ route('puestos.delete', $d->id) }}',
+                                                    title: '¿Eliminar puesto?',
+                                                    message: 'El puesto se eliminará definitivamente del sistema',
+                                                    buttonText: 'Eliminar'
+                                                })"
+                                                class="text-red-500 hover:text-red-700 p-1" title="Eliminar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
