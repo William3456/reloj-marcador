@@ -26,7 +26,7 @@ class MarcacionController extends Controller
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
 
         // 🕒 ESCENARIO 2: Salida OLVIDADA (8:30 PM hoy)
-         //Carbon::setTestNow(now()->setTime(19, 15, 0));
+        // Carbon::setTestNow(now()->setTime(19, 15, 0));
 
         // 🕒 ESCENARIO 3: Salida Temprana (3:00 PM hoy)
         // \Carbon\Carbon::setTestNow(now()->setTime(15, 0, 0));
@@ -34,6 +34,44 @@ class MarcacionController extends Controller
         // 🕒 ESCENARIO 4: Mañana a las 8:00 AM
         // Carbon::setTestNow(now()->addDay()->setTime(20, 0, 0));
 
+    }
+
+    public function indexPanel(Request $request)
+    {
+        $query = MarcacionEmpleado::visiblePara(Auth::user())-> with(['empleado', 'sucursal', 'salida'])
+            ->where('tipo_marcacion', 1);
+
+        // 1. Filtro por Nombre (Igual que antes)
+        if ($request->has('empleado') && $request->empleado != '') {
+            $query->whereHas('empleado', function ($q) use ($request) {
+                $q->where('nombres', 'like', '%'.$request->empleado.'%')
+                    ->orWhere('apellidos', 'like', '%'.$request->empleado.'%');
+            });
+        }
+
+        // 2. NUEVO FILTRO: "En Proceso" (Sin Salida)
+        if ($request->get('estado') == 'sin_cierre') {
+            // Busca marcaciones que NO tengan una salida registrada
+            $query->doesntHave('salida');
+
+            // Opcional: Si quieres ver marcaciones "En proceso" históricas o solo las de hoy.
+            // Si quieres ver TODAS las que quedaron abiertas alguna vez, quita el filtro de fechas abajo.
+            // Si quieres ver solo las de hoy que siguen abiertas, deja el filtro de fechas.
+        }
+
+        // 3. Filtro de Fechas
+        // Nota: Si presionas el botón "Turno Actual", el request ya traerá la fecha de hoy
+        $desde = $request->input('desde', date('Y-m-01'));
+        $hasta = $request->input('hasta', date('Y-m-d'));
+
+        $query->whereBetween('created_at', [
+            Carbon::parse($desde)->startOfDay(),
+            Carbon::parse($hasta)->endOfDay(),
+        ]);
+
+        $marcaciones = $query->latest()->get();
+
+        return view('marcaciones.index', compact('marcaciones'));
     }
 
     public function index()
@@ -135,6 +173,20 @@ class MarcacionController extends Controller
             'ubicacion' => 'nullable|string|max:255',
             'tipo_marcacion' => 'required|in:1,2',
             'ubi_foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ], [
+    // --- MENSAJES PERSONALIZADOS PARA LATITUD ---
+            'latitud.required' => 'Ubicación no detectada. Valide si está encendido el GPS.',
+            'latitud.not_in'   => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
+            'latitud.numeric'  => 'Formato de latitud inválido.',
+
+            // --- MENSAJES PERSONALIZADOS PARA LONGITUD ---
+            'longitud.required'=> 'Ubicación no detectada. Valide si está encendido el GPS.',
+            'longitud.not_in'  => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
+            
+            // Otros mensajes opcionales para que se vea bien en el formulario
+            'ubi_foto.required' => 'Debes tomar la foto de evidencia.',
+            'ubi_foto.image'    => 'El archivo de evidencia debe ser una imagen.',
+            'ubi_foto.max'      => 'La foto es demasiado pesada (Máx 5MB).',
         ]);
 
         // =========================

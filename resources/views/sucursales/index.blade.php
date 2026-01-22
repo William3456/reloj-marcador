@@ -20,13 +20,14 @@
             <div class="bg-gray-100 shadow rounded-lg p-6">
 
                 {{-- Botón agregar --}}
+                @if($role = Auth::user()->id_rol == 1)
                 <div class="flex justify-end mb-4">
                     <a href="{{ route('sucursales.create') }}"
                         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
                         + Añadir nueva
                     </a>
                 </div>
-
+                @endif
                 {{-- Tabla --}}
                 <div class="overflow-x-auto">
                     <table id="tablaSucursales" class="min-w-full divide-y divide-gray-200">

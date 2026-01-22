@@ -103,6 +103,30 @@
                     Inicio
                 </div>
             </a>
+
+            <div x-data="{ open: {{ request()->routeIs('marcaciones.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
+                            {{ request()->routeIs('marcaciones.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                    :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+                    <div class="flex items-center">
+                        <i class="fas fa-user-clock w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Marcaciones</span>
+                    </div>
+                    <i x-show="sidebarExpanded" x-cloak
+                        class="fas fa-chevron-down text-xs transition-transform duration-200"
+                        :class="open ? 'rotate-180' : ''"></i>
+
+                    <div x-show="!sidebarExpanded" x-cloak
+                        class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Marcaciones
+                    </div>
+                </button>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('marcaciones.index') }}"
+                        class="block py-2 text-sm {{ request()->routeIs('marcaciones.index') ? $activeLinkClass : $inactiveLinkClass }}">Ver marcaciones</a>
+                </div>
+            </div>
+
             <div x-data="{ open: {{ request()->routeIs('horarios.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
                             {{ request()->routeIs('horarios.*') ? $activeBtnClass : $inactiveBtnClass }}"

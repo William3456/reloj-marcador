@@ -82,7 +82,7 @@ class SucursalController extends Controller
     {
 
         $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
-        $horarios = horario::visiblePara(Auth::user())->where('permitido_marcacion', '=', 1)->get();
+        $horarios = horario::where('permitido_marcacion', '=', 1)->get();
         $estados = collect([
             (object) ['id' => 1, 'nombre_estado' => 'activo'],
             (object) ['id' => 0, 'nombre_estado' => 'inactivo'],

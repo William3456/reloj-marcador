@@ -19,7 +19,7 @@ class HorarioEmpleadoController extends Controller
     public function index()
     {
         $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', '=', 1)->get();
-        $horarios = horario::visiblePara(Auth::user())->where('estado', 1)
+        $horarios = horario::where('estado', 1)
             ->where('permitido_marcacion', 0)
             ->orderBy('turno_txt')
             ->get();
@@ -31,7 +31,7 @@ class HorarioEmpleadoController extends Controller
     {
         try {
             $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
-            $horarios = horario::visiblePara(Auth::user())->where('id', $sucursal->id_horario)->first();
+            $horarios = horario::where('id', $sucursal->id_horario)->first();
             $data = [
                 'sucursal' => $sucursal,
                 'horarios' => $horarios,

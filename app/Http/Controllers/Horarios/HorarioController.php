@@ -15,7 +15,7 @@ class HorarioController extends Controller
      */
     public function index()
     {
-        $horarios = horario::visiblePara(Auth::user())->get();
+        $horarios = horario::get();
         
         return view('horarios.index', [
             'horarios' => $horarios,
@@ -86,7 +86,7 @@ class HorarioController extends Controller
      */
     public function edit(string $id)
     {
-        $horario = horario::visiblePara(Auth::user())->findOrFail($id);
+        $horario = horario::findOrFail($id);
         
         return view('horarios.edit', compact('horario'));
     }

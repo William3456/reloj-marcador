@@ -2,6 +2,7 @@
 
 namespace App\Models\Marcacion;
 
+use App\Models\Empleado\Empleado;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Model;
 
@@ -31,13 +32,31 @@ class MarcacionEmpleado extends Model
             'id'
         );
     }
+
     public function entrada()
     {
         return $this->belongsTo(self::class, 'id_marcacion_entrada');
     }
-
+    public function empleado()
+    {
+        return $this->belongsTo(Empleado::class, 'id_empleado');
+    }
     public function salida()
     {
         return $this->hasOne(self::class, 'id_marcacion_entrada');
+    }
+
+    public function scopeVisiblePara($query, $user)
+    {
+        if ($user->rol->id == 1) {
+            return $query; // admin ve todo
+        }
+
+        if ($user->rol->id == 2) {
+
+            return $query->where('id_sucursal', $user->empleado->id_sucursal);
+        }
+
+        return $query;
     }
 }

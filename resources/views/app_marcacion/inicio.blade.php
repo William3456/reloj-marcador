@@ -386,62 +386,60 @@
     </div>
 </div>
 @endif
-    @push('scripts')
+@push('scripts')
 <script>
-    const MODO_PRUEBAS = false; // <-- false en producción
+    const MODO_PRUEBAS = true; // Cambiar a true solo para desarrollo
+    const PRECISION_REQUERIDA = 100; // Metros aceptables
 
     // Ubicación fija de prueba
-    const UBICACION_FAKE = { latitude: 13.69696, longitude: -89.24584, accuracy: 5 };
+    const UBICACION_FAKE = {
+        latitude: 13.69696,
+        longitude: -89.24584,
+        accuracy: 5
+    };
 
-    // Variables globales
-    let watchId = null;
-    let intentoGPS = 0;
-
-    function toggleModal(modalID) {
-        document.getElementById(modalID).classList.toggle("hidden");
-    }
-
-    function actualizarReloj() {
-        const ahora = new Date();
-        document.getElementById('reloj-tiempo-real').textContent = 
-            ahora.toLocaleTimeString('es-SV', { hour12: false });
-    }
-    setInterval(actualizarReloj, 1000);
-    actualizarReloj();
-
-    // Elementos del DOM
     const btnMarcar = document.getElementById('btn-marcar');
     const statusGps = document.getElementById('gps-status');
     const inputLat = document.getElementById('latitud');
     const inputLng = document.getElementById('longitud');
     const gpsAccuracyText = document.getElementById('gps-accuracy');
+    const inputFoto = document.getElementById('input-foto');
 
-    // OPCIONES GPS: 
-    // maximumAge: 0 -> Obliga a no usar caché, siempre pide al satélite real.
-    // timeout: 15000 -> Si en 15 seg no responde, lanza error para reiniciar.
-    const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+    // Variables de estado
+    let gpsValido = false;
+    let fotoValida = false;
 
-    // Iniciar el sistema
-    iniciarGPS();
+    function toggleModal(modalID) {
+        document.getElementById(modalID).classList.toggle("hidden");
+    }
 
-    function iniciarGPS() {
-        if (MODO_PRUEBAS) {
-            aplicarUbicacionFake();
-            return;
-        }
+    // --- RELOJ EN TIEMPO REAL ---
+    function actualizarReloj() {
+        const ahora = new Date();
+        const horas = String(ahora.getHours()).padStart(2, '0');
+        const minutos = String(ahora.getMinutes()).padStart(2, '0');
+        const segundos = String(ahora.getSeconds()).padStart(2, '0');
+        const el = document.getElementById('reloj-tiempo-real');
+        if(el) el.textContent = `${horas}:${minutos}:${segundos}`;
+    }
+    setInterval(actualizarReloj, 1000);
+    actualizarReloj();
 
-        if ("geolocation" in navigator) {
-            // Limpiamos cualquier watcher anterior para evitar duplicados
-            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-            
-            statusGps.textContent = "Buscando señal satelital...";
-            statusGps.className = "text-orange-500 animate-pulse"; // Animación visual
+    // --- GEOLOCALIZACIÓN ---
+    const options = { 
+        enableHighAccuracy: true, 
+        timeout: 15000, 
+        maximumAge: 0 
+    };
 
-            watchId = navigator.geolocation.watchPosition(success, error, options);
-        } else {
-            statusGps.textContent = "Navegador incompatible";
-            statusGps.className = "text-red-500 font-bold";
-        }
+    if (MODO_PRUEBAS) {
+        setTimeout(aplicarUbicacionFake, 1000);
+    } else if ("geolocation" in navigator) {
+        // watchPosition se queda escuchando cambios en la ubicación
+        navigator.geolocation.watchPosition(success, error, options);
+    } else {
+        statusGps.textContent = "GPS no soportado en este navegador";
+        statusGps.className = "text-sm text-red-600 font-bold";
     }
 
     function aplicarUbicacionFake() {
@@ -450,8 +448,7 @@
                 latitude: UBICACION_FAKE.latitude,
                 longitude: UBICACION_FAKE.longitude,
                 accuracy: UBICACION_FAKE.accuracy
-            },
-            timestamp: Date.now()
+            }
         });
     }
 
@@ -460,79 +457,86 @@
         const lng = position.coords.longitude;
         const acc = Math.round(position.coords.accuracy);
 
-        // Feedback visual de que está "pensando" (Un punto parpadeando o la hora)
-        const horaUpdate = new Date().toLocaleTimeString().split(' ')[0];
-        
-        // 1. SIEMPRE mostramos la precisión actual, aunque sea mala, para que el usuario vea que mejora
-        gpsAccuracyText.innerHTML = `Precisión: <b>+/- ${acc}m</b> <span class="text-xs text-gray-400">(${horaUpdate})</span>`;
+        // 1. Mostrar Precisión al Usuario visualmente
+        let colorPrecision = 'text-red-500';
+        if(acc <= PRECISION_REQUERIDA) colorPrecision = 'text-green-600';
+        else if(acc <= PRECISION_REQUERIDA * 2) colorPrecision = 'text-orange-500';
 
-        // 2. Lógica de validación
-        if (acc <= 100) {
-            // SEÑAL BUENA
+        gpsAccuracyText.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
+
+        // 2. Evaluar si la precisión es aceptable
+        if (acc <= PRECISION_REQUERIDA) {
+            // -- SEÑAL BUENA --
+            gpsValido = true;
+            
+            // Llenar inputs ocultos
             inputLat.value = lat;
             inputLng.value = lng;
             
-            statusGps.textContent = MODO_PRUEBAS ? "Ubicación PRUEBA OK" : "Ubicación Precisa";
-            statusGps.className = "text-green-600 font-bold";
+            // Actualizar UI
+            statusGps.textContent = "Ubicación Precisa Confirmada";
+            statusGps.className = "text-sm font-bold text-green-700";
             
-            btnMarcar.disabled = false;
-            btnMarcar.classList.remove('opacity-50', 'cursor-not-allowed');
+            // Icono estático (ya encontró)
+            const iconContainer = document.getElementById('gps-icon');
+            if(iconContainer) iconContainer.classList.remove('animate-bounce');
 
-            // Actualizar campos ocultos del modal si existen
+            // Actualizar inputs del modal de bloqueo si existe
             const modalLat = document.querySelector('.lat-bloqueo');
             const modalLng = document.querySelector('.lng-bloqueo');
             if(modalLat) modalLat.value = lat;
             if(modalLng) modalLng.value = lng;
 
         } else {
-            // SEÑAL MALA O DEBIL
-            statusGps.innerHTML = `Calibrando... (Señal débil: ${acc}m)`;
-            statusGps.className = "text-orange-600 font-bold animate-pulse"; // Parpadea para indicar trabajo
+            // -- SEÑAL MALA / INESTABLE --
+            gpsValido = false;
             
-            // Importante: No permitimos marcar, pero el watchPosition sigue corriendo
-            // y volverá a entrar a esta función success en cuanto detecte mejor señal.
-            btnMarcar.disabled = true;
-            btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
+            statusGps.innerHTML = `Mejorando señal... <span class="text-xs text-orange-600">(Acércate a una ventana)</span>`;
+            statusGps.className = "text-sm font-bold text-orange-500 animate-pulse";
+            
+            // Icono animado (buscando)
+            const iconContainer = document.getElementById('gps-icon');
+            if(iconContainer) iconContainer.classList.add('animate-bounce');
         }
+
+        actualizarEstadoBoton();
     }
 
     function error(err) {
-        console.warn('GPS ERROR(' + err.code + '): ' + err.message);
-        
-        // Estrategia de Reintento:
-        // Si hay error (ej: timeout por estar bajo techo), esperamos 2 seg y reiniciamos el servicio
-        statusGps.textContent = "Señal perdida. Reintentando...";
-        statusGps.className = "text-red-500";
-        
-        btnMarcar.disabled = true;
-        btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
-
-        setTimeout(() => {
-            iniciarGPS(); // <--- REINICIO AUTOMÁTICO
-        }, 3000);
+        console.warn('GPS Error: ' + err.message);
+        gpsValido = false;
+        statusGps.textContent = "Sin señal GPS. Activa la ubicación.";
+        statusGps.className = "text-sm font-bold text-red-600";
+        gpsAccuracyText.textContent = "";
+        actualizarEstadoBoton();
     }
 
-    // --- Funciones de Imagen (Sin cambios) ---
+    // --- FOTOGRAFÍA ---
     function previewImage(event) {
         const input = event.target;
         const preview = document.getElementById('preview-foto');
         const placeholder = document.getElementById('placeholder-foto');
+        
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 preview.src = e.target.result;
                 preview.classList.remove('hidden');
                 placeholder.classList.add('hidden');
-                validarFormulario();
+                
+                fotoValida = true; // Foto capturada
+                actualizarEstadoBoton();
             }
             reader.readAsDataURL(input.files[0]);
         }
     }
 
     function previewImageModal(event) {
+        // Lógica separada para el modal de bloqueo (no afecta al botón principal)
         const input = event.target;
         const preview = document.getElementById('preview-foto-modal');
         const placeholder = document.getElementById('placeholder-modal');
+        
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -544,13 +548,20 @@
         }
     }
 
-    function validarFormulario() {
-        const lat = inputLat.value;
-        if (lat && lat.length > 0) {
+    // --- VALIDACIÓN FINAL ---
+    function actualizarEstadoBoton() {
+        if (!btnMarcar) return;
+
+        // El botón se habilita SOLO si hay GPS preciso Y Foto tomada
+        if (gpsValido && fotoValida) {
             btnMarcar.disabled = false;
-            btnMarcar.classList.remove('opacity-50');
+            btnMarcar.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+            // Restaurar gradiente original si se quiere, o dejar clases CSS base
+        } else {
+            btnMarcar.disabled = true;
+            btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
 </script>
-    @endpush
+@endpush
 </x-app-layout>
