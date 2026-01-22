@@ -4,6 +4,7 @@ namespace App\Models\Sucursales;
 
 use App\Models\Empleado\Empleado;
 use App\Models\Empresa\Empresa;
+use App\Models\Horario\horario;
 use Illuminate\Database\Eloquent\Model;
 
 class Sucursal extends Model
@@ -22,6 +23,8 @@ class Sucursal extends Model
         'estado',
         'latitud',
         'longitud',
+        'telefono',
+        'margen_error_gps_mts',
     ];
 
     protected $casts = [
@@ -50,5 +53,9 @@ class Sucursal extends Model
         }
 
         return $query;
+    }
+    public function horario()
+    {
+        return $this->belongsTo(horario::class, 'id_horario');
     }
 }

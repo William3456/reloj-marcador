@@ -58,6 +58,8 @@ class SucursalController extends Controller
             'latitud' => 'required|numeric',
             'longitud' => 'required|numeric',
             'dias_laborales' => 'array|required|min:1',
+            'telefono'=>'required|max:10',
+            'margen_error_gps_mts' => 'required|integer|min:1',
         ]);
         Sucursal::create($validated);
 
@@ -80,7 +82,7 @@ class SucursalController extends Controller
     {
 
         $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
-        $horarios = horario::where('permitido_marcacion', '=', 1)->get();
+        $horarios = horario::visiblePara(Auth::user())->where('permitido_marcacion', '=', 1)->get();
         $estados = collect([
             (object) ['id' => 1, 'nombre_estado' => 'activo'],
             (object) ['id' => 0, 'nombre_estado' => 'inactivo'],
@@ -107,6 +109,8 @@ class SucursalController extends Controller
             'cant_empleados' => 'required|integer|min:1',
             'rango_marcacion_mts' => 'required|integer|min:1',
             'estado' => 'required|exists:estados,id',
+            'telefono'=>'required|max:10',
+            'margen_error_gps_mts' => 'required|integer|min:1',
 
             // días laborales: al menos 1 requerido
             'dias_laborales' => 'required|array|min:1',

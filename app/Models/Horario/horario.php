@@ -3,8 +3,10 @@
 namespace App\Models\Horario;
 
 use App\Models\Empleado\Empleado;
+use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class horario extends Model
 {
@@ -21,6 +23,15 @@ class horario extends Model
         'turno',
         'sucursal_creacion',
     ];
+    public function getHoraIniAttribute($value)
+    {
+        return Carbon::createFromFormat('H:i:s', $value)->format('H:i');
+    }
+
+    public function getHoraFinAttribute($value)
+    {
+        return Carbon::createFromFormat('H:i:s', $value)->format('H:i');
+    }
 
     protected function tipoHorario(): Attribute
     {
@@ -98,9 +109,31 @@ class horario extends Model
 
         if ($user->rol->id == 2) {
 
-            return $query->where('sucursal_creacion', $user->empleado->id_sucursal);
-        }
+        return $query->where(function ($q) use ($user) {
+
+            // Horarios creados en su sucursal
+            $q->where('sucursal_creacion', $user->empleado->id_sucursal)
+
+              // O horarios asignados a su sucursal
+              ->orWhereHas('sucursales', function ($q2) use ($user) {
+                  $q2->where('sucursales.id', $user->empleado->id_sucursal);
+              });
+
+        });
+    }
 
         return $query;
     }
+    
+
+    public function sucursales()
+{
+    return $this->hasMany(
+        Sucursal::class,
+        'id_horario', 
+        'id'          
+    );
+}
+
+
 }

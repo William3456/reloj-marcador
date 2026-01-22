@@ -32,7 +32,14 @@ class Permiso extends Model
     {
         return $this->belongsTo(TipoPermiso::class, 'id_tipo_permiso');
     }
-
+    public function tipoPermiso()
+        {
+            return $this->belongsTo(
+                TipoPermiso::class,
+                'id_tipo_permiso',
+                'id'
+            );
+        }
     public function scopeVisiblePara($query, $user = null)
     {
         if (! $user) {

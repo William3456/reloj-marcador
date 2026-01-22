@@ -17,6 +17,7 @@ use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\Reportes\ReporteEmpleadoController;
 use App\Http\Controllers\MarcacionApp\MarcacionController;
 use App\Http\Controllers\Api\DeptosPuestosController; // Para la API interna
+use App\Http\Controllers\MarcacionApp\HistorialController;
 use App\Models\Turnos\Turnos;
 
 /*
@@ -49,6 +50,7 @@ Route::middleware(['auth', 'verified', 'check.role:3'])->group(function () {
     Route::controller(MarcacionController::class)->prefix('marcacion')->name('marcacion.')->group(function () {
         Route::get('/inicio', 'index')->name('inicio');
         Route::post('/store', 'store')->name('store'); 
+        Route::get('/historial', [HistorialController::class, 'index'])->name('historial');
     });
 
 });
@@ -69,8 +71,8 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
     // --- SUCURSALES ---
     Route::controller(SucursalController::class)->prefix('sucursales')->name('sucursales.')->group(function () {
         Route::get('/index', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/create', 'store')->name('store');
+        Route::get('/create', 'create')->name('create')->middleware('check.role:1');
+        Route::post('/create', 'store')->name('store')->middleware('check.role:1');;
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');

@@ -77,6 +77,18 @@
                     Marcar
                 </div>
             </a>
+            <a href="{{ route('marcacion.historial') }}"
+                class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
+               {{ request()->routeIs('marcacion.historial') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
+                <i class="fas fa-clock w-5 text-center shrink-0"></i>
+                <span x-show="sidebarExpanded" x-cloak
+                    class="ml-3 font-medium whitespace-nowrap transition-opacity duration-200">Historial</span>
+                <div x-show="!sidebarExpanded" x-cloak
+                    class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                    Historial
+                </div>
+            </a>
         @endif
         @if ($role == 1 || $role == 2)
             <a href="{{ route('dashboard') }}"
@@ -137,9 +149,11 @@
                     <a href="{{ route('sucursales.index') }}"
                         class="block py-2 text-sm {{ request()->routeIs('sucursales.index') ? $activeLinkClass : $inactiveLinkClass }}">Lista
                         sucursales</a>
+                    @if ($role == 1)
                     <a href="{{ route('sucursales.create') }}"
                         class="block py-2 text-sm {{ request()->routeIs('sucursales.create') ? $activeLinkClass : $inactiveLinkClass }}">Añadir
                         sucursal</a>
+                    @endif
                 </div>
             </div>
 

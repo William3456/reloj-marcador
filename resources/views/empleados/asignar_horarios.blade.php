@@ -93,7 +93,7 @@
                                 {{-- Item Detalle --}}
                                 <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100 text-center">
                                     <i class="fas fa-calendar-alt text-blue-400 text-lg mb-1 block"></i>
-                                    <span class="text-xs text-gray-500 block uppercase">Días</span>
+                                    <span class="text-xs text-gray-500 block uppercase">Días laborales</span>
                                     <span id="dias" class="text-gray-800 font-bold text-sm block">-</span>
                                 </div>
                                 {{-- Item Detalle --}}

@@ -38,6 +38,7 @@
                                 </th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Correo
                                     Encargado</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones
                                 </th>
@@ -51,6 +52,7 @@
                                     <td class="px-4 py-2">{{ $s->nombre }}</td>
                                     <td class="px-4 py-2">{{ $s->direccion }}</td>
                                     <td class="px-4 py-2">{{ $s->correo_encargado }}</td>
+                                    <td class="px-4 py-2">{{ $s->telefono }}</td>
                                     <td class="px-4 py-2">
                                         <span
                                             class="px-2 py-1 text-xs rounded 

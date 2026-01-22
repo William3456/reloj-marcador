@@ -22,7 +22,12 @@ class PermisoController extends Controller
             ->with([
                 'empleados' => function ($q) {
                     $q->whereHas('permisos')
-                        ->with('permisos.tipo');
+                        ->with([
+                            'permisos' => function ($p) {
+                                $p->orderBy('estado', 'desc'); // 1 primero, luego 0
+                            },
+                            'permisos.tipo',
+                        ]);
                 },
             ])
             ->orderBy('nombre')
@@ -38,7 +43,7 @@ class PermisoController extends Controller
     {
         $empleados = Empleado::where('estado', 1)->get();
         $tiposPermiso = TipoPermiso::where('estado', 1)->get();
-        $sucursales = Sucursal::where('estado', 1)->get();
+        $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
 
         return view('permisos.create', compact('empleados', 'tiposPermiso', 'sucursales'));
     }
@@ -50,11 +55,22 @@ class PermisoController extends Controller
     {
         $data = $this->buildPermisoData($request);
 
-        Permiso::create($data);
+        $existeActivo = Permiso::where('id_empleado', $data['id_empleado'])
+            ->where('estado', 1)
+            ->exists();
+        if ($existeActivo) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['id_empleado' => 'El empleado ya tiene un permiso activo. Favor inactivar el permiso antes de asignar uno nuevo.']);
+        } else {
+            Permiso::create($data);
 
-        return redirect()
-            ->route('permisos.create')
-            ->with('success', 'Permiso asignado correctamente.');
+            return redirect()
+                ->route('permisos.index')
+                ->with('success', 'Permiso asignado correctamente.');
+        }
+
     }
 
     /**
@@ -73,7 +89,7 @@ class PermisoController extends Controller
         $permiso = Permiso::visiblePara(Auth::user())->with('empleado.sucursal')->findOrFail($id);
 
         $tiposPermiso = TipoPermiso::where('estado', 1)->get();
-        $sucursales = Sucursal::where('estado', 1)->get();
+        $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
 
         return view('permisos.edit', compact('permiso', 'tiposPermiso', 'sucursales'));
     }
@@ -87,11 +103,24 @@ class PermisoController extends Controller
 
         $data = $this->buildPermisoData($request);
 
-        $permiso->update($data);
+        $existeActivo = Permiso::where('id_empleado', $data['id_empleado'])
+            ->where('estado', 1)
+            ->where('id', '!=', $permiso->id)
+            ->exists();
 
-        return redirect()
-            ->route('permisos.index')
-            ->with('success', 'Permiso actualizado correctamente.');
+        if ($existeActivo) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['id_empleado' => 'El empleado ya tiene un permiso activo.']);
+        } else {
+            $permiso->update($data);
+
+            return redirect()
+                ->route('permisos.index')
+                ->with('success', 'Permiso actualizado correctamente.');
+        }
+
     }
 
     /**
@@ -101,6 +130,7 @@ class PermisoController extends Controller
     {
         $permiso = Permiso::findOrFail($id);
         $permiso->delete();
+
         return redirect()
             ->route('permisos.index')
             ->with('success', 'Permiso eliminado correctamente.');
@@ -116,8 +146,12 @@ class PermisoController extends Controller
         ]);
 
         $tipo = TipoPermiso::findOrFail($request->id_tipo_permiso);
+        $esEditar = request()->routeIs('permisos.update');
 
-        if ($tipo->requiere_distancia) {
+        $esFueraRango = $tipo->requiere_distancia;
+        $ubicacionLibre = $esFueraRango && $request->filled('ubicacion_libre') && $request->ubicacion_libre == 1;
+
+        if ($tipo->requiere_distancia && ! $ubicacionLibre) {
             $request->validate([
                 'cantidad_mts' => 'required|integer|min:1',
             ]);
@@ -130,13 +164,24 @@ class PermisoController extends Controller
         }
 
         if ($tipo->requiere_fechas) {
-            $request->validate([
-                'fecha_inicio' => 'required|date',
-                'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
-            ]);
+
+            $rules = [
+                'fecha_inicio' => ['required', 'date'],
+                'fecha_fin' => ['required', 'date', 'after_or_equal:fecha_inicio'],
+            ];
+
+            // SOLO en create se valida contra hoy
+            if (! $esEditar) {
+                $rules['fecha_inicio'][] = 'after_or_equal:today';
+            }
+
+            $request->validate($rules);
         }
 
-        if (in_array($tipo->codigo, ['LLEGADA_TARDE', 'SALIDA_TEMPRANA'])) {
+        if (
+            in_array($tipo->codigo, ['LLEGADA_TARDE', 'SALIDA_TEMPRANA'])
+            && ! ($esFueraRango && $ubicacionLibre)
+        ) {
             $request->validate([
                 'valor' => 'required|integer|min:1',
             ]);
@@ -155,14 +200,14 @@ class PermisoController extends Controller
         ];
 
         // Distancia
-        $data['cantidad_mts'] = $tipo->requiere_distancia
+        $data['cantidad_mts'] = ($tipo->requiere_distancia && ! $ubicacionLibre)
             ? $request->cantidad_mts
             : null;
 
-        // Valor
-        $data['valor'] = in_array($tipo->codigo, ['LLEGADA_TARDE', 'SALIDA_TEMPRANA'])
-            ? $request->valor
-            : null;
+        $data['valor'] = in_array(
+            $tipo->codigo,
+            ['LLEGADA_TARDE', 'SALIDA_TEMPRANA']
+        ) ? $request->valor : null;
 
         // Fechas
         if ($tipo->requiere_fechas) {
@@ -177,7 +222,6 @@ class PermisoController extends Controller
             $data['fecha_inicio'] = Carbon::today();
             $data['fecha_fin'] = null;
         }
-
 
         return $data;
     }

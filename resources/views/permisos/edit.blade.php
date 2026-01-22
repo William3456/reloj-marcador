@@ -1,4 +1,4 @@
-<x-app-layout title="Crear permiso">
+<x-app-layout title="Editar permiso">
     <x-slot name="header">
         <x-encabezado :crearEdit="'Editando permiso'" />
     </x-slot>

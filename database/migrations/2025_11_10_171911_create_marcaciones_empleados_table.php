@@ -14,12 +14,16 @@ return new class extends Migration
         Schema::create('marcaciones_empleados', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_empleado');
+            $table->unsignedBigInteger('id_sucursal');
             $table->decimal('latitud', 10, 7);
             $table->decimal('longitud', 10, 7);
             $table->integer('distancia_real_mts')->nullable();
             $table->string('ubicacion', 250)->nullable();
             $table->integer('tipo_marcacion'); // 1-Entrada, 2-Salida
             $table->string('ubi_foto', 250)->nullable();
+            $table->unsignedBigInteger('id_permiso_Aplicado')->nullable;
+            $table->integer('fuera_horario')->nullable;
+            $table->integer('id_marcacion_entrada')->nullable;
             $table->timestamps();
         });
     }

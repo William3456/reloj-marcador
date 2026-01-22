@@ -15,8 +15,10 @@ class HorarioController extends Controller
      */
     public function index()
     {
+        $horarios = horario::visiblePara(Auth::user())->get();
+        
         return view('horarios.index', [
-            'horarios' => horario::visiblePara(Auth::user())->get(),
+            'horarios' => $horarios,
         ]);
     }
 
@@ -44,7 +46,12 @@ class HorarioController extends Controller
             'turno' => ['required', 'integer'],
         ]);
         $user = Auth::user();
-        $validated['sucursal_creacion'] = $user->empleado->id_sucursal;
+        if(!isset($user->empleado->id_sucursal)){
+            $validated['sucursal_creacion'] = 0;
+        }else{
+            $validated['sucursal_id'] = $user->empleado->id_sucursal;
+        }
+        
 
         $contaErrr = 0;
         if (horario::where('hora_ini', $validated['hora_ini'])->exists() && 
@@ -80,7 +87,7 @@ class HorarioController extends Controller
     public function edit(string $id)
     {
         $horario = horario::visiblePara(Auth::user())->findOrFail($id);
-
+        
         return view('horarios.edit', compact('horario'));
     }
 

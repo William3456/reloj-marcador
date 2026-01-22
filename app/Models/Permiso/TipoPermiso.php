@@ -16,4 +16,12 @@ class TipoPermiso extends Model
         'requiere_dias',
         'estado',
     ];
+    public function permisos()
+    {
+        return $this->hasMany(
+            Permiso::class,
+            'id_tipo_permiso',
+            'id'
+        );
+    }
 }
