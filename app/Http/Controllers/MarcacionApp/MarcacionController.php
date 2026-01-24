@@ -321,7 +321,7 @@ class MarcacionController extends Controller
             $sucursal->latitud, $sucursal->longitud
         );
 
-        // >>> LOGICA CORREGIDA DE VALIDACION <<<
+        
         // Validamos GPS si:
         // 1. Es Entrada (Siempre valida)
         // 2. O Es Salida PERO NO es olvido (Está en horario laboral + 1 hora)
