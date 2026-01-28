@@ -22,8 +22,8 @@
 
     {{-- Edad --}}
     <div>
-        <x-input-label value="Edad" />
-        <x-text-input type="number" name="edad" value="{{ old('edad', $empleado->edad ?? '') }}" class="w-full"
+        <x-input-label value="Fecha de Nacimiento" />
+        <x-text-input type="date" name="fecha_nacimiento" value="{{ old('fecha_nacimiento', $empleado->fecha_nacimiento ?? '') }}" class="w-full"
             required />
     </div>
 

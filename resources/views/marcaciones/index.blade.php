@@ -111,8 +111,8 @@
                                                             title="{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}">
                                                             {{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}
                                                         </div>
-                                                        <div class="text-[10px] text-gray-400 font-mono mt-0.5">ID:
-                                                            {{ $m->empleado->id }}</div>
+                                                        <div class="text-[10px] text-gray-400 font-mono mt-0.5">
+                                                            {{ $m->empleado->cod_trabajador }}</div>
                                                     </td>
 
                                                     {{-- Sucursal --}}
@@ -217,7 +217,7 @@
                                                         <button onclick="verDetalleCompleto({
                                         empleado: '{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}',
 
-                                        {{-- Asegúrate que aquí también esté el año si lo quieres en el modal --}}
+                                        
                                         fecha: '{{ $m->created_at->isoFormat('dddd D [de] MMMM [del] YYYY') }}',
 
                                         latEntrada: {{ $m->latitud }},
@@ -232,7 +232,9 @@
                                         horaSalida: '{{ $m->salida ? $m->salida->created_at->format('h:i A') : '--' }}',
 
                                         estadoTexto: '{{ $estadoTexto }}',
-                                        estadoClase: '{{ $estadoClase }}'
+                                        estadoClase: '{{ $estadoClase }}',
+                                        fotoEntradaFull: '{{ $m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null }}',
+                                        fotoSalidaFull: '{{ $m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null }}'
                                     })" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 w-7 h-7 rounded flex items-center justify-center transition"
                                                             title="Ver Detalle">
                                                             <i class="fa-solid fa-eye text-xs"></i>
@@ -279,11 +281,13 @@
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center">
                                         <span class="text-xs font-bold text-green-700 block mb-1">ENTRADA</span>
+                                        <input type="hidden" id="fotoEntradaFull">
+                                        <input type="hidden" id="fotoSalidaFull">
                                         <div
                                             class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
                                             <img id="imgEntrada" src=""
                                                 class="w-full h-full object-cover hidden cursor-pointer"
-                                                onclick="zoomImagen(this.src)">
+                                                onclick="zoomImagen(document.getElementById('fotoEntradaFull').value)">
                                             <span id="noImgEntrada" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
                                         <p id="horaEntradaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">
@@ -295,7 +299,7 @@
                                             class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
                                             <img id="imgSalida" src=""
                                                 class="w-full h-full object-cover hidden cursor-pointer"
-                                                onclick="zoomImagen(this.src)">
+                                                onclick="zoomImagen(document.getElementById('fotoSalidaFull').value)">
                                             <span id="noImgSalida" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
                                         <p id="horaSalidaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">
@@ -379,6 +383,8 @@
                 document.getElementById('modalFecha').innerText = data.fecha;
                 document.getElementById('horaEntradaModal').innerText = data.horaEntrada;
                 document.getElementById('horaSalidaModal').innerText = data.horaSalida;
+                document.getElementById('fotoEntradaFull').value = data.fotoEntradaFull;
+                document.getElementById('fotoSalidaFull').value = data.fotoSalidaFull;
 
                 const badge = document.getElementById('modalBadgeStatus');
                 badge.innerText = data.estadoTexto;

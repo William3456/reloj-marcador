@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('ubicacion', 250)->nullable();
             $table->integer('tipo_marcacion'); // 1-Entrada, 2-Salida
             $table->string('ubi_foto', 250)->nullable();
+            $table->string('ubi_foto_full', 250)->nullable();
             $table->unsignedBigInteger('id_permiso_Aplicado')->nullable;
             $table->integer('fuera_horario')->nullable;
             $table->integer('id_marcacion_entrada')->nullable;

@@ -19,6 +19,7 @@ class MarcacionEmpleado extends Model
         'ubicacion',
         'tipo_marcacion',
         'ubi_foto',
+        'ubi_foto_full',
         'id_permiso_aplicado',
         'fuera_horario',
         'id_marcacion_entrada',

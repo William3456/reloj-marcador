@@ -17,7 +17,7 @@ class Empleado extends Model
         'cod_trabajador',
         'correo',
         'direccion',
-        'edad',
+        'fecha_nacimiento',
         'documento',
         'nombres',
         'apellidos',

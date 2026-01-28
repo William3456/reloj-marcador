@@ -8,6 +8,10 @@ use App\Models\Permiso\Permiso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Illuminate\Support\Facades\Log;
 
 class MarcacionController extends Controller
 {
@@ -38,7 +42,7 @@ class MarcacionController extends Controller
 
     public function indexPanel(Request $request)
     {
-        $query = MarcacionEmpleado::visiblePara(Auth::user())-> with(['empleado', 'sucursal', 'salida'])
+        $query = MarcacionEmpleado::visiblePara(Auth::user())->with(['empleado', 'sucursal', 'salida'])
             ->where('tipo_marcacion', 1);
 
         // 1. Filtro por Nombre (Igual que antes)
@@ -172,21 +176,22 @@ class MarcacionController extends Controller
             'longitud' => 'required|numeric|between:-180,180',
             'ubicacion' => 'nullable|string|max:255',
             'tipo_marcacion' => 'required|in:1,2',
-            'ubi_foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'ubi_foto' => 'required|image|max:5120', // 5 MB
+
         ], [
-    // --- MENSAJES PERSONALIZADOS PARA LATITUD ---
+            // --- MENSAJES PERSONALIZADOS PARA LATITUD ---
             'latitud.required' => 'Ubicación no detectada. Valide si está encendido el GPS.',
-            'latitud.not_in'   => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
-            'latitud.numeric'  => 'Formato de latitud inválido.',
+            'latitud.not_in' => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
+            'latitud.numeric' => 'Formato de latitud inválido.',
 
             // --- MENSAJES PERSONALIZADOS PARA LONGITUD ---
-            'longitud.required'=> 'Ubicación no detectada. Valide si está encendido el GPS.',
-            'longitud.not_in'  => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
-            
+            'longitud.required' => 'Ubicación no detectada. Valide si está encendido el GPS.',
+            'longitud.not_in' => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
+
             // Otros mensajes opcionales para que se vea bien en el formulario
             'ubi_foto.required' => 'Debes tomar la foto de evidencia.',
-            'ubi_foto.image'    => 'El archivo de evidencia debe ser una imagen.',
-            'ubi_foto.max'      => 'La foto es demasiado pesada (Máx 5MB).',
+            'ubi_foto.image' => 'El archivo de evidencia debe ser una imagen.',
+            'ubi_foto.max' => 'La foto es demasiado pesada (Máx 5MB).',
         ]);
 
         // =========================
@@ -356,16 +361,57 @@ class MarcacionController extends Controller
             'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
         ]);
 
+
         // =========================
-        // GUARDAR FOTO
+        // GUARDAR FOTO (ROBUSTO)
         // =========================
+        $file = $request->file('ubi_foto');
+
+        // Nombres de archivo
         $tipoTexto = $validated['tipo_marcacion'] == 1 ? 'entrada' : 'salida';
         $fechaHora = now()->format('YmdHis');
-        $extension = $request->file('ubi_foto')->getClientOriginalExtension();
-        $nombreArchivo = "{$empleado->cod_trabajador}_{$marcacion->id}_{$tipoTexto}_{$fechaHora}.{$extension}";
+        $nombreArchivo = "{$empleado->cod_trabajador}_{$marcacion->id}_{$tipoTexto}_{$fechaHora}.jpg";
 
-        $ruta = $request->file('ubi_foto')->storeAs('marcaciones_empleados', $nombreArchivo, 'public');
-        $marcacion->update(['ubi_foto' => $ruta]);
+        try {
+            // 2. Instanciar Manager (Si falla aquí, es que no activaste php_gd en WAMP)
+            $manager = new ImageManager(new Driver());
+
+            // 3. Leer imagen
+            $image = $manager->read($file);
+
+            // --- PROCESO A: MINIATURA (400px) ---
+            // scaleDown: Si es menor a 400, no la toca. Si es mayor, la reduce.
+            $encodedMini = $image->scaleDown(width: 400)->toJpeg(quality: 60);
+
+            // --- PROCESO B: FULL (1280px) ---
+            // Leemos de nuevo el archivo original para procesar la versión grande limpia
+            $imageFull = $manager->read($file);
+            $encodedFull = $imageFull->scaleDown(width: 1280)->toJpeg(quality: 85);
+
+            // 4. Guardar en Storage
+            $rutaMini = "marcaciones_empleados/{$nombreArchivo}";
+            $rutaFull = "marcaciones_empleados/full/{$nombreArchivo}";
+
+            Storage::disk('public')->put($rutaMini, (string) $encodedMini);
+            Storage::disk('public')->put($rutaFull, (string) $encodedFull);
+
+            // 5. Actualizar BD
+            $marcacion->update([
+                'ubi_foto'      => $rutaMini,
+                'ubi_foto_full' => $rutaFull
+            ]);
+
+            //return response()->json(['message' => 'Guardado correctamente']);
+
+        } catch (\Exception $e) {
+            Log::error("Error subiendo foto: " . $e->getMessage());
+            
+            
+            return response()->json([
+                'error' => 'Ocurrió un error al procesar la imagen.',
+                'detalle' => $e->getMessage() 
+            ], 500);
+        }
 
         // Mensaje personalizado
         if ($esOlvidoSalida) {
