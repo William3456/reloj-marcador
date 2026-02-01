@@ -3,6 +3,7 @@
 namespace App\Models\Marcacion;
 
 use App\Models\Empleado\Empleado;
+use App\Models\Horario\horario;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Model;
 
@@ -23,6 +24,7 @@ class MarcacionEmpleado extends Model
         'id_permiso_aplicado',
         'fuera_horario',
         'id_marcacion_entrada',
+        'id_horario',
     ];
 
     public function sucursal()
@@ -38,10 +40,12 @@ class MarcacionEmpleado extends Model
     {
         return $this->belongsTo(self::class, 'id_marcacion_entrada');
     }
+
     public function empleado()
     {
         return $this->belongsTo(Empleado::class, 'id_empleado');
     }
+
     public function salida()
     {
         return $this->hasOne(self::class, 'id_marcacion_entrada');
@@ -59,5 +63,10 @@ class MarcacionEmpleado extends Model
         }
 
         return $query;
+    }
+
+    public function horario()
+    {
+        return $this->belongsTo(horario::class, 'id_horario');
     }
 }

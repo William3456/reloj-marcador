@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Horarios;
 
 use App\Http\Controllers\Controller;
 use App\Models\Horario\horario;
+use App\Models\HorarioSucursal\HorarioSucursal;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,8 @@ class HorarioController extends Controller
      */
     public function create()
     {
-        return view('horarios.create');
+        $dias = config('dias.laborales');
+        return view('horarios.create', compact('dias'));
     }
 
     /**
@@ -44,6 +46,7 @@ class HorarioController extends Controller
             'requiere_salida' => ['required', 'in:0,1'],
             'turno_txt' => ['required', 'string'],
             'turno' => ['required', 'integer'],
+            'dias' => 'array|required|min:1',
         ]);
         $user = Auth::user();
         if(!isset($user->empleado->id_sucursal)){
@@ -87,8 +90,8 @@ class HorarioController extends Controller
     public function edit(string $id)
     {
         $horario = horario::findOrFail($id);
-        
-        return view('horarios.edit', compact('horario'));
+        $dias = config('dias.laborales');
+        return view('horarios.edit', compact('horario', 'dias'));
     }
 
     /**
@@ -106,6 +109,7 @@ class HorarioController extends Controller
             'requiere_salida' => ['required', 'in:0,1'],
             'turno_txt' => ['required', 'string'],
             'turno' => ['required', 'integer'],
+            'dias' => 'array|required|min:1',
         ]);
 
         $horario = horario::findOrFail($id);
@@ -123,7 +127,7 @@ class HorarioController extends Controller
     public function destroy(string $id)
     {
         $horario = horario::findOrFail($id);
-        $tieneSuc = Sucursal::where('id_horario', $horario->id)->first();
+        $tieneSuc = HorarioSucursal::where('id_horario', $horario->id)->first();
         if ($tieneSuc) {
             return redirect()->route('horarios.index')->with('error', 'No se puede eliminar el horario porque está asociado a una o más sucursales.');
         } else {

@@ -60,7 +60,21 @@
             </option>
         </select>
     </div>
-
+    <div class="md:col-span-2">
+        <x-input-label value="Días laborales (Inicios de)" />
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-lg border mt-1">
+            @foreach ($dias as $dia)
+                <label class="flex items-center gap-2 p-2 bg-white rounded-md border hover:bg-gray-100 cursor-pointer shadow-sm">
+                    <input type="checkbox" name="dias[]" value="{{ $dia }}"
+                        class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" {{ in_array($dia, old('dias', $horario->dias ?? [])) ? 'checked' : '' }}>
+                    <span class="text-sm font-medium capitalize select-none text-gray-700">{{ $dia }}</span>
+                </label>
+            @endforeach
+        </div>
+        @error('dias_laborales')
+            <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
     <!-- Turno (centrado y al final) -->
     <div class="col-md-4">
 

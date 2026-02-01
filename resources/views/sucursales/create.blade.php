@@ -23,7 +23,6 @@
                     @include('sucursales._form', [
                         'sucursal' => null,
                         'empresas' => $empresas,
-                        'horarios' => $horarios,
                         'estados' => $estados,
                         'dias' => $dias
                     ])

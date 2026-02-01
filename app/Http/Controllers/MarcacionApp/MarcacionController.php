@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\MarcacionApp;
 
 use App\Http\Controllers\Controller;
+use App\Models\Horario\horario;
 use App\Models\Marcacion\MarcacionEmpleado;
 use App\Models\Permiso\Permiso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class MarcacionController extends Controller
 {
@@ -30,13 +31,13 @@ class MarcacionController extends Controller
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
 
         // 🕒 ESCENARIO 2: Salida OLVIDADA (8:30 PM hoy)
-        // Carbon::setTestNow(now()->setTime(19, 15, 0));
+        // Carbon::setTestNow(now()->setTime( 19, 30, 0));
 
         // 🕒 ESCENARIO 3: Salida Temprana (3:00 PM hoy)
         // \Carbon\Carbon::setTestNow(now()->setTime(15, 0, 0));
 
-        // 🕒 ESCENARIO 4: Mañana a las 8:00 AM
-        // Carbon::setTestNow(now()->addDay()->setTime(20, 0, 0));
+        // 🕒 ESCENARIO 4: Mañana a las 8:00 AM //martes = 10
+        //Carbon::setTestNow(now()->addDay(13)->setTime(6, 41, 0));
 
     }
 
@@ -82,79 +83,595 @@ class MarcacionController extends Controller
     {
         $hoy = Carbon::today();
         $user = Auth::user();
-        $empleadoId = $user->empleado->id;
-        $sucursal = $user->empleado->sucursal;
+        $empleado = $user->empleado;
+        $sucursal = $empleado->sucursal;
+        $diaSemanaHoy = $this->getDiaSemanaEspanol(now());
+        // ---------------------------------------------------------
+        // 0. VERIFICAR PERMISOS (NUEVO)
+        // ---------------------------------------------------------
+        $permisos = $this->validaPermisos(); // Reutilizamos tu función
+        $permisoActivo = null;
 
-        // 1. Datos visuales del día actual
-        $entradaHoy = MarcacionEmpleado::where('id_empleado', $empleadoId)
-            ->whereDate('created_at', $hoy)
-            ->where('tipo_marcacion', 1)
-            ->latest()
-            ->first();
-
-        $salidaHoy = MarcacionEmpleado::where('id_empleado', $empleadoId)
-            ->whereDate('created_at', $hoy)
-            ->where('tipo_marcacion', 2)
-            ->latest()
-            ->first();
-
-        // --- CORRECCIÓN CRÍTICA ---
-        // Si tenemos entrada y encontramos una salida creada hoy...
-        if ($entradaHoy && $salidaHoy) {
-            // Verificamos: ¿Esta salida pertenece a la entrada de hoy?
-            // Si la salida apunta a otra entrada (ej: ID 52 del día 19), entonces NO es la salida de hoy.
-            if ($salidaHoy->id_marcacion_entrada != $entradaHoy->id) {
-                $salidaHoy = null; // La ignoramos visualmente para permitir marcar la salida real de hoy
-            }
+        // Buscamos si hay algún permiso que EXIMA de marcar
+        // (Ajusta las claves según lo que devuelve tu función validaPermisos)
+        if ($permisos['sin_marcacion']) {
+            $permisoActivo = $permisos['sin_marcacion']; // Objeto Permiso
+        } elseif ($permisos['incapacidad']) {
+            $permisoActivo = $permisos['incapacidad'];
         }
-        // ---------------------------
+        $historialHoy = collect();
+        // Si hay permiso activo, no necesitamos calcular nada más complejo
+        //dd();
+        if ($permisoActivo) {
+            return view('app_marcacion.inicio', compact('permisoActivo', 'historialHoy'));
+        }
 
-        $horarioRequiereSalida = $sucursal->horario->requiere_salida;
+        // =========================================================
+        // 1. OBTENER HISTORIAL DE HOY
+        // =========================================================
+        $historialHoy = MarcacionEmpleado::where('id_empleado', $empleado->id)
+            ->whereDate('created_at', $hoy)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        // 2. LÓGICA DE DETECCIÓN DE OLVIDOS (CICLO ABIERTO)
-        // ... (El resto de tu código sigue igual)
+        $ultimoRegistro = MarcacionEmpleado::where('id_empleado', $empleado->id)
+            ->latest()->first();
+
+        // =========================================================
+        // 2. DETERMINAR ESTADO ACTUAL
+        // =========================================================
+        $entradaActiva = null;
+        if ($ultimoRegistro && $ultimoRegistro->tipo_marcacion == 1) {
+            $entradaActiva = $ultimoRegistro;
+        }
+
+        // =========================================================
+        // 3. BUSCAR Y FILTRAR HORARIOS
+        // =========================================================
+        $normalizarDia = function ($dia) {
+            $dia = mb_strtolower($dia, 'UTF-8');
+            $buscar = ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'sábado', 'miércoles'];
+            $reemplazar = ['a', 'e', 'i', 'o', 'u', 'n', 'sabado', 'miercoles'];
+            $limpio = str_replace($buscar, $reemplazar, $dia);
+
+            return substr($limpio, 0, 3);
+        };
+
+        $hoyNorm = $normalizarDia($diaSemanaHoy);
+
+        // A. Horarios del empleado
+        $candidatosRaw = $empleado->horarios->filter(function ($h) use ($hoyNorm, $normalizarDia) {
+            $diasHorario = array_map($normalizarDia, $h->dias ?? []);
+
+            return in_array($hoyNorm, $diasHorario);
+        });
+
+        // B. Backup Sucursal
+        if ($candidatosRaw->isEmpty() && $empleado->horarios->isEmpty()) {
+            $candidatosRaw = $sucursal->horarios->filter(function ($h) use ($hoyNorm, $normalizarDia) {
+                $diasHorario = array_map($normalizarDia, $h->dias ?? []);
+
+                return in_array($hoyNorm, $diasHorario);
+            });
+        }
+
+        // C. Filtro Maestro (Cruce con Horario Sucursal)
+        $horariosSucursalHoy = $sucursal->horarios->filter(function ($h) use ($hoyNorm, $normalizarDia) {
+            $dias = array_map($normalizarDia, $h->dias ?? []);
+
+            return in_array($hoyNorm, $dias);
+        });
+
+        $candidatos = $candidatosRaw->filter(function ($horarioEmpleado) use ($horariosSucursalHoy, $hoy) {
+            if ($horariosSucursalHoy->isEmpty()) {
+                return false;
+            }
+
+            $iniEmp = Carbon::parse($hoy->format('Y-m-d').' '.$horarioEmpleado->hora_ini);
+            $finEmp = Carbon::parse($hoy->format('Y-m-d').' '.$horarioEmpleado->hora_fin);
+            if ($finEmp->lessThan($iniEmp)) {
+                $finEmp->addDay();
+            }
+
+            foreach ($horariosSucursalHoy as $hs) {
+                $iniSuc = Carbon::parse($hoy->format('Y-m-d').' '.$hs->hora_ini);
+                $finSuc = Carbon::parse($hoy->format('Y-m-d').' '.$hs->hora_fin);
+                if ($finSuc->lessThan($iniSuc)) {
+                    $finSuc->addDay();
+                }
+
+                if ($iniEmp->greaterThanOrEqualTo($iniSuc->copy()->subMinutes(30)) &&
+                    $finEmp->lessThanOrEqualTo($finSuc->copy()->addMinutes(15))) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        $horarioActivo = ($entradaActiva && $entradaActiva->id_horario) ? $entradaActiva->horario : null;
+
+        // =========================================================
+        // 4. VALIDACIÓN DE BLOQUEO
+        // =========================================================
+        $horarioRequiereSalida = $sucursal->horarios()->where('requiere_salida', 1)->exists() ? 1 : 0;
         $marcacionPendiente = null;
         $mostrarModalBloqueo = false;
-        if ($horarioRequiereSalida == 1) {
 
-            // Buscamos la última entrada que NO tenga salida vinculada
-            $entradaAbierta = MarcacionEmpleado::where('id_empleado', $empleadoId)
+        if ($horarioRequiereSalida == 1 && $entradaActiva && $horarioActivo) {
+            $fechaEntrada = $entradaActiva->created_at->format('Y-m-d');
+            $salidaTeorica = Carbon::parse($fechaEntrada.' '.$horarioActivo->hora_fin);
+            if (Carbon::parse($horarioActivo->hora_fin)->lessThan(Carbon::parse($horarioActivo->hora_ini))) {
+                $salidaTeorica->addDay();
+            }
+            if (now()->greaterThan($salidaTeorica->copy()->addHour())) {
+                $marcacionPendiente = $entradaActiva;
+                $mostrarModalBloqueo = true;
+            }
+        }
+
+        // =========================================================
+        // 5. CÁLCULO DE PRÓXIMO TURNO Y ESTADO DE ENTRADA
+        // =========================================================
+        $tiempoRestante = null;
+        $proximoHorario = null;
+        $habilitarEntrada = false;
+        $jornadaTerminada = false;
+
+        if (! $entradaActiva) {
+            $ahora = now();
+            $turnoVigente = null;
+            $siguienteTurno = null;
+            $minutosParaSiguiente = PHP_INT_MAX;
+
+            // Ordenar para evaluar cronológicamente
+            $candidatos = $candidatos->sortBy('hora_ini');
+
+            foreach ($candidatos as $h) {
+                $inicio = Carbon::parse($hoy->format('Y-m-d').' '.$h->hora_ini);
+                $fin = Carbon::parse($hoy->format('Y-m-d').' '.$h->hora_fin);
+
+                if ($fin->lessThan($inicio)) {
+                    $fin->addDay();
+                }
+
+                $inicioHabilitado = $inicio->copy()->subMinutes(30);
+
+                // 1. ¿Turno VIGENTE? (Dentro del rango)
+                if ($ahora->between($inicioHabilitado, $fin)) {
+                    $yaCompletado = $historialHoy->contains(function ($m) use ($h) {
+                        return $m->tipo_marcacion == 2 && $m->id_horario == $h->id;
+                    });
+
+                    if (! $yaCompletado) {
+                        $turnoVigente = $h;
+                        break;
+                    }
+                }
+
+                // 2. ¿Turno FUTURO?
+                if (! $turnoVigente && $inicioHabilitado->greaterThan($ahora)) {
+                    $yaCompletado = $historialHoy->contains(function ($m) use ($h) {
+                        return $m->tipo_marcacion == 2 && $m->id_horario == $h->id;
+                    });
+
+                    if (! $yaCompletado) {
+                        $diff = $ahora->diffInMinutes($inicio);
+                        if ($diff < $minutosParaSiguiente) {
+                            $minutosParaSiguiente = $diff;
+                            $siguienteTurno = $inicio;
+                        }
+                    }
+                }
+            }
+
+            // --- TOMA DE DECISIONES VISUALES ---
+
+            if ($turnoVigente) {
+                $habilitarEntrada = true;
+                $tiempoRestante = null;
+            } elseif ($siguienteTurno) {
+                $habilitarEntrada = false;
+                $proximoHorario = $siguienteTurno;
+                $tiempoRestante = $proximoHorario->locale('es')->diffForHumans($ahora, [
+                    'parts' => 2, 'join' => true, 'syntax' => Carbon::DIFF_ABSOLUTE,
+                ]);
+            } else {
+                // CASO: NO HAY MÁS TURNOS (Ni vigentes ni futuros)
+
+                // Si hay candidatos (hubo turnos hoy) O hay historial -> Jornada Terminada
+                if ($candidatos->isNotEmpty() || $historialHoy->isNotEmpty()) {
+                    $jornadaTerminada = true;
+                    $habilitarEntrada = false;
+                } else {
+                    // Día libre
+                    $habilitarEntrada = false;
+                }
+            }
+        }
+
+        return view('app_marcacion.inicio', compact(
+            'entradaActiva', 'horarioRequiereSalida', 'mostrarModalBloqueo',
+            'marcacionPendiente', 'tiempoRestante', 'proximoHorario',
+            'habilitarEntrada', 'historialHoy', 'jornadaTerminada', 'candidatos', 'permisoActivo'
+        ));
+    }
+
+    public function store(Request $request)
+    {
+        // 1. Validar Request
+        $validated = $this->validateRequest($request);
+
+        $empleado = Auth::user()->empleado;
+        $sucursal = $empleado->sucursal;
+        $fechaReferencia = now();
+        $entradaAbierta = null;
+        if ($request->tipo_marcacion == 1) {
+            if (! $this->isSucursalAbierta($sucursal, now())) {
+                return back()->withErrors(['error' => 'La sucursal se encuentra cerrada en este horario.']);
+            }
+        }
+        // 2. Buscar Entrada Previa (si es Salida)
+        if ($validated['tipo_marcacion'] == 2) {
+            $entradaAbierta = MarcacionEmpleado::where('id_empleado', $empleado->id)
                 ->where('tipo_marcacion', 1)
                 ->whereDoesntHave('salida')
                 ->latest()
                 ->first();
 
             if ($entradaAbierta) {
-                // --- AQUÍ ESTÁ LA LÓGICA CORREGIDA ---
+                $fechaReferencia = $entradaAbierta->created_at;
+            }
+        }
 
-                // 1. Obtenemos la fecha en la que se marcó esa entrada (pudo ser hoy o ayer)
-                $fechaEntrada = $entradaAbierta->created_at->format('Y-m-d');
+        // 3. Validar si la Sucursal trabaja hoy
+        $diaSemana = $this->getDiaSemanaEspanol($fechaReferencia);
+        if (! $this->isDiaLaboralSucursal($sucursal, $diaSemana)) {
+            return back()->withErrors(['error' => "La sucursal no labora los días $diaSemana."]);
+        }
 
-                // 2. Obtenemos la hora de salida definida en la SUCURSAL
-                // AJUSTAR CAMPO: 'hora_cierre', 'hora_salida', o como lo tengas en la BD
-                $horaSalidaSucursal = $sucursal->horario->hora_fin;
+        // 4. Obtener el Horario Correcto (Aquí usamos el ID nuevo)
+        $horarioHoy = $this->determinarHorario($empleado, $sucursal, $diaSemana, $validated['tipo_marcacion'], $entradaAbierta);
 
-                // 3. Construimos el Timestamp de cuándo debió salir la sucursal ESE día
-                $momentoSalidaSucursal = Carbon::parse($fechaEntrada.' '.$horaSalidaSucursal);
+        if (! $horarioHoy) {
+            return back()->withErrors(['error' => "No se encontró un horario asignado para el $diaSemana."]);
+        }
 
-                // 4. Regla: Hora Salida Sucursal + 1 Hora de tolerancia
-                $limiteOlvido = $momentoSalidaSucursal->copy()->addHour();
+        // 5. Validar Tiempos (Entrada/Salida, Nocturnos, Tolerancias)
+        $validacionTiempo = $this->validarTiemposTurno($horarioHoy, $fechaReferencia, $validated['tipo_marcacion'], $entradaAbierta);
 
-                // 5. Comparación: ¿La hora actual ya superó ese límite?
+        if (isset($validacionTiempo['error'])) {
+            return back()->withErrors(['error' => $validacionTiempo['error']]);
+        }
+
+        // 6. Validar GPS
+        $validacionGPS = $this->validarGPS($validated, $sucursal, $validacionTiempo['es_olvido']);
+        if (isset($validacionGPS['error'])) {
+            return back()->withErrors(['error' => $validacionGPS['error']]);
+        }
+
+        // 7. Guardar en BD
+        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta);
+
+        // 8. Procesar Foto
+        $this->procesarImagen($request->file('ubi_foto'), $marcacion, $empleado, $validated['tipo_marcacion']);
+
+        $msj = $validacionTiempo['es_olvido'] ? 'Salida registrada (Regularización).' : ($validated['tipo_marcacion'] == 1 ? 'Entrada registrada.' : 'Salida registrada.');
+
+        return back()->with('success', $msj);
+    }
+
+    /**
+     * Verifica si la hora dada cae dentro del horario operativo de la sucursal
+     * con un margen de tolerancia (ej: permitir marcar 30 min antes de abrir y 60 después de cerrar).
+     */
+    private function isSucursalAbierta($sucursal, Carbon $fechaHora)
+    {
+        $diaSemana = $this->getDiaSemanaEspanol($fechaHora);
+
+        // 1. Normalizar texto para buscar en JSON (Viernes vs viernes)
+        $normalizar = function ($s) {
+            return mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $s));
+        };
+        $diaNormalizado = $normalizar($diaSemana);
+
+        // 2. Obtener horarios de la sucursal para HOY
+        $horariosSucursal = $sucursal->horarios->filter(function ($h) use ($diaNormalizado, $normalizar) {
+            $dias = array_map($normalizar, $h->dias ?? []);
+
+            return in_array($diaNormalizado, $dias);
+        });
+
+        if ($horariosSucursal->isEmpty()) {
+            return false;
+        } // No abre hoy
+
+        // 3. Verificar si la hora encaja en algún rango
+        foreach ($horariosSucursal as $hs) {
+            $inicio = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_ini);
+            $fin = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_fin);
+
+            // Ajuste nocturno (si cierra al día siguiente)
+            if ($fin->lessThan($inicio)) {
+                $fin->addDay();
+            }
+
+            // RANGO PERMISIVO:
+            // Permitimos marcar desde 30 mins antes de abrir hasta 1 hora después de cerrar
+            // Ajusta estos valores según tu política real.
+            if ($fechaHora->between($inicio->copy()->subMinutes(30), $fin->copy()->addHour())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function getDiaSemanaEspanol($fecha)
+    {
+        $dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+        return $dias[$fecha->dayOfWeek];
+    }
+
+    /**
+     * MÉTODO PRINCIPAL: ORQUESTADOR
+     */
+
+    // -------------------------------------------------------------------------
+    // FUNCIONES PRIVADAS (LOGICA SECCIONADA)
+    // -------------------------------------------------------------------------
+
+    private function validateRequest($request)
+    {
+        return $request->validate([
+            'latitud' => 'required|numeric|between:-90,90',
+            'longitud' => 'required|numeric|between:-180,180',
+            'ubicacion' => 'nullable|string|max:255',
+            'tipo_marcacion' => 'required|in:1,2',
+            'ubi_foto' => 'required|image|max:5120',
+        ], [
+            'latitud.required' => 'Ubicación no detectada.',
+            'ubi_foto.required' => 'Debes tomar la foto de evidencia.',
+        ]);
+    }
+
+    private function isDiaLaboralSucursal($sucursal, $diaSemana)
+    {
+        $diasLaboralesSucursal = $sucursal->dias_laborales ?? [];
+        $diasLaboralesNorm = array_map(function ($d) {
+            return mb_strtolower($d, 'UTF-8');
+        }, $diasLaboralesSucursal);
+
+        return in_array(mb_strtolower($diaSemana, 'UTF-8'), $diasLaboralesNorm);
+    }
+
+    private function determinarHorario($empleado, $sucursal, $diaSemana, $tipoMarcacion, $entradaAbierta)
+    {
+        // ---------------------------------------------------------
+        // ESCENARIO 1: SALIDA (USAR ID GUARDADO) - ¡INFALIBLE!
+        // ---------------------------------------------------------
+        if ($tipoMarcacion == 2 && $entradaAbierta) {
+            // Si la entrada ya tiene el ID guardado, lo usamos directo.
+            if ($entradaAbierta->id_horario) {
+                return \App\Models\Horario\Horario::find($entradaAbierta->id_horario);
+            }
+
+            // FALLBACK PARA REGISTROS VIEJOS (SIN ID)
+            // Buscamos el horario cuyo inicio coincida mejor con la hora de entrada registrada
+            $candidatos = $empleado->horarios()->whereJsonContains('dias', $diaSemana)->get();
+            if ($candidatos->isEmpty()) {
+                $candidatos = $sucursal->horarios()->whereJsonContains('dias', $diaSemana)->get();
+            }
+
+            $horaEntrada = Carbon::parse($entradaAbierta->created_at->format('H:i:s'));
+            foreach ($candidatos as $h) {
+                $inicio = Carbon::parse($h->hora_ini);
+                // Si la diferencia es menor a 4 horas, asumimos que es este
+                if ($horaEntrada->diffInMinutes($inicio) < 240) {
+                    return $h;
+                }
+            }
+
+            return $candidatos->first();
+        }
+
+        // ---------------------------------------------------------
+        // ESCENARIO 2: ENTRADA (SELECCIÓN INTELIGENTE)
+        // ---------------------------------------------------------
+
+        // 1. Obtener candidatos (Prioridad Empleado -> Sucursal)
+        $candidatos = $empleado->horarios()->whereJsonContains('dias', $diaSemana)->get();
+        if ($candidatos->isEmpty()) {
+            $candidatos = $sucursal->horarios()->whereJsonContains('dias', $diaSemana)->get();
+        }
+
+        if ($candidatos->isEmpty()) {
+            return null;
+        }
+
+        $ahora = now();
+        $mejorCandidato = null;
+        $minutosDiferencia = PHP_INT_MAX;
+
+        // PASO A: Buscar si "CAIGO DENTRO" de algún turno activo (Prioridad Alta)
+        // Esto arregla el bug: Si son las 15:50 (Turno 14:00-16:40), caerá aquí en vez de irse al de las 17:00
+        foreach ($candidatos as $h) {
+            $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
+            $fin = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_fin);
+
+            if ($fin->lessThan($inicio)) {
+                $fin->addDay();
+            } // Ajuste nocturno
+
+            // Si la hora actual está DENTRO del intervalo (con 1 hora de margen post-cierre)
+            if ($ahora->greaterThanOrEqualTo($inicio->copy()->subMinutes(60)) && $ahora->lessThanOrEqualTo($fin)) {
+                return $h; // ¡Encontrado! Retorno inmediato.
+            }
+        }
+
+        // PASO B: Si no estoy dentro de ninguno (Llegada Temprano), buscar el MÁS CERCANO en el futuro
+        foreach ($candidatos as $h) {
+            $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
+
+            // Calculamos distancia absoluta
+            $diff = abs($ahora->diffInMinutes($inicio, false));
+
+            // Solo consideramos turnos que no hayan pasado hace mucho (> 8 horas)
+            if ($ahora->diffInHours($inicio, false) < -8) {
+                continue;
+            }
+
+            if ($diff < $minutosDiferencia) {
+                $minutosDiferencia = $diff;
+                $mejorCandidato = $h;
+            }
+        }
+
+        return $mejorCandidato ?? $candidatos->last();
+    }
+
+    private function validarTiemposTurno($horario, $fechaReferencia, $tipoMarcacion, $entradaAbierta)
+    {
+        $permisos = $this->validaPermisos(); // Tu función existente
+
+        // Verificar permiso eximente
+        $permisoExime = collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first();
+        if ($permisoExime) {
+            return ['error' => 'Permiso activo exime marcación.'];
+        }
+
+        // Construir tiempos
+        $fechaBase = $fechaReferencia->format('Y-m-d');
+        $inicioTurno = Carbon::parse($fechaBase.' '.$horario->hora_ini);
+        $finTurno = Carbon::parse($fechaBase.' '.$horario->hora_fin);
+
+        // Ajuste Nocturno
+        if ($finTurno->lessThanOrEqualTo($inicioTurno)) {
+            $finTurno->addDay();
+        }
+
+        $resultado = [
+            'fuera_horario' => null,
+            'es_olvido' => false,
+            'permiso_aplicado' => collect($permisos)->except('permisos')->filter()->first()?->id,
+        ];
+
+        if ($tipoMarcacion == 1) {
+            // --- LÓGICA ENTRADA ---
+            if (now()->lessThanOrEqualTo($finTurno)) {
+                $tolerancia = $horario->tolerancia;
+                if ($permisos['llegada_tarde']) {
+                    $tolerancia += $permisos['llegada_tarde']->valor;
+                }
+
+                $horaMaxima = $inicioTurno->copy()->addMinutes($tolerancia);
+                if (now()->greaterThan($horaMaxima)) {
+                    $resultado['fuera_horario'] = 1;
+                }
+            } else {
+                return ['error' => 'Tu jornada para este turno ya finalizó.'];
+            }
+        } else {
+            // --- LÓGICA SALIDA ---
+            if ($entradaAbierta) {
+                $limiteOlvido = $finTurno->copy()->addHour();
+                $momentoMinimo = $finTurno->copy();
+                if ($permisos['salida_temprana']) {
+                    $momentoMinimo->subMinutes($permisos['salida_temprana']->valor);
+                }
+
                 if (now()->greaterThan($limiteOlvido)) {
-                    $marcacionPendiente = $entradaAbierta;
-                    $mostrarModalBloqueo = true; // Activa el modal de "Olvido"
+                    $resultado['es_olvido'] = true;
+                    $resultado['fuera_horario'] = 1;
+                } else {
+                    if (now()->lessThan($momentoMinimo)) {
+                        return ['error' => 'Salida no permitida antes de las '.$momentoMinimo->format('d/m H:i')];
+                    }
                 }
             }
         }
 
-        return view('app_marcacion.inicio', compact(
-            'entradaHoy',
-            'salidaHoy',
-            'horarioRequiereSalida',
-            'mostrarModalBloqueo',
-            'marcacionPendiente'
-        ));
+        return $resultado;
+    }
+
+    private function validarGPS($validated, $sucursal, $esOlvido)
+    {
+        // Regla: Si es salida por olvido, NO validamos
+        if ($validated['tipo_marcacion'] == 2 && $esOlvido) {
+            return ['distancia' => 0]; // Distancia irrelevante
+        }
+
+        // Regla de Sucursal
+        $sucursalExigeSalida = $sucursal->horarios()->where('requiere_salida', 1)->exists();
+
+        // Opcional: Si quieres ser estricto y la sucursal NO exige salida, podrías saltar validación en salida.
+        // Pero generalmente el GPS siempre se valida si estás marcando.
+
+        $permisos = $this->validaPermisos();
+        $rango = ($permisos['fuera_rango']->cantidad_mts ?? $sucursal->rango_marcacion_mts) ?? PHP_INT_MAX;
+
+        $distancia = $this->distanciaEnMetros(
+            $validated['latitud'],
+            $validated['longitud'],
+            $sucursal->latitud,
+            $sucursal->longitud
+        );
+
+        if ($distancia > ($rango + $sucursal->margen_error_gps_mts)) {
+            return ['error' => "Estás fuera del rango permitido ($distancia mts)."];
+        }
+
+        return ['distancia' => $distancia];
+    }
+
+    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta)
+    {
+        return MarcacionEmpleado::create([
+            'id_empleado' => $empleado->id,
+            'id_sucursal' => $sucursal->id,
+            'id_horario' => $horario->id, // <--- AQUÍ GUARDAMOS EL ID DEL HORARIO
+            'latitud' => $validated['latitud'],
+            'longitud' => $validated['longitud'],
+            'distancia_real_mts' => $distancia,
+            'tipo_marcacion' => $validated['tipo_marcacion'],
+            'id_permiso_aplicado' => $validacionTiempo['permiso_aplicado'],
+            'fuera_horario' => $validacionTiempo['fuera_horario'],
+            'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
+        ]);
+    }
+
+    private function procesarImagen($file, $marcacion, $empleado, $tipo)
+    {
+        try {
+            $tipoTexto = $tipo == 1 ? 'entrada' : 'salida';
+            $nombre = "{$empleado->cod_trabajador}_{$marcacion->id}_{$tipoTexto}_".now()->format('YmdHis').'.jpg';
+
+            $manager = new ImageManager(new Driver);
+
+            // Miniatura
+            $imgMini = $manager->read($file)->scaleDown(width: 400)->toJpeg(60);
+            // Full
+            $imgFull = $manager->read($file)->scaleDown(width: 1280)->toJpeg(85);
+
+            $rutaMini = "marcaciones_empleados/$nombre";
+            $rutaFull = "marcaciones_empleados/full/$nombre";
+
+            Storage::disk('public')->put($rutaMini, (string) $imgMini);
+            Storage::disk('public')->put($rutaFull, (string) $imgFull);
+
+            $marcacion->update([
+                'ubi_foto' => $rutaMini,
+                'ubi_foto_full' => $rutaFull,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error procesando foto marcación ID {$marcacion->id}: ".$e->getMessage());
+        }
+    }
+
+    private function guardaHistoricoHorarioEmpleado($empleado, $sucursal, $horario, $diaSemana)
+    {
+       
     }
 
     /**
@@ -163,266 +680,6 @@ class MarcacionController extends Controller
     public function create()
     {
         //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-
-        $validated = $request->validate([
-            'latitud' => 'required|numeric|between:-90,90',
-            'longitud' => 'required|numeric|between:-180,180',
-            'ubicacion' => 'nullable|string|max:255',
-            'tipo_marcacion' => 'required|in:1,2',
-            'ubi_foto' => 'required|image|max:5120', // 5 MB
-
-        ], [
-            // --- MENSAJES PERSONALIZADOS PARA LATITUD ---
-            'latitud.required' => 'Ubicación no detectada. Valide si está encendido el GPS.',
-            'latitud.not_in' => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
-            'latitud.numeric' => 'Formato de latitud inválido.',
-
-            // --- MENSAJES PERSONALIZADOS PARA LONGITUD ---
-            'longitud.required' => 'Ubicación no detectada. Valide si está encendido el GPS.',
-            'longitud.not_in' => 'El GPS devolvió coordenadas en 0. Valide si tiene buena señal.',
-
-            // Otros mensajes opcionales para que se vea bien en el formulario
-            'ubi_foto.required' => 'Debes tomar la foto de evidencia.',
-            'ubi_foto.image' => 'El archivo de evidencia debe ser una imagen.',
-            'ubi_foto.max' => 'La foto es demasiado pesada (Máx 5MB).',
-        ]);
-
-        // =========================
-        // DATOS BASE
-        // =========================
-        $empleado = Auth::user()->empleado;
-        $sucursal = $empleado->sucursal;
-        $fueraHorario = null;
-
-        // Variable bandera para detectar olvido
-        $esOlvidoSalida = false;
-
-        // =========================
-        // VALIDAR PERMISOS
-        // =========================
-        $permisos = $this->validaPermisos();
-        $permisoActivo = collect($permisos)->except('permisos')->filter()->first();
-        $permisoExime = collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first();
-
-        if ($permisoExime) {
-            return back()->withErrors([
-                'error' => 'Tienes un permiso activo que exime la marcación hasta: '.
-                            Carbon::parse($permisoExime->fecha_fin)->locale('es')->translatedFormat('l d \\d\\e F \\d\\e Y'),
-            ]);
-        }
-
-        // =========================
-        // BUSCAR ENTRADA PENDIENTE
-        // =========================
-        $entradaAbierta = MarcacionEmpleado::where('id_empleado', $empleado->id)
-            ->where('tipo_marcacion', 1)
-            ->whereDoesntHave('salida')
-            ->latest()
-            ->first();
-
-        // =========================
-        // VALIDACIÓN DE HORARIOS (ENTRADA Y SALIDA)
-        // =========================
-        if ($validated['tipo_marcacion'] == 1) {
-            // --- LOGICA ENTRADA ---
-
-            // 1. Convertimos la hora fin de la BD en un objeto Carbon con fecha de HOY
-            $horaFinTurno = Carbon::parse($empleado->sucursal->horario->hora_fin);
-
-            // 2. Comparamos: Si "ahora" es MENOR o IGUAL a la hora fin, permitimos marcar
-            if (now()->lessThanOrEqualTo($horaFinTurno)) {
-
-                // --- CÓDIGO DE LLEGADA TARDE (Tu lógica original) ---
-                $horaEntrada = $sucursal->horario->hora_ini;
-                $tolerancia = $sucursal->horario->tolerancia;
-
-                if ($permisos['llegada_tarde']) {
-                    $tolerancia += $permisos['llegada_tarde']->valor;
-                }
-
-                // Convertimos hora entrada a Carbon para sumar minutos fácilmente
-                $horaMaxima = Carbon::parse($horaEntrada)->addMinutes($tolerancia);
-                // dd($permisos);
-                if (now()->greaterThan($horaMaxima)) {
-                    $fueraHorario = 1; // Llegada tarde
-                }
-                // ----------------------------------------------------
-
-            } else {
-                // Si "ahora" es MAYOR a la hora fin:
-                return back()->withErrors([
-                    'error' => 'No puedes marcar entrada, la jornada laboral de hoy ya finalizó.',
-                ]);
-            }
-        } else {
-            // --- LOGICA SALIDA ---
-            if ($entradaAbierta) {
-                $horaSalida = $sucursal->horario->hora_fin;
-                $horaActual = now()->format('H:i:s');
-
-                // 1. VERIFICAMOS SI ES DE OTRO DÍA
-                // Si la entrada NO fue creada hoy, asumimos automáticamente que es un cierre pendiente (olvido).
-                $esDiaDistinto = ! $entradaAbierta->created_at->isToday();
-
-                // 2. DEFINIR LÍMITE (Hora salida + 1 hora) para el mismo día
-                $horaLimiteNormal = Carbon::parse($horaSalida)->addHour()->format('H:i:s');
-
-                // CONDICIÓN CORREGIDA:
-                // Es olvido si: Es otro día O BIEN (es el mismo día Y ya pasó la hora límite)
-                if ($esDiaDistinto || $horaActual > $horaLimiteNormal) {
-
-                    // >>> ES UN OLVIDO DE SALIDA <<<
-                    $esOlvidoSalida = true;
-                    $fueraHorario = 1;
-                    // Al ser olvido (o día distinto), NO validamos hora mínima.
-
-                } else {
-                    // >>> ES UNA SALIDA NORMAL (Mismo día y dentro del rango/temprano) <<<
-                    $fueraHorario = null;
-
-                    $horaMinimaSalida = $horaSalida;
-
-                    if ($permisos['salida_temprana']) {
-                        // Usamos la fecha de HOY para el cálculo correcto de la resta de minutos
-                        $horaMinimaSalida = Carbon::parse(now()->format('Y-m-d').' '.$horaSalida)
-                            ->subMinutes($permisos['salida_temprana']->valor)
-                            ->format('H:i:s');
-                    }
-
-                    // Aquí la comparación de strings funciona bien porque ya sabemos que estamos en el MISMO día
-                    if ($horaActual < $horaMinimaSalida) {
-                        return back()->withErrors([
-                            'error' => "No puedes marcar salida antes de la hora mínima ($horaMinimaSalida).",
-                        ]);
-                    }
-                }
-            }
-        }
-
-        // =========================
-        // VALIDACIÓN GPS
-        // =========================
-        $rango = $sucursal->rango_marcacion_mts;
-        $margenError = $sucursal->margen_error_gps_mts;
-
-        // Ajuste de rango por permisos (Solo aplica si no es olvido, o según tu lógica de negocio)
-        if ($permisos['fuera_rango']) {
-            if ($permisos['fuera_rango']->cantidad_mts !== null) {
-                $rango = $permisos['fuera_rango']->cantidad_mts;
-            } else {
-                $rango = PHP_INT_MAX; // Exonerado
-            }
-        }
-
-        $distanciaReal = $this->distanciaEnMetros(
-            $validated['latitud'], $validated['longitud'],
-            $sucursal->latitud, $sucursal->longitud
-        );
-
-        // >>> LOGICA CORREGIDA DE VALIDACION <<<
-        // Validamos GPS si:
-        // 1. Es Entrada (Siempre valida)
-        // 2. O Es Salida PERO NO es olvido (Está en horario laboral + 1 hora)
-        $validarGPS = true;
-
-        if ($validated['tipo_marcacion'] == 2 && $esOlvidoSalida) {
-            $validarGPS = false; // Apagamos validación si se le olvidó marcar
-        }
-
-        if ($validarGPS) {
-            if ($distanciaReal > ($rango + $margenError)) {
-                return back()->withErrors([
-                    'error' => "Estás fuera del rango permitido ($distanciaReal m).",
-                ]);
-            }
-        }
-
-        // =========================
-        // GUARDAR MARCACIÓN
-        // =========================
-        $marcacion = MarcacionEmpleado::create([
-            'id_empleado' => $empleado->id,
-            'id_sucursal' => $sucursal->id,
-            'latitud' => $validated['latitud'],
-            'longitud' => $validated['longitud'],
-            'distancia_real_mts' => $distanciaReal,
-            'ubicacion' => null,
-            'tipo_marcacion' => $validated['tipo_marcacion'],
-            'ubi_foto' => null,
-            'id_permiso_aplicado' => $permisoActivo?->id,
-            'fuera_horario' => $fueraHorario,
-            'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
-        ]);
-
-
-        // =========================
-        // GUARDAR FOTO (ROBUSTO)
-        // =========================
-        $file = $request->file('ubi_foto');
-
-        // Nombres de archivo
-        $tipoTexto = $validated['tipo_marcacion'] == 1 ? 'entrada' : 'salida';
-        $fechaHora = now()->format('YmdHis');
-        $nombreArchivo = "{$empleado->cod_trabajador}_{$marcacion->id}_{$tipoTexto}_{$fechaHora}.jpg";
-
-        try {
-            // 2. Instanciar Manager (Si falla aquí, es que no activaste php_gd en WAMP)
-            $manager = new ImageManager(new Driver());
-
-            // 3. Leer imagen
-            $image = $manager->read($file);
-
-            // --- PROCESO A: MINIATURA (400px) ---
-            // scaleDown: Si es menor a 400, no la toca. Si es mayor, la reduce.
-            $encodedMini = $image->scaleDown(width: 400)->toJpeg(quality: 60);
-
-            // --- PROCESO B: FULL (1280px) ---
-            // Leemos de nuevo el archivo original para procesar la versión grande limpia
-            $imageFull = $manager->read($file);
-            $encodedFull = $imageFull->scaleDown(width: 1280)->toJpeg(quality: 85);
-
-            // 4. Guardar en Storage
-            $rutaMini = "marcaciones_empleados/{$nombreArchivo}";
-            $rutaFull = "marcaciones_empleados/full/{$nombreArchivo}";
-
-            Storage::disk('public')->put($rutaMini, (string) $encodedMini);
-            Storage::disk('public')->put($rutaFull, (string) $encodedFull);
-
-            // 5. Actualizar BD
-            $marcacion->update([
-                'ubi_foto'      => $rutaMini,
-                'ubi_foto_full' => $rutaFull
-            ]);
-
-            //return response()->json(['message' => 'Guardado correctamente']);
-
-        } catch (\Exception $e) {
-            Log::error("Error subiendo foto: " . $e->getMessage());
-            
-            
-            return response()->json([
-                'error' => 'Ocurrió un error al procesar la imagen.',
-                'detalle' => $e->getMessage() 
-            ], 500);
-        }
-
-        // Mensaje personalizado
-        if ($esOlvidoSalida) {
-            $msj = 'Salida registrada (Regularización por olvido).';
-        } else {
-            $msj = $validated['tipo_marcacion'] == 1
-                ? ($fueraHorario ? 'Entrada registrada (Llegada tardía).' : 'Entrada registrada correctamente.')
-                : 'Salida registrada correctamente.';
-        }
-
-        return back()->with('success', $msj);
     }
 
     public function distanciaEnMetros($lat1, $lon1, $lat2, $lon2)

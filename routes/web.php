@@ -17,6 +17,7 @@ use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\Reportes\ReporteEmpleadoController;
 use App\Http\Controllers\MarcacionApp\MarcacionController;
 use App\Http\Controllers\Api\DeptosPuestosController; // Para la API interna
+use App\Http\Controllers\HorariosSucursal\HorarioSucursalController;
 use App\Http\Controllers\MarcacionApp\HistorialController;
 use App\Models\Marcacion\MarcacionEmpleado;
 use App\Models\Turnos\Turnos;
@@ -77,6 +78,7 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::get('/{id}/info', [SucursalController::class, 'showInfo'])->name('sucursales.info');
     });
 
     // --- HORARIOS ---
@@ -136,6 +138,11 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
         Route::post('/horario-trabajador/store', 'store')->name('horario_trabajador.store');
     });
 
+    Route::controller(HorarioSucursalController::class)->group(function () {
+        Route::get('/horario-sucursal', 'index')->name('sucursaleshorarios.asign');
+        Route::post('/horario-sucursal/store', 'store')->name('horario_sucursal.store');
+    });
+
     Route::controller(MarcacionController::class)->prefix('marcaciones')->name('marcaciones.')->group(function () {
         Route::get('/index', 'indexPanel')->name('index');
     });
@@ -191,6 +198,7 @@ Route::middleware(['api'])->prefix('api')->group(function () {
     Route::get('/puestosDptosBySucId/{sucursalId}', [DeptosPuestosController::class, 'puestosAndDeptos']);
     Route::get('/sucursal/details/{id}', [HorarioEmpleadoController::class, 'getSucursalDetails']);
     Route::get('/empleados/sucursal/{id}', [HorarioEmpleadoController::class, 'getEmpleadosBySucursal']);
+    Route::get('/horarios-sucursal/{id}', [HorarioSucursalController::class, 'getBySucursal']);
 });
 
 

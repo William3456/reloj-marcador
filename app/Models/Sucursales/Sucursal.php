@@ -16,7 +16,6 @@ class Sucursal extends Model
         'direccion',
         'correo_encargado',
         'id_empresa',
-        'id_horario',
         'cant_empleados',
         'rango_marcacion_mts',
         'dias_laborales',
@@ -54,8 +53,13 @@ class Sucursal extends Model
 
         return $query;
     }
-    public function horario()
+    public function horarios()
     {
-        return $this->belongsTo(horario::class, 'id_horario');
+        return $this->belongsToMany(
+            horario::class,           // Modelo destino
+            'horarios_sucursales',    // Tabla pivote (intermedia)
+            'id_sucursal',            // Clave foránea en la pivote para este modelo
+            'id_horario'              // Clave foránea en la pivote para el otro modelo
+        );
     }
 }
