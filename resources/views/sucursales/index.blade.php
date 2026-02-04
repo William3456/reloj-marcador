@@ -211,6 +211,21 @@
                 responsive: true, paging: true, searching: true,
                 language: { url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/es-ES.json' }
             });
+
+            // 1. Evento Clic fuera del modal
+            document.getElementById('modalSucursal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    cerrarModalSucursal();
+                }
+            });
+
+            // 2. Evento Tecla Escape
+            document.addEventListener('keydown', function(e) {
+                const modal = document.getElementById('modalSucursal');
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    cerrarModalSucursal();
+                }
+            });
         </script>
     @endpush
 

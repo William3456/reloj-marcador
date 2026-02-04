@@ -174,47 +174,155 @@
             {{-- =========================================================== --}}
             {{-- SECCIÓN RESUMEN (AHORA SIEMPRE VISIBLE SI HAY DATOS) --}}
             {{-- =========================================================== --}}
+            {{-- =========================================================== --}}
+            {{-- SECCIÓN RESUMEN (DISEÑO HISTORIAL) --}}
+            {{-- =========================================================== --}}
             @if($historialHoy->isNotEmpty())
-                <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                        <h4 class="font-bold text-gray-700 text-sm">Resumen de Actividad (Hoy)</h4>
-                    </div>
-                    <div class="divide-y divide-gray-100">
-                        @foreach($historialHoy as $registro)
-                            <div class="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                <div class="flex items-center">
-                                    <div class="p-2 rounded-full mr-3 {{ $registro->tipo_marcacion == 1 ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600' }}">
-                                        @if($registro->tipo_marcacion == 1)
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-                                        @else
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                
+                <div class="mt-8 mb-2">
+                    <h4 class="font-bold text-gray-700 text-sm px-2 mb-2 uppercase tracking-wider">Actividad de Hoy</h4>
+                </div>
+
+                {{-- Agrupamos por Horario para simular la vista de Turnos --}}
+                @php
+                    // Agrupamos por ID de horario para mantener juntos entrada y salida del mismo turno
+                    $registrosPorTurno = $historialHoy->groupBy(function($item) {
+                        return $item->horario_id ?? 'extra'; 
+                    });
+                @endphp
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    
+                    @foreach($registrosPorTurno as $horarioId => $registros)
+                        @php
+                            // Intentamos obtener info del horario del primer registro del grupo
+                            $horarioRef = $registros->first()->horario;
+                            $tituloTurno = $horarioRef 
+                                ? 'Turno • ' . \Carbon\Carbon::parse($horarioRef->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($horarioRef->hora_fin)->format('H:i')
+                                : 'Marcaciones Adicionales';
+                        @endphp
+
+                        {{-- CABECERA DEL TURNO --}}
+                        <div class="bg-gray-50/50 px-4 py-1.5 border-b border-gray-100 border-t {{ $loop->first ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                {{ $tituloTurno }}
+                            </span>
+                        </div>
+
+                        {{-- LISTA DE MARCACIONES DEL TURNO --}}
+                        @foreach($registros as $reg)
+                            @php
+                                $etiqueta = null;
+                                $claseColor = ''; // Solo para badge
+                                $tipoTexto = $reg->tipo_marcacion == 1 ? 'Entrada' : 'Salida';
+                                
+                                // Lógica visual de colores
+                                if($reg->tipo_marcacion == 1) { // Entrada
+                                    $iconoBg = 'bg-green-100 text-green-600';
+                                    if($reg->fuera_horario) { $etiqueta = 'Tarde'; $claseColor = 'bg-orange-100 text-orange-700 border-orange-200'; }
+                                } else { // Salida
+                                    $iconoBg = 'bg-red-100 text-red-600';
+                                    if($reg->fuera_horario) { $etiqueta = 'Olvido/Extra'; $claseColor = 'bg-red-100 text-red-700 border-red-200'; }
+                                }
+                            @endphp
+
+                            <div onclick="abrirDetalleHistorial(this)"
+                                 class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
+                                 data-tipo="{{ $tipoTexto }}"
+                                 data-hora="{{ $reg->created_at->format('h:i A') }}"
+                                 data-fecha="{{ $reg->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
+                                 data-sucursal="{{ $reg->sucursal->nombre ?? 'Ubicación GPS' }}"
+                                 data-foto="{{ Storage::url($reg->ubi_foto) }}"
+                                 data-lat="{{ $reg->latitud }}"
+                                 data-lng="{{ $reg->longitud }}"
+                                 data-etiqueta="{{ $etiqueta }}"
+                                 data-clase-color="{{ $claseColor }}">
+                                
+                                {{-- Icono --}}
+                                <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $iconoBg }}">
+                                    @if($reg->tipo_marcacion == 1)
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                    @else
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                    @endif
+                                </div>
+
+                                {{-- Textos --}}
+                                <div class="ml-4 flex-grow">
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-sm font-bold text-gray-800">{{ $tipoTexto }}</p>
+                                        @if($etiqueta)
+                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $claseColor }}">
+                                                {{ $etiqueta }}
+                                            </span>
                                         @endif
                                     </div>
-                                    <div>
-                                        <p class="text-sm font-bold text-gray-800">{{ $registro->tipo_marcacion == 1 ? 'Entrada' : 'Salida' }}</p>
-                                        <p class="text-xs text-gray-500">
-                                            @if($registro->horario) 
-                                                Turno {{ \Carbon\Carbon::parse($registro->horario->hora_ini)->format('H:i') }} 
-                                            @endif
-                                        </p>
-                                    </div>
+                                    <p class="text-xs text-gray-500">
+                                        {{ $reg->created_at->format('h:i A') }} • {{ $reg->sucursal->nombre ?? 'GPS' }}
+                                    </p>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-bold text-gray-700">{{ $registro->created_at->format('H:i') }}</p>
-                                    @if($registro->fuera_horario)
-                                        <span class="text-[10px] text-orange-500 font-bold block">Tarde/Olvido</span>
-                                    @endif
+
+                                {{-- Chevron --}}
+                                <div class="text-gray-300">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                 </div>
                             </div>
                         @endforeach
-                    </div>
+                    @endforeach
                 </div>
             @endif
+{{-- MODAL DETALLE HISTORIAL (Idéntico al de Historial) --}}
+    <div id="modal-detalle-historial" class="fixed inset-0 z-[120] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="cerrarDetalleHistorial()"></div>
 
+        <div class="fixed inset-x-0 bottom-0 bg-white rounded-t-[30px] shadow-2xl transform transition-transform duration-300 overflow-hidden max-w-md mx-auto">
+            <div class="flex justify-center pt-3" onclick="cerrarDetalleHistorial()">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <div class="p-6 pb-10">
+                {{-- Encabezado --}}
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 id="md-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
+                            <span id="md-etiqueta" class="hidden text-[10px] font-bold px-2 py-0.5 rounded border"></span>
+                        </div>
+                        <p id="md-fecha" class="text-blue-600 font-medium text-sm"></p>
+                    </div>
+                    <button onclick="cerrarDetalleHistorial()" class="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                {{-- Foto --}}
+                <div class="mb-6 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner min-h-[14rem]">
+                    <img id="md-img" src="" class="w-full h-56 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+Evidencia';" />
+                </div>
+
+                {{-- Info Ubicación --}}
+                <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center mb-4 pb-4 border-b border-gray-100">
+                        <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600 mr-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sucursal Asignada</p>
+                            <p id="md-sucursal" class="text-sm font-bold text-gray-900">---</p>
+                        </div>
+                    </div>
+                    
+                    {{-- Mapa --}}
+                    <div id="md-mapa" class="w-full h-40 rounded-xl overflow-hidden bg-gray-100 relative z-0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
         </div>
     </div>
 
     {{-- MODIFICACIÓN 2: Modal de Información de Sucursal (Fuera del flujo principal) --}}
+    {{-- MODAL DE INFORMACIÓN DE SUCURSAL Y TURNOS --}}
     <div id="modal-sucursal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         {{-- Backdrop oscuro --}}
         <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('modal-sucursal')"></div>
@@ -226,8 +334,8 @@
                     
                     {{-- Cabecera Modal --}}
                     <div class="bg-blue-600 px-4 py-3 sm:px-6 flex justify-between items-center">
-                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Mi sucursal asignada</h3>
-                        <button onclick="toggleModal('modal-sucursal')" class="text-white hover:text-gray-200">
+                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Información Laboral</h3>
+                        <button onclick="toggleModal('modal-sucursal')" class="text-white hover:text-gray-200 focus:outline-none">
                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -235,82 +343,156 @@
                     </div>
 
                     {{-- Cuerpo del Modal --}}
-                    <div class="px-4 py-5 sm:p-6 space-y-4">
-                        {{-- Icono central --}}
-                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                            <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                        </div>
-
+                    {{-- Cuerpo del Modal COMPACTO --}}
+                    <div class="px-4 py-4 space-y-4">
+                        
+                        {{-- Icono y Nombre Sucursal (Más pequeño) --}}
                         <div class="text-center">
-                            {{-- DATOS DINÁMICOS DE SUCURSAL --}}
-                            {{-- Asegúrate de que el usuario tenga relación con sucursal, usa optional() o ?? para evitar errores --}}
-                            <h4 class="text-lg font-bold text-gray-900">
-                                
-                                {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal Asignada' }}
+                            <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 mb-2">
+                                <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <h4 class="text-base font-bold text-gray-900 leading-tight">
+                                {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal' }}
                             </h4>
-                            <p class="text-sm text-gray-500 mt-1">
-                                {{ Auth::user()->empleado->sucursal->direccion ?? 'Ponte en contacto con RRHH para asignación.' }}
+                            <p class="text-xs text-gray-500">
+                                {{ Auth::user()->empleado->sucursal->direccion ?? '' }}
                             </p>
                         </div>
                         
-                        {{-- Información extra en lista --}}
-                        <div class="bg-gray-50 rounded-lg p-3 text-sm text-left space-y-2 border border-gray-100">
-    
-    {{-- SECCIÓN HORARIOS (MODIFICADA: Días en vez de Turno) --}}
-    <div class="flex flex-col space-y-2">
-        <span class="text-gray-500 font-medium text-xs uppercase mb-1">Horarios de Atención:</span>
-        
-        @forelse(Auth::user()->empleado->sucursal->horarios as $h)
-            <div class="flex flex-col bg-white border border-gray-200 rounded px-2 py-2 shadow-sm">
-                {{-- 1. Hora Inicio - Fin --}}
-                <div class="flex items-center mb-1">
-                    <i class="far fa-clock text-blue-500 mr-1.5 text-xs"></i>
-                    <span class="font-bold text-gray-700">
-                        {{ \Carbon\Carbon::parse($h->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
-                    </span>
-                </div>
+                        {{-- CAJA CONTENEDORA --}}
+                        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
 
-                {{-- 2. Días del Horario (Reemplaza al turno_txt) --}}
-                <div class="flex flex-wrap gap-1">
-                    @foreach($h->dias ?? [] as $dia)
-                        <span class="text-[10px] bg-gray-100 text-gray-600 border border-gray-200 px-1.5 py-0.5 rounded capitalize">
-                            {{ mb_substr($dia, 0, 3) }} {{-- Abreviamos a 3 letras (Lun, Mar...) --}}
-                        </span>
-                    @endforeach
-                </div>
-            </div>
-        @empty
-            <span class="text-gray-400 italic text-xs">Sin horarios asignados</span>
-        @endforelse
-    </div>
+                            {{-- 1. SECCIÓN: MIS TURNOS --}}
+                            {{-- 1. SECCIÓN: MIS TURNOS --}}
+                            <div class="mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-blue-700 font-bold text-[10px] uppercase tracking-wide">
+                                        <i class="fa-solid fa-user-clock mr-1"></i> Mis Turnos
+                                    </span>
+                                </div>
+                                
+                                {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @forelse(Auth::user()->empleado->horarios as $miHorario)
+                                        @php
+                                            // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
+                                            $esTurnoActual = false;
+                                            $now = \Carbon\Carbon::now();
+                                            
+                                            // 1. Verificar Día (Normalizamos a 3 letras minúsculas para comparar: lun, mar, mié...)
+                                            $hoySlug = \Str::slug($now->locale('es')->isoFormat('ddd')); 
+                                            // A veces isoFormat devuelve "mié" con tilde, Str::slug lo pasa a "mie"
+                                            
+                                            $esDiaCorrecto = collect($miHorario->dias)->contains(function($d) use ($hoySlug) {
+                                                // Normalizamos el día de la BD también (quitamos tildes y mayúsculas)
+                                                $diaDbSlug = \Str::slug(mb_substr($d, 0, 3));
+                                                return $diaDbSlug === $hoySlug;
+                                            });
 
-    <div class="border-t border-gray-200 my-2"></div>
+                                            // 2. Verificar Hora
+                                            if ($esDiaCorrecto) {
+                                                $inicio = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_ini);
+                                                $fin = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_fin);
+                                                
+                                                // Ajuste para turnos nocturnos (ej: 22:00 a 06:00)
+                                                if ($fin->lessThan($inicio)) {
+                                                    $fin->addDay();
+                                                }
 
-    {{-- SECCIÓN TELÉFONO --}}
-    <div class="flex justify-between items-center">
-        <span class="text-gray-500">Teléfono:</span>
-        <span class="font-medium text-gray-800">{{ Auth::user()->empleado->sucursal->telefono ?? 'N/A' }}</span>
-    </div>
+                                                // Damos 30 min de gracia antes y 15 despues para que se "ilumine" un poco antes
+                                                if ($now->between($inicio->copy()->subMinutes(30), $fin->copy()->addMinutes(15))) {
+                                                    $esTurnoActual = true;
+                                                }
+                                            }
+                                        @endphp
 
-    {{-- SECCIÓN DÍAS LABORALES GENERALES (Opcional: Si quieres mantener el resumen global abajo) --}}
-    <div class="flex flex-col space-y-2 pt-1">
-        <span class="text-gray-500 text-xs text-center font-bold">Días operativos (Sucursal):</span>
-        <div class="flex flex-wrap gap-1 justify-center">
-            @foreach(Auth::user()->empleado->sucursal->dias_laborales ?? [] as $dia)
-                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-700/10 capitalize">
-                    {{ $dia }}
-                </span>
-            @endforeach
-        </div>
-    </div>
-</div>
+                                        <div class="border-l-4 rounded px-2 py-1.5 shadow-sm relative transition-all duration-500
+                                            {{-- ESTILOS CONDICIONALES --}}
+                                            {{ $esTurnoActual 
+                                                ? 'bg-green-50 border-green-500 border border-green-200 animate-pulse' 
+                                                : 'bg-white border-blue-500 border-blue-200' 
+                                            }}">
+                                            
+                                            {{-- Etiqueta "AHORA" si está activo --}}
+                                            @if($esTurnoActual)
+                                                <div class="absolute top-1 right-1">
+                                                    <span class="flex h-2 w-2 relative">
+                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                                    </span>
+                                                </div>
+                                            @endif
+
+                                            {{-- Hora compacta --}}
+                                            <div class="text-xs font-black mb-1 {{ $esTurnoActual ? 'text-green-800' : 'text-gray-800' }}">
+                                                {{ \Carbon\Carbon::parse($miHorario->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($miHorario->hora_fin)->format('H:i') }}
+                                            </div>
+                                            
+                                            {{-- Días Mini --}}
+                                            <div class="flex flex-wrap gap-0.5">
+                                                @foreach($miHorario->dias ?? [] as $dia)
+                                                    <span class="text-[8px] px-1 rounded capitalize leading-tight border
+                                                        {{ $esTurnoActual 
+                                                            ? 'bg-green-100 text-green-700 border-green-200 font-bold' 
+                                                            : 'bg-blue-50 text-blue-700 border-blue-100' 
+                                                        }}">
+                                                        {{ mb_substr($dia, 0, 3) }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="col-span-full text-center py-2 border border-dashed border-gray-200 rounded bg-white">
+                                            <span class="text-gray-400 italic text-xs">Sin asignación personal</span>
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-200 my-2"></div>
+
+                            {{-- 2. SECCIÓN: HORARIOS SUCURSAL --}}
+                            <div class="mb-2">
+                                <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención General:</span>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @forelse(Auth::user()->empleado->sucursal->horarios as $h)
+                                        <div class="bg-white border border-gray-200 rounded px-2 py-1.5 shadow-sm opacity-80">
+                                            <div class="text-xs font-bold text-gray-600 mb-1">
+                                                {{ \Carbon\Carbon::parse($h->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
+                                            </div>
+                                            <div class="flex flex-wrap gap-0.5">
+                                                @foreach($h->dias ?? [] as $dia)
+                                                    <span class="text-[8px] bg-gray-100 text-gray-500 border border-gray-200 px-1 rounded capitalize leading-tight">
+                                                        {{ mb_substr($dia, 0, 3) }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <span class="text-gray-400 italic text-xs col-span-full">No definido</span>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            {{-- 3. TELÉFONO COMPACTO --}}
+                            <div class="mt-3 bg-white border border-gray-200 rounded p-2 flex justify-between items-center">
+                                <span class="text-gray-500 text-xs">Teléfono:</span>
+                                <span class="font-bold text-gray-800 text-xs flex items-center">
+                                    <i class="fa-solid fa-phone mr-1.5 text-gray-400"></i>
+                                    {{ Auth::user()->empleado->sucursal->telefono ?? 'N/A' }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Footer Modal --}}
                     <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                        <button type="button" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto" onclick="toggleModal('modal-sucursal')">Cerrar</button>
+                        <button type="button" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto" onclick="toggleModal('modal-sucursal')">
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -559,6 +741,77 @@
             btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
+
+    let mapHistorial;
+        let markerHistorial;
+
+        function abrirDetalleHistorial(elemento) {
+            const tipo = elemento.getAttribute('data-tipo');
+            const hora = elemento.getAttribute('data-hora');
+            const fecha = elemento.getAttribute('data-fecha');
+            const sucursal = elemento.getAttribute('data-sucursal');
+            const fotoUrl = elemento.getAttribute('data-foto');
+            const etiqueta = elemento.getAttribute('data-etiqueta');
+            const claseColor = elemento.getAttribute('data-clase-color');
+            const lat = parseFloat(elemento.getAttribute('data-lat'));
+            const lng = parseFloat(elemento.getAttribute('data-lng'));
+
+            // Llenar datos
+            document.getElementById('md-titulo').innerText = tipo;
+            document.getElementById('md-fecha').innerText = fecha + ' • ' + hora;
+            document.getElementById('md-img').src = fotoUrl;
+            document.getElementById('md-sucursal').innerText = sucursal;
+
+            // Etiqueta
+            const badge = document.getElementById('md-etiqueta');
+            if(etiqueta) {
+                badge.innerText = etiqueta;
+                badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // Mostrar Modal
+            const modal = document.getElementById('modal-detalle-historial');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Iniciar Mapa
+            initMapHistorial(lat, lng);
+        }
+
+        function cerrarDetalleHistorial() {
+            document.getElementById('modal-detalle-historial').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function initMapHistorial(lat, lng) {
+            const position = { lat: lat, lng: lng };
+            if (!mapHistorial) {
+                setTimeout(() => {
+                    // Verificamos si Google Maps está cargado (ya que lo usas en la vista principal)
+                    if(typeof google !== 'undefined') {
+                        mapHistorial = new google.maps.Map(document.getElementById("md-mapa"), {
+                            center: position,
+                            zoom: 16,
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                        });
+                        markerHistorial = new google.maps.Marker({
+                            position: position,
+                            map: mapHistorial,
+                        });
+                    }
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    mapHistorial.setCenter(position);
+                    markerHistorial.setPosition(position);
+                    google.maps.event.trigger(mapHistorial, 'resize');
+                }, 100);
+            }
+        }
 </script>
 @endpush
 </x-app-layout>

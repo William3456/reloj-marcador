@@ -67,8 +67,8 @@
                                                 <option value="{{ $h->id }}" 
                                                         data-hora_ini="{{ $h->hora_ini }}" 
                                                         data-hora_fin="{{ $h->hora_fin }}" 
-                                                        data-turno="{{ $h->turno_txt }}">
-                                                    {{ $h->hora_ini }} - {{ $h->hora_fin }} ({{ $h->turno_txt }})
+                                                        data-dias="{{ implode(', ', $h->dias) }}">
+                                                    {{ $h->hora_ini }} - {{ $h->hora_fin }} ({{ implode(', ', $h->dias) }})
                                                 </option>
                                             @endforeach
                                         </select>

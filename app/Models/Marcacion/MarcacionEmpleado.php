@@ -4,6 +4,7 @@ namespace App\Models\Marcacion;
 
 use App\Models\Empleado\Empleado;
 use App\Models\Horario\horario;
+use App\Models\Horario\HorarioHistorico;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Model;
 
@@ -25,6 +26,8 @@ class MarcacionEmpleado extends Model
         'fuera_horario',
         'id_marcacion_entrada',
         'id_horario',
+        'id_horario_historico_empleado',
+        'id_horario_historico_sucursal',
     ];
 
     public function sucursal()
@@ -69,4 +72,10 @@ class MarcacionEmpleado extends Model
     {
         return $this->belongsTo(horario::class, 'id_horario');
     }
+    public function horarioHistorico()
+    {
+        // Esta relación conecta la marcación con la "foto" del horario en ese momento
+        return $this->belongsTo(HorarioHistorico::class, 'id_horario_historico_empleado');
+    }
+    
 }

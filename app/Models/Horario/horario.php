@@ -140,4 +140,12 @@ class horario extends Model
             'id_sucursal'            // Clave foránea del modelo destino (Sucursal) en la pivote
         );
     }
+    public function historicos()
+    {
+        return $this->hasMany(
+            HorarioHistorico::class,
+            'id_horario',
+            'id'
+        );
+    }
 }

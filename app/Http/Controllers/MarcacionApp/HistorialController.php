@@ -4,9 +4,11 @@ namespace App\Http\Controllers\MarcacionApp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Marcacion\MarcacionEmpleado;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class HistorialController extends Controller
 {
@@ -16,45 +18,143 @@ class HistorialController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $empleado = $user->empleado;
+        $hoy = Carbon::now()->endOfDay();
 
+        // 1. Definir rango de fechas solicitado (Input del usuario)
         $desde = $request->input('desde')
             ? Carbon::parse($request->input('desde'))->startOfDay()
             : Carbon::now()->startOfMonth()->startOfDay();
 
-        $hasta = $request->input('hasta')
+        $hastaSolicitado = $request->input('hasta')
             ? Carbon::parse($request->input('hasta'))->endOfDay()
             : Carbon::now()->endOfMonth()->endOfDay();
 
-        $marcaciones = MarcacionEmpleado::where('id_empleado', $user->empleado->id)
-            ->where(function ($q) use ($desde, $hasta) {
+        // ---------------------------------------------------------
+        // CORRECCIÓN 1: LÓGICA INTELIGENTE PARA EL LIMITE DE FECHA
+        // ---------------------------------------------------------
+        // Buscamos la fecha de la ULTIMA marcación real que tenga este empleado en BD
+        $ultimaMarcacionRegistrada = MarcacionEmpleado::where('id_empleado', $empleado->id)
+            ->max('created_at');
 
-                // Entradas dentro del rango
-                $q->where(function ($q2) use ($desde, $hasta) {
-                    $q2->where('tipo_marcacion', 1)
-                        ->whereBetween('created_at', [$desde, $hasta]);
-                })
+        $fechaTopeLogico = $hoy; // Por defecto, el tope es Hoy
 
-                // Salidas cuya ENTRADA esté dentro del rango
-                    ->orWhere(function ($q2) use ($desde, $hasta) {
-                        $q2->where('tipo_marcacion', 2)
-                            ->whereHas('entrada', function ($q3) use ($desde, $hasta) {
-                                $q3->whereBetween('created_at', [$desde, $hasta]);
-                            });
-                    });
-            })
+        if ($ultimaMarcacionRegistrada) {
+            $fechaUltima = Carbon::parse($ultimaMarcacionRegistrada)->endOfDay();
+            // Si tienes pruebas en el futuro (ej: mañana), el tope se extiende hasta esa fecha
+            if ($fechaUltima->isFuture()) {
+                $fechaTopeLogico = $fechaUltima;
+            }
+        }
+
+        // El $hasta final será lo que pidió el usuario, PERO recortado por el tope lógico
+        // (Para que si filtras hasta el 31 de mes, no te salgan días vacíos futuros,
+        // a menos que tengas marcaciones en ellos).
+        $hasta = $hastaSolicitado->greaterThan($fechaTopeLogico) ? $fechaTopeLogico : $hastaSolicitado;
+
+        // 2. Traer marcaciones
+        $todasMarcaciones = MarcacionEmpleado::where('id_empleado', $empleado->id)
+            ->whereBetween('created_at', [$desde, $hasta])
             ->with(['sucursal', 'entrada'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->entrada
-                    ? $item->entrada->created_at->format('Y-m-d')
-                    : $item->created_at->format('Y-m-d');
-            });
+            ->get();
 
-        return view(
-            'app_marcacion.marcaciones.historial',
-            compact('marcaciones', 'desde', 'hasta')
-        );
+        // 3. Generar historial
+        $historial = collect();
+        $idsUsados = []; // <--- NUEVO: Para no repetir la misma entrada en dos turnos
+
+        if ($desde->lessThanOrEqualTo($hasta)) {
+            $periodo = CarbonPeriod::create($desde, $hasta);
+
+            foreach ($periodo as $dia) {
+                $nombreDia = Str::lower($dia->locale('es')->isoFormat('dddd'));
+
+                // A. Buscar horarios
+                $horariosDelDia = $empleado->horarios()
+                    ->where('dias', 'like', "%$nombreDia%")
+                    ->orderBy('hora_ini')
+                    ->get();
+
+                $turnosData = [];
+                $completados = 0;
+
+                foreach ($horariosDelDia as $horario) {
+
+                    $horaInicioTurno = Carbon::parse($dia->format('Y-m-d').' '.$horario->hora_ini);
+
+                    // DEFINIR VENTANA DE TIEMPO ESTRICTA
+                    // La marcación es válida si ocurre entre 2 horas antes y 4 horas después del inicio del turno.
+                    // Esto evita que el Turno 1 (08:00) capture una marcación de las 16:00 (fuera de rango).
+                    $ventanaInicio = $horaInicioTurno->copy()->subHours(2);
+                    $ventanaFin = $horaInicioTurno->copy()->addHours(4);
+
+                    // 1. Buscar Entrada
+                    $marcacionEncontrada = $todasMarcaciones->filter(function ($m) use ($ventanaInicio, $ventanaFin, $idsUsados) {
+                        return $m->tipo_marcacion == 1
+                            && ! in_array($m->id, $idsUsados) // <--- VALIDACIÓN 1: Que no haya sido usada
+                            && $m->created_at->between($ventanaInicio, $ventanaFin); // <--- VALIDACIÓN 2: Rango estricto
+                    })->first();
+
+                    if ($marcacionEncontrada) {
+                        $completados++;
+                        $idsUsados[] = $marcacionEncontrada->id; // <--- MARCAR COMO USADA
+
+                        // BUSCAR SALIDA (Tu lógica existente, mantenida intacta)
+                        // ... (aquí va tu lógica de búsqueda de salida igual que antes)
+                        $salida = $todasMarcaciones->first(function ($item) use ($marcacionEncontrada) {
+                            return $item->tipo_marcacion == 2
+                                && $item->id_marcacion_entrada == $marcacionEncontrada->id;
+                        });
+
+                        if (! $salida) {
+                            $salida = $todasMarcaciones->first(function ($item) use ($marcacionEncontrada, $dia) {
+                                return $item->tipo_marcacion == 2
+                                    && $item->id_marcacion_entrada == null
+                                    && $item->created_at->gt($marcacionEncontrada->created_at)
+                                    && $item->created_at->lt($dia->copy()->endOfDay());
+                            });
+                        }
+                        // ... (fin lógica salida)
+
+                        $turnosData[] = [
+                            'estado' => 'completado',
+                            'horario_info' => $horario,
+                            'entrada' => $marcacionEncontrada,
+                            'salida' => $salida,
+                        ];
+                    } else {
+                        if ($horaInicioTurno->isPast()) {
+                            $turnosData[] = ['estado' => 'perdido', 'horario_info' => $horario];
+                        } else {
+                            $turnosData[] = ['estado' => 'pendiente', 'horario_info' => $horario];
+                        }
+                    }
+                }
+
+                // Resto de tu lógica para agregar al historial...
+                $tieneMarcacionesSueltas = $todasMarcaciones->filter(function ($m) use ($dia) {
+                    return $m->created_at->isSameDay($dia);
+                })->count() > 0;
+
+                $esHoy = $dia->isSameDay(Carbon::now()->startOfDay());
+
+                if ($horariosDelDia->count() > 0 || $esHoy || $tieneMarcacionesSueltas) {
+                    $historial->push([
+                        'fecha' => $dia,
+                        'total_turnos' => $horariosDelDia->count(),
+                        'completados' => $completados,
+                        'detalles' => $turnosData,
+                    ]);
+                }
+            }
+        }
+
+        $historial = $historial->sortByDesc('fecha');
+
+        return view('app_marcacion.marcaciones.historial', [
+            'historial' => $historial,
+            'desde' => $desde,
+            'hasta' => $hastaSolicitado,
+        ]);
     }
 
     /**

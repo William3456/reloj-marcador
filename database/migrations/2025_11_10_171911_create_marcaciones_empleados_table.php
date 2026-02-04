@@ -25,6 +25,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_permiso_Aplicado')->nullable;
             $table->integer('fuera_horario')->nullable;
             $table->integer('id_marcacion_entrada')->nullable;
+            $table->unsignedBigInteger('id_horario')->nullable;
+            $table->unsignedBigInteger('id_horario_historico_empleado')->nullable;
+            $table->unsignedBigInteger('id_horario_historico_sucursal')->nullable;
             $table->timestamps();
         });
     }

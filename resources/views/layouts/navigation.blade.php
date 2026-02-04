@@ -317,6 +317,11 @@
                         class="block py-2 text-sm {{ request()->routeIs('reportes.empleados.sucursal') ? $activeLinkClass : $inactiveLinkClass }}">Empleados</a>
 
                 </div>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('reportes.marcaciones.marcaciones_rep') }}"
+                        class="block py-2 text-sm {{ request()->routeIs('reportes.marcaciones.marcaciones_rep') ? $activeLinkClass : $inactiveLinkClass }}">Asistencia</a>
+
+                </div>
             </div>
         @endif
     </nav>

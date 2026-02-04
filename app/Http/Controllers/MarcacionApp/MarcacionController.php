@@ -4,11 +4,13 @@ namespace App\Http\Controllers\MarcacionApp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Horario\horario;
+use App\Models\Horario\HorarioHistorico;
 use App\Models\Marcacion\MarcacionEmpleado;
 use App\Models\Permiso\Permiso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -31,13 +33,13 @@ class MarcacionController extends Controller
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
 
         // 🕒 ESCENARIO 2: Salida OLVIDADA (8:30 PM hoy)
-        // Carbon::setTestNow(now()->setTime( 19, 30, 0));
+         //Carbon::setTestNow(now()->setTime( 8, 0, 0));
 
         // 🕒 ESCENARIO 3: Salida Temprana (3:00 PM hoy)
         // \Carbon\Carbon::setTestNow(now()->setTime(15, 0, 0));
 
         // 🕒 ESCENARIO 4: Mañana a las 8:00 AM //martes = 10
-        //Carbon::setTestNow(now()->addDay(13)->setTime(6, 41, 0));
+        //Carbon::setTestNow(now()->addDay()->setTime(19, 0, 0));
 
     }
 
@@ -101,7 +103,7 @@ class MarcacionController extends Controller
         }
         $historialHoy = collect();
         // Si hay permiso activo, no necesitamos calcular nada más complejo
-        //dd();
+        // dd();
         if ($permisoActivo) {
             return view('app_marcacion.inicio', compact('permisoActivo', 'historialHoy'));
         }
@@ -325,7 +327,9 @@ class MarcacionController extends Controller
         }
 
         // 3. Validar si la Sucursal trabaja hoy
+
         $diaSemana = $this->getDiaSemanaEspanol($fechaReferencia);
+
         if (! $this->isDiaLaboralSucursal($sucursal, $diaSemana)) {
             return back()->withErrors(['error' => "La sucursal no labora los días $diaSemana."]);
         }
@@ -351,7 +355,7 @@ class MarcacionController extends Controller
         }
 
         // 7. Guardar en BD
-        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta);
+        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana);
 
         // 8. Procesar Foto
         $this->procesarImagen($request->file('ubi_foto'), $marcacion, $empleado, $validated['tipo_marcacion']);
@@ -625,20 +629,85 @@ class MarcacionController extends Controller
         return ['distancia' => $distancia];
     }
 
-    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta)
+    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana)
     {
-        return MarcacionEmpleado::create([
-            'id_empleado' => $empleado->id,
-            'id_sucursal' => $sucursal->id,
-            'id_horario' => $horario->id, // <--- AQUÍ GUARDAMOS EL ID DEL HORARIO
-            'latitud' => $validated['latitud'],
-            'longitud' => $validated['longitud'],
-            'distancia_real_mts' => $distancia,
-            'tipo_marcacion' => $validated['tipo_marcacion'],
-            'id_permiso_aplicado' => $validacionTiempo['permiso_aplicado'],
-            'fuera_horario' => $validacionTiempo['fuera_horario'],
-            'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
-        ]);
+        return DB::transaction(function () use (
+            $diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta) {
+            $horarioEmpleado = $horario;
+            $horarioSucursal = null;
+
+            foreach ($sucursal->horarios as $h) {
+                if ($h->permitido_marcacion == 1 && in_array($diaSemana, $h->dias)) {
+                    $horarioSucursal = $h;
+                    break;
+                }
+            }
+
+            $historicoEmpleado = HorarioHistorico::mismoHorario($horarioEmpleado)
+                ->vigente()->first();
+
+            if ($historicoEmpleado == null) {
+                HorarioHistorico::where('id_horario', $horarioEmpleado->id)
+                    ->where('tipo_horario', $horarioEmpleado->permitido_marcacion)
+                    ->vigente()
+                    ->update(['vigente_hasta' => now()]);
+
+                $historicoEmpleado = HorarioHistorico::create([
+                    'id_horario' => $horarioEmpleado->id,
+                    'tipo_horario' => $horarioEmpleado->permitido_marcacion,
+                    'hora_entrada' => $horarioEmpleado->hora_ini,
+                    'hora_salida' => $horarioEmpleado->hora_fin,
+                    'tolerancia' => $horarioEmpleado->tolerancia,
+                    'dias' => json_encode($horarioEmpleado->dias),
+                    'vigente_desde' => now(),
+                ]);
+            }
+            $historicoSucursal = null;
+
+            if ($horarioSucursal) {
+                $historicoSucursal = HorarioHistorico::mismoHorario($horarioSucursal)
+                    ->vigente()->first();
+
+                
+
+                
+                if ($historicoSucursal == null) {
+
+                    HorarioHistorico::where('id_horario', $horarioSucursal->id)
+                        ->where('tipo_horario', $horarioSucursal->permitido_marcacion)
+                        ->vigente()
+                        ->update(['vigente_hasta' => now()]);
+
+                    $historicoSucursal = HorarioHistorico::create([
+                        'id_horario' => $horarioSucursal->id,
+                        'tipo_horario' => $horarioSucursal->permitido_marcacion,
+                        'hora_entrada' => $horarioSucursal->hora_ini,
+                        'hora_salida' => $horarioSucursal->hora_fin,
+                        'tolerancia' => $horarioSucursal->tolerancia,
+                        'dias' => json_encode($horarioSucursal->dias),
+                        'vigente_desde' => now(),
+                    ]);
+                }
+            }
+
+            // Guardar marcación (mínimo cambio)
+            return MarcacionEmpleado::create([
+                'id_empleado' => $empleado->id,
+                'id_sucursal' => $sucursal->id,
+                'id_horario' => $horario->id,
+                'id_horario_historico_empleado' => $historicoEmpleado->id,
+                'id_horario_historico_sucursal' => $historicoSucursal?->id,
+                'latitud' => $validated['latitud'],
+                'longitud' => $validated['longitud'],
+                'distancia_real_mts' => $distancia,
+                'tipo_marcacion' => $validated['tipo_marcacion'],
+                'id_permiso_aplicado' => $validacionTiempo['permiso_aplicado'],
+                'fuera_horario' => $validacionTiempo['fuera_horario'],
+                'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2
+                    ? $entradaAbierta?->id
+                    : null,
+            ]);
+        });
     }
 
     private function procesarImagen($file, $marcacion, $empleado, $tipo)
@@ -669,10 +738,7 @@ class MarcacionController extends Controller
         }
     }
 
-    private function guardaHistoricoHorarioEmpleado($empleado, $sucursal, $horario, $diaSemana)
-    {
-       
-    }
+    private function guardaHistoricoHorarioEmpleado($empleado, $sucursal, $horario, $diaSemana) {}
 
     /**
      * Show the form for creating a new resource.
