@@ -17,6 +17,7 @@ use App\Http\Controllers\Reportes\ReporteEmpleadoController;
 use App\Http\Controllers\Reportes\ReporteMarcacionesController;
 use App\Http\Controllers\Sucursales\SucursalController; // Para la API interna
 use App\Models\Turnos\Turnos;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
