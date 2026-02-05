@@ -468,7 +468,7 @@ class MarcacionController extends Controller
         if ($tipoMarcacion == 2 && $entradaAbierta) {
             // Si la entrada ya tiene el ID guardado, lo usamos directo.
             if ($entradaAbierta->id_horario) {
-                return \App\Models\Horario\Horario::find($entradaAbierta->id_horario);
+                return horario::find($entradaAbierta->id_horario);
             }
 
             // FALLBACK PARA REGISTROS VIEJOS (SIN ID)
@@ -652,53 +652,45 @@ class MarcacionController extends Controller
                     break;
                 }
             }
+        }
 
-            $historicoEmpleado = HorarioHistorico::mismoHorario($horarioEmpleado)
-                ->vigente()->first();
+        // =========================
+        // VALIDACIÓN GPS
+        // =========================
+        $rango = $sucursal->rango_marcacion_mts;
+        $margenError = $sucursal->margen_error_gps_mts;
 
-            if ($historicoEmpleado == null) {
-                HorarioHistorico::where('id_horario', $horarioEmpleado->id)
-                    ->where('tipo_horario', $horarioEmpleado->permitido_marcacion)
-                    ->vigente()
-                    ->update(['vigente_hasta' => now()]);
+        // Ajuste de rango por permisos (Solo aplica si no es olvido, o según tu lógica de negocio)
+        if ($permisos['fuera_rango']) {
+            if ($permisos['fuera_rango']->cantidad_mts !== null) {
+                $rango = $permisos['fuera_rango']->cantidad_mts;
+            } else {
+                $rango = PHP_INT_MAX; // Exonerado
+            }
+        }
 
-                $historicoEmpleado = HorarioHistorico::create([
-                    'id_horario' => $horarioEmpleado->id,
-                    'tipo_horario' => $horarioEmpleado->permitido_marcacion,
-                    'hora_entrada' => $horarioEmpleado->hora_ini,
-                    'hora_salida' => $horarioEmpleado->hora_fin,
-                    'tolerancia' => $horarioEmpleado->tolerancia,
-                    'dias' => json_encode($horarioEmpleado->dias),
-                    'vigente_desde' => now(),
+        $distanciaReal = $this->distanciaEnMetros(
+            $validated['latitud'], $validated['longitud'],
+            $sucursal->latitud, $sucursal->longitud
+        );
+
+        // >>> LOGICA CORREGIDA DE VALIDACION <<<
+        // Validamos GPS si:
+        // 1. Es Entrada (Siempre valida)
+        // 2. O Es Salida PERO NO es olvido (Está en horario laboral + 1 hora)
+        $validarGPS = true;
+
+        if ($validated['tipo_marcacion'] == 2 && $esOlvidoSalida) {
+            $validarGPS = false; // Apagamos validación si se le olvidó marcar
+        }
+
+        if ($validarGPS) {
+            if ($distanciaReal > ($rango + $margenError)) {
+                return back()->withErrors([
+                    'error' => "Estás fuera del rango permitido ($distanciaReal m).",
                 ]);
             }
-            $historicoSucursal = null;
-
-            if ($horarioSucursal) {
-                $historicoSucursal = HorarioHistorico::mismoHorario($horarioSucursal)
-                    ->vigente()->first();
-
-                
-
-                
-                if ($historicoSucursal == null) {
-
-                    HorarioHistorico::where('id_horario', $horarioSucursal->id)
-                        ->where('tipo_horario', $horarioSucursal->permitido_marcacion)
-                        ->vigente()
-                        ->update(['vigente_hasta' => now()]);
-
-                    $historicoSucursal = HorarioHistorico::create([
-                        'id_horario' => $horarioSucursal->id,
-                        'tipo_horario' => $horarioSucursal->permitido_marcacion,
-                        'hora_entrada' => $horarioSucursal->hora_ini,
-                        'hora_salida' => $horarioSucursal->hora_fin,
-                        'tolerancia' => $horarioSucursal->tolerancia,
-                        'dias' => json_encode($horarioSucursal->dias),
-                        'vigente_desde' => now(),
-                    ]);
-                }
-            }
+        }
 
             // Guardar marcación (mínimo cambio)
             return MarcacionEmpleado::create([

@@ -221,4 +221,11 @@ Route::get('/crear-enlace', function () {
         return "Error: " . $e->getMessage();
     }
 });
+Route::get('/reparar-git', function () {
+    // Entramos a la carpeta del proyecto
+    chdir(base_path());
+    // Ejecutamos el comando para descartar los cambios del archivo conflictivo
+    $output = shell_exec('git checkout config/filesystems.php 2>&1');
+    return "Listo. Git reset ejecutado. Mensaje: " . $output;
+});
 require __DIR__.'/auth.php';
