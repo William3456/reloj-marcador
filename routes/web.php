@@ -1,25 +1,25 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail; // Para el test de correo
-
-// Importación de Controladores
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Empresa\EmpresaController;
-use App\Http\Controllers\Sucursales\SucursalController;
-use App\Http\Controllers\Horarios\HorarioController;
-use App\Http\Controllers\Empleados\EmpleadoController;
-use App\Http\Controllers\Permiso\PermisoController;
+use App\Http\Controllers\Api\DeptosPuestosController;
 use App\Http\Controllers\Departamentos\DepartamentosController;
-use App\Http\Controllers\Puestos\PuestosController;
+use App\Http\Controllers\Empleados\EmpleadoController; // Para el test de correo
+// Importación de Controladores
+use App\Http\Controllers\Empresa\EmpresaController;
+use App\Http\Controllers\Horarios\HorarioController;
 use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
-use App\Http\Controllers\Reportes\ReporteEmpleadoController;
-use App\Http\Controllers\MarcacionApp\MarcacionController;
-use App\Http\Controllers\Api\DeptosPuestosController; // Para la API interna
+use App\Http\Controllers\HorariosSucursal\HorarioSucursalController;
 use App\Http\Controllers\MarcacionApp\HistorialController;
-use App\Models\Marcacion\MarcacionEmpleado;
+use App\Http\Controllers\MarcacionApp\MarcacionController;
+use App\Http\Controllers\Permiso\PermisoController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Puestos\PuestosController;
+use App\Http\Controllers\Reportes\ReporteEmpleadoController;
+use App\Http\Controllers\Reportes\ReporteMarcacionesController;
+use App\Http\Controllers\Sucursales\SucursalController; // Para la API interna
 use App\Models\Turnos\Turnos;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,7 +30,7 @@ use App\Models\Turnos\Turnos;
 // Ruta Raíz Inteligente: Decide qué mostrar según el rol
 Route::get('/', function () {
     $user = Auth::user();
-    
+
     // Si es Empleado (Rol 3), ir directo a marcación
     if ($user->id_rol == 3) {
         return redirect()->route('marcacion.inicio');
@@ -40,22 +40,20 @@ Route::get('/', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('home');
 
-
 /*
 |--------------------------------------------------------------------------
 | RUTAS PARA EMPLEADOS (ROL 3) - LA APP MÓVIL
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified', 'check.role:3'])->group(function () {
-    
+
     Route::controller(MarcacionController::class)->prefix('marcacion')->name('marcacion.')->group(function () {
         Route::get('/inicio', 'index')->name('inicio');
-        Route::post('/store', 'store')->name('store'); 
+        Route::post('/store', 'store')->name('store');
         Route::get('/historial', [HistorialController::class, 'index'])->name('historial');
     });
 
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,10 +71,11 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
     Route::controller(SucursalController::class)->prefix('sucursales')->name('sucursales.')->group(function () {
         Route::get('/index', 'index')->name('index');
         Route::get('/create', 'create')->name('create')->middleware('check.role:1');
-        Route::post('/create', 'store')->name('store')->middleware('check.role:1');;
+        Route::post('/create', 'store')->name('store')->middleware('check.role:1');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::get('/{id}/info', [SucursalController::class, 'showInfo'])->name('sucursales.info');
     });
 
     // --- HORARIOS ---
@@ -136,6 +135,11 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
         Route::post('/horario-trabajador/store', 'store')->name('horario_trabajador.store');
     });
 
+    Route::controller(HorarioSucursalController::class)->group(function () {
+        Route::get('/horario-sucursal', 'index')->name('sucursaleshorarios.asign');
+        Route::post('/horario-sucursal/store', 'store')->name('horario_sucursal.store');
+    });
+
     Route::controller(MarcacionController::class)->prefix('marcaciones')->name('marcaciones.')->group(function () {
         Route::get('/index', 'indexPanel')->name('index');
     });
@@ -144,15 +148,21 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
     Route::controller(ReporteEmpleadoController::class)->prefix('reportes/empleados')->name('reportes.empleados.')->group(function () {
         Route::get('/rep-empleados', 'porSucursal')->name('empleados_rep');
     });
-    
+    Route::controller(ReporteMarcacionesController::class)->prefix('reportes/marcaciones')->name('reportes.marcaciones.')->group(function () {
+        Route::get('/rep-marcaciones', 'index')->name('marcaciones_rep');
+    });
+
     // Generación de PDF (Se deja fuera del grupo 'prefix' anterior para mantener tu nombre de ruta exacto si lo usas en JS)
     Route::get('/reportes/empleados/pdf', [ReporteEmpleadoController::class, 'generarPdf'])->name('empleados.pdf');
-    
+    Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
+    // Rutas de Reporte de Marcaciones
+    //Route::get('/reportes/marcaciones', [ReporteMarcacionesController::class, 'index'])->name('marcaciones.index');
+    //Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
+
     // --- EMPRESAS (LISTADO SOLO PARA ROL 2 SEGÚN TU CÓDIGO ANTERIOR) ---
     Route::view('/empresas', 'empresas.lista')->name('empresas.home')->middleware('check.role:2');
 
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -166,7 +176,6 @@ Route::middleware(['auth', 'verified', 'check.role:1'])->group(function () {
     });
 });
 
-
 /*
 |--------------------------------------------------------------------------
 | PERFIL DE USUARIO (COMÚN PARA TODOS)
@@ -177,7 +186,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -191,8 +199,8 @@ Route::middleware(['api'])->prefix('api')->group(function () {
     Route::get('/puestosDptosBySucId/{sucursalId}', [DeptosPuestosController::class, 'puestosAndDeptos']);
     Route::get('/sucursal/details/{id}', [HorarioEmpleadoController::class, 'getSucursalDetails']);
     Route::get('/empleados/sucursal/{id}', [HorarioEmpleadoController::class, 'getEmpleadosBySucursal']);
+    Route::get('/horarios-sucursal/{id}', [HorarioSucursalController::class, 'getBySucursal']);
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -204,5 +212,11 @@ Route::get('/test-mail', function () {
         $m->to('tu_correo@gmail.com')->subject('Prueba');
     });
 });
-
+Route::get('/donde-esta-el-ini', function () {
+    return [
+        'Archivo cargado' => php_ini_loaded_file(),
+        'Limite actual subida' => ini_get('upload_max_filesize'),
+        'Limite actual post' => ini_get('post_max_size'),
+    ];
+});
 require __DIR__.'/auth.php';

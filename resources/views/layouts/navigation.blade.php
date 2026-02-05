@@ -152,9 +152,9 @@
                 </div>
             </div>
 
-            <div x-data="{ open: {{ request()->routeIs('sucursales.*') ? 'true' : 'false' }} }">
+            <div x-data="{ open: {{ request()->routeIs('sucursales*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('sucursales.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                            {{ request()->routeIs('sucursales*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-store w-5 text-center shrink-0"></i>
@@ -178,6 +178,9 @@
                         class="block py-2 text-sm {{ request()->routeIs('sucursales.create') ? $activeLinkClass : $inactiveLinkClass }}">Añadir
                         sucursal</a>
                     @endif
+                    <a href="{{ route('sucursaleshorarios.asign') }}"
+                        class="block py-2 text-sm {{ request()->routeIs('sucursaleshorarios.asign') ? $activeLinkClass : $inactiveLinkClass }}">Asignar
+                        horarios</a>
                 </div>
             </div>
 
@@ -312,6 +315,11 @@
                 <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
                     <a href="{{ route('reportes.empleados.empleados_rep') }}"
                         class="block py-2 text-sm {{ request()->routeIs('reportes.empleados.sucursal') ? $activeLinkClass : $inactiveLinkClass }}">Empleados</a>
+
+                </div>
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('reportes.marcaciones.marcaciones_rep') }}"
+                        class="block py-2 text-sm {{ request()->routeIs('reportes.marcaciones.marcaciones_rep') ? $activeLinkClass : $inactiveLinkClass }}">Asistencia</a>
 
                 </div>
             </div>

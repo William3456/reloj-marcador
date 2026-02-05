@@ -57,7 +57,7 @@ class EmpleadoController extends Controller
             'nombres' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
             'documento' => 'required|string|max:50|unique:empleados,documento',
-            'edad' => 'required|integer|min:18|max:90',
+            'fecha_nacimiento' => 'required|date',
             'correo' => 'required|email|max:150|unique:empleados,correo|unique:users,email',
             'direccion' => 'required|string|max:255',
             'id_puesto' => 'required|exists:puestos_trabajos,id',
@@ -67,11 +67,11 @@ class EmpleadoController extends Controller
             'login' => 'required|in:0,1',
             'estado' => 'required|in:0,1',
             'id_rol' => 'required_if:login,1|exists:roles,id',
+            'telefono' => 'required|max:10',
         ], [
             'nombres.required' => 'El campo nombres es obligatorio.',
             'apellidos.required' => 'El campo apellidos es obligatorio.',
-            'edad.min' => 'El empleado debe tener al menos 18 años.',
-            'edad.max' => 'La edad no puede superar los 90 años.',
+            
 
             'correo.required' => 'El correo es obligatorio.',
             'correo.email' => 'Debes ingresar un correo válido.',
@@ -94,6 +94,9 @@ class EmpleadoController extends Controller
 
             'estado.required' => 'Debes seleccionar un estado.',
             'estado.in' => 'Valor inválido para el estado.',
+
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'telefono.max' => 'El teléfono no debe exceder los 10 caracteres.',
         ]);
 
         $codigo = $this->armaCodigo($validated['nombres'], $validated['apellidos']);
@@ -102,8 +105,9 @@ class EmpleadoController extends Controller
         $empleado = Empleado::create([
             'cod_trabajador' => 'TEMP',
             'correo' => $validated['correo'],
+            'telefono' => $validated['telefono'],
             'direccion' => $validated['direccion'],
-            'edad' => $validated['edad'],
+            'fecha_nacimiento' => $validated['fecha_nacimiento'],
             'documento' => $validated['documento'],
             'nombres' => $validated['nombres'],
             'apellidos' => $validated['apellidos'],
@@ -216,7 +220,7 @@ class EmpleadoController extends Controller
             'nombres' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
             'documento' => 'required|string|max:50',
-            'edad' => 'required|integer|min:18|max:90',
+            'fecha_nacimiento' => 'required|date',
             'correo' => 'required|email|max:150',
             'direccion' => 'required|string|max:255',
             'id_puesto' => 'required|exists:puestos_trabajos,id',
@@ -226,11 +230,10 @@ class EmpleadoController extends Controller
             'login' => 'required|in:0,1',
             'estado' => 'required|in:0,1',
             'id_rol' => 'required_if:login,1|exists:roles,id',
+            'telefono' => 'required|max:10',
         ], [
             'nombres.required' => 'El campo nombres es obligatorio.',
             'apellidos.required' => 'El campo apellidos es obligatorio.',
-            'edad.min' => 'El empleado debe tener al menos 18 años.',
-            'edad.max' => 'La edad no puede superar los 90 años.',
 
             'correo.required' => 'El correo es obligatorio.',
             'correo.email' => 'Debes ingresar un correo válido.',
@@ -253,6 +256,9 @@ class EmpleadoController extends Controller
 
             'estado.required' => 'Debes seleccionar un estado.',
             'estado.in' => 'Valor inválido para el estado.',
+
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'telefono.max' => 'El teléfono no debe exceder los 10 caracteres.',
         ]);
 
         if(Empleado::where('correo', $validated['correo'])->where('id', '!=', $id)->exists()){

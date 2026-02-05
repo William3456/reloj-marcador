@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Empleado\Empleado;
 use App\Models\Horario\horario;
 use App\Models\HorarioEmpleado\HorarioEmpleado;
+use App\Models\HorarioSucursal\HorarioSucursal;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,7 @@ class HorarioEmpleadoController extends Controller
     {
         try {
             $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
-            $horarios = horario::where('id', $sucursal->id_horario)->first();
+            $horarios = HorarioSucursal::where('id_sucursal', $sucursal->id)->with('horario')->get();
             $data = [
                 'sucursal' => $sucursal,
                 'horarios' => $horarios,

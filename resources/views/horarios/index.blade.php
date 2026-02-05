@@ -33,7 +33,7 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Turno</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Días</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora inicio</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora fin</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Horas laborales</th>
@@ -49,7 +49,7 @@
                             @foreach ($horarios as $h)
                                 <tr>
                                     <td class="px-4 py-2">{{ $h->id }}</td>
-                                    <td class="px-4 py-2">{{ $h->turno_txt }}</td>
+                                    <td class="px-4 py-2">{{ implode(', ', array_map(fn($d) => mb_convert_case($d, MB_CASE_TITLE, "UTF-8"), $h->dias)) }}</td>
                                     <td class="px-4 py-2">{{ $h->hora_ini }}</td>
                                     <td class="px-4 py-2">{{ $h->hora_fin }}</td>
                                     <td class="px-4 py-2">{{ $h->horas_laborales }}</td>
@@ -100,6 +100,7 @@
         <script>
             new DataTable('#tablaHorarios', {
                 responsive: true,
+                order: [[5, 'asc']],
                 paging: true,
                 searching: true,
                 info: true,

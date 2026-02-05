@@ -15,238 +15,314 @@
         </div>
     </x-slot>
 
-    <div class="py-6 px-4"> 
+<div class="py-6 px-4"> 
         <div class="max-w-md mx-auto space-y-6"> 
 
-            {{-- 1. Tarjeta de Reloj en Tiempo Real --}}
+            {{-- RELOJ --}}
             <div class="bg-white shadow-lg rounded-2xl p-6 text-center border-t-4 border-blue-600 relative overflow-hidden">
                 <div class="absolute top-3 right-3 opacity-10">
-                    <svg class="w-12 h-12 text-blue-800" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                    </svg>
+                    <svg class="w-12 h-12 text-blue-800" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
                 </div>
                 <p class="text-gray-500 text-xs uppercase tracking-widest font-bold mb-1 relative z-10">Hora Actual</p>
-                <div id="reloj-tiempo-real" class="text-5xl font-black text-gray-800 tracking-tight relative z-10">
-                    --:--:--
-                </div>
+                <div id="reloj-tiempo-real" class="text-5xl font-black text-gray-800 tracking-tight relative z-10">--:--:--</div>
                 <p class="text-blue-600 font-medium text-sm mt-2 uppercase relative z-10" id="fecha-actual">
                     {{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd, D [de] MMMM') }}
                 </p>
             </div>
 
-            {{-- Mensajes de Éxito/Error --}}
-           @if (session('success'))
-                <div class="p-4 rounded-xl bg-green-50 border-l-4 border-green-500 text-green-700 shadow-sm animate-pulse mb-6">
-                    <p class="font-bold">¡Excelente!</p>
-                    <p class="text-sm">{{ session('success') }}</p>
-                </div>
+            {{-- MENSAJES --}}
+            @if (session('success'))
+                <div class="p-4 rounded-xl bg-green-50 border-l-4 border-green-500 text-green-700 shadow-sm mb-6"><p class="font-bold">¡Excelente!</p><p class="text-sm">{{ session('success') }}</p></div>
             @elseif (session('error'))
-                <div class="p-4 rounded-xl bg-red-50 border-l-4 border-red-500 text-red-700 shadow-sm mb-6">
-                    <p class="font-bold">Error</p>
-                    <p class="text-sm">{{ session('error') }}</p>
-                </div>
+                <div class="p-4 rounded-xl bg-red-50 border-l-4 border-red-500 text-red-700 shadow-sm mb-6"><p class="font-bold">Error</p><p class="text-sm">{{ session('error') }}</p></div>
             @endif
-
-            {{-- NUEVO: Bloque para capturar withErrors() --}}
             @if ($errors->any())
                 <div class="p-4 rounded-xl bg-red-50 border-l-4 border-red-500 text-red-700 shadow-sm mb-6">
-                    <div class="flex items-center mb-1">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        <p class="font-bold">Atención</p>
-                    </div>
-                    <ul class="list-disc list-inside text-sm space-y-1">
-                    @foreach ($errors->getMessages() as $key => $messages)
-                        @if ($key !== 'ubi_foto') {{-- <-- AQUÍ FILTRAMOS QUE NO SE MUESTRE --}}
-                            @foreach ($messages as $message)
-                                <li>{{ $message }}</li>
-                            @endforeach
-                        @endif
-                    @endforeach
-                    </ul>
+                    <ul class="list-disc list-inside text-sm">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
                 </div>
             @endif
 
-            {{-- 2. Formulario Principal --}}
-            {{-- 2. Formulario Principal --}}
-            <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
-                <div class="p-6">
-                    
-                    {{-- LÓGICA CENTRAL: Definimos si ya terminó por hoy --}}
-                    @php
-                        $yaCompleto = false;
-                        
-                        // CASO A: Ya marcó Entrada y Salida
-                        if ($entradaHoy && $salidaHoy) {
-                            $yaCompleto = true;
-                        }
-                        // CASO B: Ya marcó Entrada y NO requiere salida
-                        elseif ($entradaHoy && $horarioRequiereSalida == 0) {
-                            $yaCompleto = true;
-                        }
-                    @endphp
+            {{-- =========================================================== --}}
+            {{-- LÓGICA VISUAL PRINCIPAL --}}
+            {{-- =========================================================== --}}
+            {{-- CASO 0: PERMISO ACTIVO (EXIME MARCACIÓN) --}}
+            @if(isset($permisoActivo) && $permisoActivo)
 
-                    <form action="{{ route('marcacion.store') }}" method="POST" enctype="multipart/form-data" id="form-marcacion">
-                        @csrf
-                        <input type="hidden" name="latitud" id="latitud" value="{{ old('latitud') }}">
-                        <input type="hidden" name="longitud" id="longitud" value="{{ old('longitud') }}">
-                        <input type="hidden" name="ubicacion" id="ubicacion_texto" value="{{ old('ubicacion') }}">
+                <div class="bg-green-500 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
+                    <div class="p-8 text-center relative z-10">
+                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2">Permiso Asignado</h3>
+                        <p class="text-green-100 text-sm">Tienes un permiso activo para hoy: {{ $permisoActivo->tipoPermiso->nombre ?? 'Permiso Especial' }}</p>
+                        <p class="text-xs text-green-200 mt-4">No es necesario marcar asistencia.</p>
+                    </div>
+                </div>
+            {{-- CASO 1: ESPERA (Hay turno futuro, pero falta mucho) --}}
+            @elseif(isset($tiempoRestante) && !$habilitarEntrada)
+                <div class="bg-indigo-600 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
+                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500 rounded-full opacity-50 blur-xl"></div>
+                    <div class="p-8 text-center relative z-10">
+                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                            <i class="far fa-clock text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2">Próximo Turno</h3>
+                        <p class="text-indigo-100 text-sm mb-4">Inicia a las <span class="font-bold text-white">{{ $proximoHorario->format('H:i') }}</span></p>
+                        <div class="bg-indigo-800/50 rounded-lg p-3 inline-block">
+                            <span class="text-xs uppercase tracking-widest text-indigo-300">Faltan</span>
+                            <div class="text-xl font-bold text-white">{{ $tiempoRestante }}</div>
+                        </div>
+                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 30 minutos antes.</p>
+                    </div>
+                </div>
 
-                        <div class="space-y-6">
-                            {{-- Estado del GPS --}}
-                            <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                <div class="flex items-center">
-                                    <div id="gps-icon" class="animate-bounce mr-2 text-gray-400">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                    </div>
-                                    <span id="gps-status" class="text-sm text-gray-500 font-medium">Buscando ubicación...</span>
-                                </div>
-                                <div id="gps-accuracy" class="text-xs text-gray-400"></div>
-                            </div>
+            {{-- CASO 2: JORNADA FINALIZADA (No hay turno futuro y ya se trabajó hoy) --}}
+            @elseif($jornadaTerminada)
+                <div class="bg-green-600 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
+                    <div class="p-8 text-center relative z-10">
+                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2">¡Jornada Completada!</h3>
+                        <p class="text-green-100 text-sm">Has finalizado todos tus turnos de hoy.</p>
+                        <p class="text-xs text-green-200 mt-4">Nos vemos en tu próximo turno.</p>
+                    </div>
+                </div>
 
-                            {{-- Selector de Tipo --}}
-                            <div>
+            {{-- CASO 3: FORMULARIO ACTIVO (Entrada habilitada o Salida pendiente) --}}
+            @else
+                @if($candidatos->isNotEmpty() || $entradaActiva) {{-- Solo mostrar form si hay turnos --}}
+                    <div class="bg-white shadow-xl rounded-2xl overflow-hidden mb-6">
+                        <div class="p-6">
+                            @php
+                                $mostrarForm = true;
+                                if ($entradaActiva && $horarioRequiereSalida == 0) $mostrarForm = false;
+                            @endphp
+                        <form action="{{ route('marcacion.store') }}" method="POST" enctype="multipart/form-data" id="form-marcacion">
+                            @csrf
+                            <input type="hidden" name="latitud" id="latitud">
+                            <input type="hidden" name="longitud" id="longitud">
+                            <input type="hidden" name="ubicacion" id="ubicacion_texto">
+
+                            <div class="mb-6">
                                 <label class="block text-sm font-bold text-gray-700 mb-3">Tipo de Registro</label>
                                 
-                                <div class="w-full">
-{{-- CASO 1: FALTA ENTRADA --}}
-@if(!$entradaHoy)
-    <label class="cursor-pointer group relative">
-        <input type="radio" name="tipo_marcacion" value="1" class="peer sr-only" checked>
-        <div class="flex flex-col items-center justify-center p-6 border-2 border-blue-100 bg-blue-50 rounded-xl transition-all duration-200 peer-checked:border-blue-500 peer-checked:shadow-md hover:bg-blue-100">
-            <div class="w-14 h-14 bg-blue-500 text-white rounded-full flex items-center justify-center mb-3 shadow-sm animate-pulse">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-            </div>
-            <span class="font-bold text-xl text-blue-800">MARCAR ENTRADA</span>
-            <span class="text-sm text-blue-600 mt-1">Iniciar jornada de hoy</span>
-        </div>
-        <div class="absolute top-3 right-3 text-blue-300">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </div>
-    </label>
-{{-- CASO 2: TIENE ENTRADA, NO TIENE SALIDA Y REQUIERE SALIDA --}}
-@elseif($entradaHoy && !$salidaHoy && $horarioRequiereSalida == 1)
-    <label class="cursor-pointer group relative">
-        <input type="radio" name="tipo_marcacion" value="2" class="peer sr-only" checked>
-        <div class="flex flex-col items-center justify-center p-6 border-2 border-red-100 bg-red-50 rounded-xl transition-all duration-200 peer-checked:border-red-500 peer-checked:shadow-md hover:bg-red-100">
-            <div class="w-14 h-14 bg-red-500 text-white rounded-full flex items-center justify-center mb-3 shadow-sm">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-            </div>
-            
-            <span class="font-bold text-xl text-red-800">MARCAR SALIDA</span>
-            <span class="text-sm text-red-600 mt-1 block text-center">
-                Cerrar turno. Entrada: {{ $entradaHoy->created_at->format('H:i') }}
-
-                {{-- AQUI EL CAMBIO: Texto más explícito --}}
-                @if($entradaHoy->id_permiso_aplicado)
-                    <div class="mt-1 text-blue-600 font-bold text-xs bg-blue-100 px-2 py-0.5 rounded-full inline-flex items-center">
-                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Con Permiso
-                    </div>
-                @elseif($entradaHoy->fuera_horario)
-                    <div class="mt-1 text-orange-600 font-bold text-xs bg-orange-100 px-2 py-0.5 rounded-full inline-flex items-center">
-                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Llegada Tarde {{-- CAMBIO: Antes decía solo "Tarde" --}}
-                    </div>
-                @endif
-            </span>
-        </div>
-    </label>
-
-{{-- CASO 3: JORNADA COMPLETADA --}}
-@else
-    <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-        {{-- ... (Icono verde y título igual) ... --}}
-        <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-        </div>
-        <h3 class="text-lg font-bold text-green-800">¡Jornada Completada!</h3>
-        
-        @if($horarioRequiereSalida == 1)
-            <p class="text-green-600 text-sm mt-1">Has registrado entrada y salida hoy.</p>
-            <div class="mt-3 text-xs text-gray-500 bg-white p-2 rounded border border-gray-100 inline-block text-left">
-                
-                <div class="mb-1">
-                    Entrada: {{ $entradaHoy->created_at->format('H:i') }}
-                    
-                    @if($entradaHoy->id_permiso_aplicado)
-                        <span class="ml-1 text-blue-600 font-bold" title="Permiso aplicado">(Con Permiso)</span>
-                    @elseif($entradaHoy->fuera_horario)
-                        {{-- AQUI EL CAMBIO EN EL RESUMEN --}}
-                        <span class="ml-1 text-orange-600 font-bold inline-flex items-center" title="Entrada tardía">
-                             <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                             Llegada Tarde
-                        </span>
-                    @endif
-                </div>
-
-                @if($salidaHoy) 
-                    <div>
-                        Salida: {{ $salidaHoy->created_at->format('H:i') }}
-                    </div>
-                @endif
-            </div>
-        @else
-            {{-- ... (Logica para cuando no requiere salida) ... --}}
-             <p class="text-green-600 text-sm mt-1">Has registrado tu asistencia de hoy.</p>
-            <div class="mt-3 text-xs text-gray-500 bg-white p-2 rounded border border-gray-100 inline-block">
-                Registrado a las: {{ $entradaHoy->created_at->format('H:i') }}
-                
-                @if($entradaHoy->id_permiso_aplicado)
-                    <span class="ml-1 text-blue-600 font-bold">(Con Permiso)</span>
-                @elseif($entradaHoy->fuera_horario)
-                     {{-- AQUI EL CAMBIO --}}
-                    <span class="ml-1 text-orange-600 font-bold inline-flex items-center">
-                        <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Llegada Tarde
-                    </span>
-                @endif
-            </div>
-        @endif
-    </div>
-@endif
-                                </div>
+                                @if(!$entradaActiva)
+                                    {{-- BOTÓN ENTRADA --}}
+                                    <label class="cursor-pointer group relative">
+                                        <input type="radio" name="tipo_marcacion" value="1" class="peer sr-only" checked>
+                                        <div class="flex flex-col items-center justify-center p-6 border-2 border-blue-100 bg-blue-50 rounded-xl transition-all duration-200 peer-checked:border-blue-500 peer-checked:shadow-md hover:bg-blue-100">
+                                            <div class="w-14 h-14 bg-blue-500 text-white rounded-full flex items-center justify-center mb-3 shadow-sm animate-pulse">
+                                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                            </div>
+                                            <span class="font-bold text-xl text-blue-800">MARCAR ENTRADA</span>
+                                            <span class="text-sm text-blue-600 mt-1">Iniciar jornada</span>
+                                        </div>
+                                    </label>
+                                @elseif($entradaActiva && $horarioRequiereSalida == 1)
+                                    {{-- BOTÓN SALIDA --}}
+                                    <label class="cursor-pointer group relative">
+                                        <input type="radio" name="tipo_marcacion" value="2" class="peer sr-only" checked>
+                                        <div class="flex flex-col items-center justify-center p-6 border-2 border-red-100 bg-red-50 rounded-xl transition-all duration-200 peer-checked:border-red-500 peer-checked:shadow-md hover:bg-red-100">
+                                            <div class="w-14 h-14 bg-red-500 text-white rounded-full flex items-center justify-center mb-3 shadow-sm">
+                                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                            </div>
+                                            <span class="font-bold text-xl text-red-800">MARCAR SALIDA</span>
+                                            <span class="text-sm text-red-600 mt-1">Entrada: {{ $entradaActiva->created_at->format('H:i') }}</span>
+                                        </div>
+                                    </label>
+                                @else
+                                    <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+                                        <h3 class="text-lg font-bold text-green-800">Asistencia Registrada</h3>
+                                        <p class="text-green-600 text-sm">Entrada: {{ $entradaActiva->created_at->format('H:i') }}</p>
+                                    </div>
+                                @endif
                             </div>
 
-                            {{-- CONDICIONAL VISUALIZACIÓN FORMULARIO --}}
-                            {{-- Solo mostramos el formulario si NO está completo --}}
-                            @if( !$yaCompleto )
-                            
-                                {{-- Input de Cámara --}}
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">Evidencia</label>
-                                    <div class="relative w-full h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center overflow-hidden group hover:border-blue-400 transition-colors">
-                                        <img id="preview-foto" class="absolute inset-0 w-full h-full object-cover hidden" />
-                                        <div id="placeholder-foto" class="text-center p-4">
-                                            <div class="w-12 h-12 mx-auto bg-gray-200 rounded-full flex items-center justify-center text-gray-500 mb-2 {{ $errors->has('ubi_foto') ? 'bg-red-100 text-red-500' : '' }}">
-                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                            </div>
-                                            <p class="text-sm {{ $errors->has('ubi_foto') ? 'text-red-500 font-bold' : 'text-gray-500 font-medium' }}">
-                                                {{ $errors->has('ubi_foto') ? '¡Debes tomar la foto de nuevo!' : 'Tocar para tomar foto' }}
-                                            </p>
-                                        </div>
-                                        <input type="file" name="ubi_foto" id="input-foto" accept="image/*" capture="user" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="previewImage(event)">
+                            @if($mostrarForm)
+                                <div class="space-y-6">
+                                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                        <div class="flex items-center"><span id="gps-status" class="text-sm text-gray-500 font-medium">Buscando GPS...</span></div>
+                                        <div id="gps-accuracy" class="text-xs text-gray-400"></div>
                                     </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-3">Evidencia</label>
+                                        <div class="relative w-full h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center overflow-hidden group hover:border-blue-400 transition-colors">
+                                            <img id="preview-foto" class="absolute inset-0 w-full h-full object-cover hidden" />
+                                            <div id="placeholder-foto" class="text-center p-4"><p class="text-sm text-gray-500 font-medium">Tocar para tomar foto</p></div>
+                                            <input type="file" name="ubi_foto" id="input-foto" accept="image/*" capture="user" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="previewImage(event)">
+                                        </div>
+                                    </div>
+                                    <button type="submit" id="btn-marcar" disabled class="w-full text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-xl text-lg px-5 py-4 text-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">Registrar Marcación</button>
                                 </div>
-
-                                {{-- Botón de Guardar --}}
-                                <div class="pt-2">
-                                    <button type="submit" id="btn-marcar" disabled class="w-full text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-xl text-lg px-5 py-4 text-center shadow-lg transform transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                                        Registrar Marcación
-                                    </button>
-                                    <p class="text-center text-xs text-gray-400 mt-2">Se registrará tu ubicación actual.</p>
-                                </div>
-
                             @endif
-                            {{-- FIN DEL CONDICIONAL DE FORMULARIO --}}
-
+                        </form>
+                @else
+                        {{-- CASO: DÍA LIBRE (Sin turnos asignados hoy) --}}
+                    <div class="bg-gray-100 rounded-2xl p-8 text-center border-2 border-dashed border-gray-300">
+                        <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
-                    </form>
+                        <h3 class="text-xl font-bold text-gray-500">Sin Turnos Asignados</h3>
+                        <p class="text-gray-400 text-sm mt-2">No tienes horarios programados para hoy.</p>
+                    </div>
+                @endif  
+                    </div>
+                </div>
+            @endif
+
+            {{-- =========================================================== --}}
+            {{-- SECCIÓN RESUMEN (AHORA SIEMPRE VISIBLE SI HAY DATOS) --}}
+            {{-- =========================================================== --}}
+            {{-- =========================================================== --}}
+            {{-- SECCIÓN RESUMEN (DISEÑO HISTORIAL) --}}
+            {{-- =========================================================== --}}
+            @if($historialHoy->isNotEmpty())
+                
+                <div class="mt-8 mb-2">
+                    <h4 class="font-bold text-gray-700 text-sm px-2 mb-2 uppercase tracking-wider">Actividad de Hoy</h4>
+                </div>
+
+                {{-- Agrupamos por Horario para simular la vista de Turnos --}}
+                @php
+                    // Agrupamos por ID de horario para mantener juntos entrada y salida del mismo turno
+                    $registrosPorTurno = $historialHoy->groupBy(function($item) {
+                        return $item->horario_id ?? 'extra'; 
+                    });
+                @endphp
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    
+                    @foreach($registrosPorTurno as $horarioId => $registros)
+                        @php
+                            // Intentamos obtener info del horario del primer registro del grupo
+                            $horarioRef = $registros->first()->horario;
+                            $tituloTurno = $horarioRef 
+                                ? 'Turno • ' . \Carbon\Carbon::parse($horarioRef->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($horarioRef->hora_fin)->format('H:i')
+                                : 'Marcaciones Adicionales';
+                        @endphp
+
+                        {{-- CABECERA DEL TURNO --}}
+                        <div class="bg-gray-50/50 px-4 py-1.5 border-b border-gray-100 border-t {{ $loop->first ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                {{ $tituloTurno }}
+                            </span>
+                        </div>
+
+                        {{-- LISTA DE MARCACIONES DEL TURNO --}}
+                        @foreach($registros as $reg)
+                            @php
+                                $etiqueta = null;
+                                $claseColor = ''; // Solo para badge
+                                $tipoTexto = $reg->tipo_marcacion == 1 ? 'Entrada' : 'Salida';
+                                
+                                // Lógica visual de colores
+                                if($reg->tipo_marcacion == 1) { // Entrada
+                                    $iconoBg = 'bg-green-100 text-green-600';
+                                    if($reg->fuera_horario) { $etiqueta = 'Tarde'; $claseColor = 'bg-orange-100 text-orange-700 border-orange-200'; }
+                                } else { // Salida
+                                    $iconoBg = 'bg-red-100 text-red-600';
+                                    if($reg->fuera_horario) { $etiqueta = 'Olvido/Extra'; $claseColor = 'bg-red-100 text-red-700 border-red-200'; }
+                                }
+                            @endphp
+
+                            <div onclick="abrirDetalleHistorial(this)"
+                                 class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
+                                 data-tipo="{{ $tipoTexto }}"
+                                 data-hora="{{ $reg->created_at->format('h:i A') }}"
+                                 data-fecha="{{ $reg->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
+                                 data-sucursal="{{ $reg->sucursal->nombre ?? 'Ubicación GPS' }}"
+                                 data-foto="{{ Storage::url($reg->ubi_foto) }}"
+                                 data-lat="{{ $reg->latitud }}"
+                                 data-lng="{{ $reg->longitud }}"
+                                 data-etiqueta="{{ $etiqueta }}"
+                                 data-clase-color="{{ $claseColor }}">
+                                
+                                {{-- Icono --}}
+                                <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $iconoBg }}">
+                                    @if($reg->tipo_marcacion == 1)
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                    @else
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                    @endif
+                                </div>
+
+                                {{-- Textos --}}
+                                <div class="ml-4 flex-grow">
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-sm font-bold text-gray-800">{{ $tipoTexto }}</p>
+                                        @if($etiqueta)
+                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $claseColor }}">
+                                                {{ $etiqueta }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <p class="text-xs text-gray-500">
+                                        {{ $reg->created_at->format('h:i A') }} • {{ $reg->sucursal->nombre ?? 'GPS' }}
+                                    </p>
+                                </div>
+
+                                {{-- Chevron --}}
+                                <div class="text-gray-300">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endforeach
+                </div>
+            @endif
+{{-- MODAL DETALLE HISTORIAL (Idéntico al de Historial) --}}
+    <div id="modal-detalle-historial" class="fixed inset-0 z-[120] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="cerrarDetalleHistorial()"></div>
+
+        <div class="fixed inset-x-0 bottom-0 bg-white rounded-t-[30px] shadow-2xl transform transition-transform duration-300 overflow-hidden max-w-md mx-auto">
+            <div class="flex justify-center pt-3" onclick="cerrarDetalleHistorial()">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <div class="p-6 pb-10">
+                {{-- Encabezado --}}
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 id="md-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
+                            <span id="md-etiqueta" class="hidden text-[10px] font-bold px-2 py-0.5 rounded border"></span>
+                        </div>
+                        <p id="md-fecha" class="text-blue-600 font-medium text-sm"></p>
+                    </div>
+                    <button onclick="cerrarDetalleHistorial()" class="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                {{-- Foto --}}
+                <div class="mb-6 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner min-h-[14rem]">
+                    <img id="md-img" src="" class="w-full h-56 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+Evidencia';" />
+                </div>
+
+                {{-- Info Ubicación --}}
+                <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center mb-4 pb-4 border-b border-gray-100">
+                        <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600 mr-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sucursal Asignada</p>
+                            <p id="md-sucursal" class="text-sm font-bold text-gray-900">---</p>
+                        </div>
+                    </div>
+                    
+                    {{-- Mapa --}}
+                    <div id="md-mapa" class="w-full h-40 rounded-xl overflow-hidden bg-gray-100 relative z-0"></div>
                 </div>
             </div>
+        </div>
+    </div>
         </div>
     </div>
 
     {{-- MODIFICACIÓN 2: Modal de Información de Sucursal (Fuera del flujo principal) --}}
+    {{-- MODAL DE INFORMACIÓN DE SUCURSAL Y TURNOS --}}
     <div id="modal-sucursal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         {{-- Backdrop oscuro --}}
         <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('modal-sucursal')"></div>
@@ -258,8 +334,8 @@
                     
                     {{-- Cabecera Modal --}}
                     <div class="bg-blue-600 px-4 py-3 sm:px-6 flex justify-between items-center">
-                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Mi sucursal asignada</h3>
-                        <button onclick="toggleModal('modal-sucursal')" class="text-white hover:text-gray-200">
+                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Información Laboral</h3>
+                        <button onclick="toggleModal('modal-sucursal')" class="text-white hover:text-gray-200 focus:outline-none">
                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -267,53 +343,156 @@
                     </div>
 
                     {{-- Cuerpo del Modal --}}
-                    <div class="px-4 py-5 sm:p-6 space-y-4">
-                        {{-- Icono central --}}
-                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                            <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                        </div>
-
+                    {{-- Cuerpo del Modal COMPACTO --}}
+                    <div class="px-4 py-4 space-y-4">
+                        
+                        {{-- Icono y Nombre Sucursal (Más pequeño) --}}
                         <div class="text-center">
-                            {{-- DATOS DINÁMICOS DE SUCURSAL --}}
-                            {{-- Asegúrate de que el usuario tenga relación con sucursal, usa optional() o ?? para evitar errores --}}
-                            <h4 class="text-lg font-bold text-gray-900">
-                                
-                                {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal Asignada' }}
+                            <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 mb-2">
+                                <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <h4 class="text-base font-bold text-gray-900 leading-tight">
+                                {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal' }}
                             </h4>
-                            <p class="text-sm text-gray-500 mt-1">
-                                {{ Auth::user()->empleado->sucursal->direccion ?? 'Ponte en contacto con RRHH para asignación.' }}
+                            <p class="text-xs text-gray-500">
+                                {{ Auth::user()->empleado->sucursal->direccion ?? '' }}
                             </p>
                         </div>
                         
-                        {{-- Información extra en lista --}}
-                        <div class="bg-gray-50 rounded-lg p-3 text-sm text-left space-y-2 border border-gray-100">
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Horario:</span>
-                                <span class="font-medium text-gray-800">{{ Auth::user()->empleado->sucursal->horario->hora_ini }} - {{ Auth::user()->empleado->sucursal->horario->hora_fin }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Teléfono:</span>
-                                <span class="font-medium text-gray-800">{{ Auth::user()->empleado->sucursal->telefono ?? 'N/A' }}</span>
-                            </div>
-                            <div class="flex flex-col space-y-2">
-                                <span class="text-gray-500 text-xs text-center font-bold">Días laborales:</span>
-                                <div class="flex flex-wrap gap-1">
-                                    
-                                    @foreach(Auth::user()->empleado->sucursal->dias_laborales ?? [] as $dia)
-                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-700/10 capitalize">
-                                            {{ $dia }}
-                                        </span>
-                                    @endforeach
+                        {{-- CAJA CONTENEDORA --}}
+                        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+
+                            {{-- 1. SECCIÓN: MIS TURNOS --}}
+                            {{-- 1. SECCIÓN: MIS TURNOS --}}
+                            <div class="mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-blue-700 font-bold text-[10px] uppercase tracking-wide">
+                                        <i class="fa-solid fa-user-clock mr-1"></i> Mis Turnos
+                                    </span>
                                 </div>
+                                
+                                {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @forelse(Auth::user()->empleado->horarios as $miHorario)
+                                        @php
+                                            // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
+                                            $esTurnoActual = false;
+                                            $now = \Carbon\Carbon::now();
+                                            
+                                            // 1. Verificar Día (Normalizamos a 3 letras minúsculas para comparar: lun, mar, mié...)
+                                            $hoySlug = \Str::slug($now->locale('es')->isoFormat('ddd')); 
+                                            // A veces isoFormat devuelve "mié" con tilde, Str::slug lo pasa a "mie"
+                                            
+                                            $esDiaCorrecto = collect($miHorario->dias)->contains(function($d) use ($hoySlug) {
+                                                // Normalizamos el día de la BD también (quitamos tildes y mayúsculas)
+                                                $diaDbSlug = \Str::slug(mb_substr($d, 0, 3));
+                                                return $diaDbSlug === $hoySlug;
+                                            });
+
+                                            // 2. Verificar Hora
+                                            if ($esDiaCorrecto) {
+                                                $inicio = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_ini);
+                                                $fin = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_fin);
+                                                
+                                                // Ajuste para turnos nocturnos (ej: 22:00 a 06:00)
+                                                if ($fin->lessThan($inicio)) {
+                                                    $fin->addDay();
+                                                }
+
+                                                // Damos 30 min de gracia antes y 15 despues para que se "ilumine" un poco antes
+                                                if ($now->between($inicio->copy()->subMinutes(30), $fin->copy()->addMinutes(15))) {
+                                                    $esTurnoActual = true;
+                                                }
+                                            }
+                                        @endphp
+
+                                        <div class="border-l-4 rounded px-2 py-1.5 shadow-sm relative transition-all duration-500
+                                            {{-- ESTILOS CONDICIONALES --}}
+                                            {{ $esTurnoActual 
+                                                ? 'bg-green-50 border-green-500 border border-green-200 animate-pulse' 
+                                                : 'bg-white border-blue-500 border-blue-200' 
+                                            }}">
+                                            
+                                            {{-- Etiqueta "AHORA" si está activo --}}
+                                            @if($esTurnoActual)
+                                                <div class="absolute top-1 right-1">
+                                                    <span class="flex h-2 w-2 relative">
+                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                                    </span>
+                                                </div>
+                                            @endif
+
+                                            {{-- Hora compacta --}}
+                                            <div class="text-xs font-black mb-1 {{ $esTurnoActual ? 'text-green-800' : 'text-gray-800' }}">
+                                                {{ \Carbon\Carbon::parse($miHorario->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($miHorario->hora_fin)->format('H:i') }}
+                                            </div>
+                                            
+                                            {{-- Días Mini --}}
+                                            <div class="flex flex-wrap gap-0.5">
+                                                @foreach($miHorario->dias ?? [] as $dia)
+                                                    <span class="text-[8px] px-1 rounded capitalize leading-tight border
+                                                        {{ $esTurnoActual 
+                                                            ? 'bg-green-100 text-green-700 border-green-200 font-bold' 
+                                                            : 'bg-blue-50 text-blue-700 border-blue-100' 
+                                                        }}">
+                                                        {{ mb_substr($dia, 0, 3) }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="col-span-full text-center py-2 border border-dashed border-gray-200 rounded bg-white">
+                                            <span class="text-gray-400 italic text-xs">Sin asignación personal</span>
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-200 my-2"></div>
+
+                            {{-- 2. SECCIÓN: HORARIOS SUCURSAL --}}
+                            <div class="mb-2">
+                                <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención General:</span>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @forelse(Auth::user()->empleado->sucursal->horarios as $h)
+                                        <div class="bg-white border border-gray-200 rounded px-2 py-1.5 shadow-sm opacity-80">
+                                            <div class="text-xs font-bold text-gray-600 mb-1">
+                                                {{ \Carbon\Carbon::parse($h->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
+                                            </div>
+                                            <div class="flex flex-wrap gap-0.5">
+                                                @foreach($h->dias ?? [] as $dia)
+                                                    <span class="text-[8px] bg-gray-100 text-gray-500 border border-gray-200 px-1 rounded capitalize leading-tight">
+                                                        {{ mb_substr($dia, 0, 3) }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <span class="text-gray-400 italic text-xs col-span-full">No definido</span>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            {{-- 3. TELÉFONO COMPACTO --}}
+                            <div class="mt-3 bg-white border border-gray-200 rounded p-2 flex justify-between items-center">
+                                <span class="text-gray-500 text-xs">Teléfono:</span>
+                                <span class="font-bold text-gray-800 text-xs flex items-center">
+                                    <i class="fa-solid fa-phone mr-1.5 text-gray-400"></i>
+                                    {{ Auth::user()->empleado->sucursal->telefono ?? 'N/A' }}
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     {{-- Footer Modal --}}
                     <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                        <button type="button" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto" onclick="toggleModal('modal-sucursal')">Cerrar</button>
+                        <button type="button" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto" onclick="toggleModal('modal-sucursal')">
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -562,6 +741,77 @@
             btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
+
+    let mapHistorial;
+        let markerHistorial;
+
+        function abrirDetalleHistorial(elemento) {
+            const tipo = elemento.getAttribute('data-tipo');
+            const hora = elemento.getAttribute('data-hora');
+            const fecha = elemento.getAttribute('data-fecha');
+            const sucursal = elemento.getAttribute('data-sucursal');
+            const fotoUrl = elemento.getAttribute('data-foto');
+            const etiqueta = elemento.getAttribute('data-etiqueta');
+            const claseColor = elemento.getAttribute('data-clase-color');
+            const lat = parseFloat(elemento.getAttribute('data-lat'));
+            const lng = parseFloat(elemento.getAttribute('data-lng'));
+
+            // Llenar datos
+            document.getElementById('md-titulo').innerText = tipo;
+            document.getElementById('md-fecha').innerText = fecha + ' • ' + hora;
+            document.getElementById('md-img').src = fotoUrl;
+            document.getElementById('md-sucursal').innerText = sucursal;
+
+            // Etiqueta
+            const badge = document.getElementById('md-etiqueta');
+            if(etiqueta) {
+                badge.innerText = etiqueta;
+                badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // Mostrar Modal
+            const modal = document.getElementById('modal-detalle-historial');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Iniciar Mapa
+            initMapHistorial(lat, lng);
+        }
+
+        function cerrarDetalleHistorial() {
+            document.getElementById('modal-detalle-historial').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function initMapHistorial(lat, lng) {
+            const position = { lat: lat, lng: lng };
+            if (!mapHistorial) {
+                setTimeout(() => {
+                    // Verificamos si Google Maps está cargado (ya que lo usas en la vista principal)
+                    if(typeof google !== 'undefined') {
+                        mapHistorial = new google.maps.Map(document.getElementById("md-mapa"), {
+                            center: position,
+                            zoom: 16,
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                        });
+                        markerHistorial = new google.maps.Marker({
+                            position: position,
+                            map: mapHistorial,
+                        });
+                    }
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    mapHistorial.setCenter(position);
+                    markerHistorial.setPosition(position);
+                    google.maps.event.trigger(mapHistorial, 'resize');
+                }, 100);
+            }
+        }
 </script>
 @endpush
 </x-app-layout>

@@ -22,7 +22,13 @@ class horario extends Model
         'turno_txt',
         'turno',
         'sucursal_creacion',
+        'dias',
     ];
+
+    protected $casts = [
+        'dias' => 'array',
+    ];
+
     public function getHoraIniAttribute($value)
     {
         return Carbon::createFromFormat('H:i:s', $value)->format('H:i');
@@ -109,31 +115,37 @@ class horario extends Model
 
         if ($user->rol->id == 2) {
 
-        return $query->where(function ($q) use ($user) {
+            return $query->where(function ($q) use ($user) {
 
-            // Horarios creados en su sucursal
-            $q->where('sucursal_creacion', $user->empleado->id_sucursal)
+                // Horarios creados en su sucursal
+                $q->where('sucursal_creacion', $user->empleado->id_sucursal)
 
-              // O horarios asignados a su sucursal
-              ->orWhereHas('sucursales', function ($q2) use ($user) {
-                  $q2->where('sucursales.id', $user->empleado->id_sucursal);
-              });
+                  // O horarios asignados a su sucursal
+                    ->orWhereHas('sucursales', function ($q2) use ($user) {
+                        $q2->where('sucursales.id', $user->empleado->id_sucursal);
+                    });
 
-        });
-    }
+            });
+        }
 
         return $query;
     }
-    
 
     public function sucursales()
-{
-    return $this->hasMany(
-        Sucursal::class,
-        'id_horario', 
-        'id'          
-    );
-}
-
-
+    {
+        return $this->belongsToMany(
+            Sucursal::class,          // Modelo destino
+            'horarios_sucursales',   // Tabla pivote
+            'id_horario',            // Clave foránea de este modelo (Horario) en la pivote
+            'id_sucursal'            // Clave foránea del modelo destino (Sucursal) en la pivote
+        );
+    }
+    public function historicos()
+    {
+        return $this->hasMany(
+            HorarioHistorico::class,
+            'id_horario',
+            'id'
+        );
+    }
 }

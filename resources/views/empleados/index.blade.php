@@ -65,7 +65,7 @@
                         </thead>
 
                         <tbody class="bg-white divide-y divide-gray-200 text-xs">
-                            
+
                             @foreach ($empleados as $e)
                                 <tr class="hover:bg-blue-50 transition-colors cursor-pointer group"
                                     onclick="verEmpleado({{ $e->id }})">
@@ -132,14 +132,13 @@
                                                 class="inline">
                                                 @csrf @method('DELETE')
                                                 @if(auth()->user()?->empleado?->id !== $e->id)
-                                                    <button type="button"
-                                                        @click="$dispatch('open-confirm-modal', { 
-                                                            url: '{{ route('empleados.delete', $e->id) }}',
-                                                            title: '¿Inactivar empleado?',
-                                                            message: 'El empleado perderá acceso al sistema, pero sus datos se conservarán.',
-                                                            buttonText: 'Inactivar'
-                                                        })"
-                                                        class="text-red-500 hover:text-red-700 p-1" title="Inactivar">
+                                                    <button type="button" @click="$dispatch('open-confirm-modal', { 
+                                                                                    url: '{{ route('empleados.delete', $e->id) }}',
+                                                                                    title: '¿Inactivar empleado?',
+                                                                                    message: 'El empleado perderá acceso al sistema, pero sus datos se conservarán.',
+                                                                                    buttonText: 'Inactivar'
+                                                                                })" class="text-red-500 hover:text-red-700 p-1"
+                                                        title="Inactivar">
                                                         <i class="fa-solid fa-user-slash"></i>
                                                     </button>
                                                 @else
@@ -216,13 +215,13 @@
                             horariosHTML = '<div class="space-y-1">';
                             e.horarios.forEach(h => {
                                 horariosHTML += `
-                                        <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm">
-                                            <div class="flex items-center gap-2">
-                                                <span class="font-medium text-gray-800">${h.hora_ini} – ${h.hora_fin}</span>
-                                                <span class="px-2 py-0.5 rounded-full text-xs bg-blue-200 text-blue-800">${h.turno_txt}</span>
-                                            </div>
-                                        </div>
-                                    `;
+                                                    <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="font-medium text-gray-800">${h.hora_ini} – ${h.hora_fin}</span>
+                                                            <span class="px-2 py-0.5 rounded-full text-xs bg-blue-200 text-blue-800">${diasUpper(h.dias)}</span>
+                                                        </div>
+                                                    </div>
+                                                `;
                             });
                             horariosHTML += '</div>';
                         } else {
@@ -230,31 +229,31 @@
                         }
 
                         let html = `
-                                <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
-                                    <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
-                                    <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
-                                    <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
-                                    <p><strong>Edad:</strong> ${e.edad ?? ''}</p>
-                                    <p><strong>DUI:</strong> ${e.documento ?? ''}</p>
-                                    <p><strong>Correo:</strong> ${e.correo ?? ''}</p>
-                                    <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
-                                </div>
-                                <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
-                                    <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
-                                    <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
-                                    <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
-                                    <p><strong>Empresa:</strong> ${e.empresa?.nombre ?? ''}</p>
-                                    <p><strong>Login:</strong> ${e.login == 1 ? "Sí" : "No"}</p>
-                                    <p><strong>Rol:</strong>  ${e.user?.rol?.rol_name ?? "Sin Rol"}</p>
-                                    <p><strong>Estado:</strong> <span class="${estadoColor} font-semibold">${estadoTexto}</span></p>
-                                </div>
-                                <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                    <h3 class="font-semibold text-gray-700 mb-2 text-sm">Horarios asignados</h3>
-                                    ${horariosHTML}
-                                </div>
-                            `;
+                                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
+                                                <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
+                                                <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
+                                                <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
+                                                <p><strong>Edad:</strong> ${calcularEdad(e.fecha_nacimiento)}</p>
+                                                <p><strong>DUI:</strong> ${e.documento ?? ''}</p>
+                                                <p><strong>Correo:</strong> ${e.correo ?? ''}</p>
+                                                <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
+                                            </div>
+                                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
+                                                <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
+                                                <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
+                                                <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
+                                                <p><strong>Empresa:</strong> ${e.empresa?.nombre ?? ''}</p>
+                                                <p><strong>Login:</strong> ${e.login == 1 ? "Sí" : "No"}</p>
+                                                <p><strong>Rol:</strong>  ${e.user?.rol?.rol_name ?? "Sin Rol"}</p>
+                                                <p><strong>Estado:</strong> <span class="${estadoColor} font-semibold">${estadoTexto}</span></p>
+                                            </div>
+                                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Horarios asignados</h3>
+                                                ${horariosHTML}
+                                            </div>
+                                        `;
 
                         document.getElementById("contenidoEmpleado").innerHTML = html;
                         const modal = document.getElementById("modalEmpleado");
@@ -278,6 +277,64 @@
                     caja.classList.remove("modal-slide-out");
                 }, 300);
             }
+            function diasUpper(diasRaw) {
+                // 1. Usamos 'diasRaw' (el parámetro), NO 'h.dias'
+                if (!diasRaw) return '-';
+
+                let lista = diasRaw;
+
+                // 2. Si es texto, decidimos si es JSON o lista separada por comas
+                if (typeof lista === 'string') {
+                    try {
+                        lista = JSON.parse(lista);
+                    } catch (e) {
+                        lista = lista.split(',');
+                    }
+                }
+
+                // 3. Seguridad
+                if (!Array.isArray(lista)) {
+                    lista = [lista];
+                }
+
+                // 4. Mapear y devolver
+                return lista
+                    .map(d => {
+                        let str = String(d).trim();
+                        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+                    })
+                    .join(', ');
+            }
+            function calcularEdad(fechaNacimiento) {
+                if (!fechaNacimiento) return '';
+
+                const hoy = new Date();
+                const nacimiento = new Date(fechaNacimiento);
+
+                let edad = hoy.getFullYear() - nacimiento.getFullYear();
+                const mes = hoy.getMonth() - nacimiento.getMonth();
+
+                if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+                    edad--;
+                }
+
+                return edad;
+            }
+            // 1. Evento Clic fuera del modal
+            document.getElementById('modalEmpleado').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    cerrarModalEmpleado();
+                }
+            });
+
+            // 2. Evento Tecla Escape
+            document.addEventListener('keydown', function(e) {
+                const modal = document.getElementById('modalEmpleado');
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    cerrarModalEmpleado();
+                }
+            });
+
         </script>
     @endpush
 

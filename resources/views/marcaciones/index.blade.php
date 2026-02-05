@@ -1,332 +1,282 @@
 <x-app-layout title="Historial de Asistencia">
-
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Reporte de Asistencia') }}
+            Historial de Marcaciones
         </h2>
     </x-slot>
 
-    {{-- CONTENEDOR PADRE --}}
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-gray-100 shadow rounded-lg p-6">
-                {{-- BLOQUE 1: FILTROS --}}
-                <div class="bg-white shadow-sm rounded-lg p-6 mb-8 border border-gray-200">
-                    <div class="flex flex-wrap gap-4 items-end justify-between">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+
+            <div class="bg-white shadow rounded-lg p-6">
+
+                {{-- SECCIÓN 1: FILTROS (Estilo Reporte) --}}
+                <form action="{{ route('marcaciones.index') }}" method="GET" class="mb-6 border-b border-gray-100 pb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        
+                        {{-- Rango Fechas --}}
                         <div>
-                            <h3 class="text-gray-700 font-bold text-sm mb-3">
-                                <i class="fa-solid fa-sliders mr-2"></i>Opciones de Filtrado
-                            </h3>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Desde</label>
+                            <input type="date" name="desde" value="{{ request('desde') ?? date('Y-m-d') }}"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hasta</label>
+                            <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        </div>
 
-<form action="{{ route('marcaciones.index') }}" method="GET" class="flex flex-wrap gap-4 items-end">
-    
-    {{-- Input Desde --}}
-    <div>
-        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Desde</label>
-        <input type="date" name="desde" value="{{ request('desde') ?? date('Y-m-01') }}"
-            class="w-36 text-sm border-gray-300 rounded-md focus:ring-blue-500 h-9 shadow-sm text-gray-700">
-    </div>
+                        {{-- Sucursal --}}
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sucursal</label>
+                            <select name="sucursal"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                <option value="">Todas</option>
+                                @foreach($sucursales as $suc)
+                                    <option value="{{ $suc->id }}" {{ request('sucursal') == $suc->id ? 'selected' : '' }}>
+                                        {{ $suc->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-    {{-- Input Hasta --}}
-    <div>
-        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Hasta</label>
-        <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}"
-            class="w-36 text-sm border-gray-300 rounded-md focus:ring-blue-500 h-9 shadow-sm text-gray-700">
-    </div>
+                        {{-- Empleado --}}
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Empleado</label>
+                            <select name="empleado"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                <option value="">Todos</option>
+                                @foreach($empleadosList as $emp)
+                                    <option value="{{ $emp->id }}" {{ request('empleado') == $emp->id ? 'selected' : '' }}>
+                                        {{ $emp->nombres }} {{ $emp->apellidos }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-    {{-- GRUPO DE ACCIONES --}}
-    <div class="flex gap-2">
-        {{-- 1. Botón Filtrar (Submit normal) --}}
-        <button type="submit"
-            class="bg-blue-600 text-white px-4 py-2 rounded-md text-xs font-bold hover:bg-blue-700 h-9 shadow-md transition-colors flex items-center gap-2"
-            title="Aplicar rango de fechas seleccionado">
-            <i class="fa-solid fa-filter"></i> Filtrar
-        </button>
-
-        {{-- 2. NUEVO: Botón Turno Actual (Hoy) --}}
-        {{-- Envía la fecha de hoy en ambos parámetros --}}
-        <a href="{{ route('marcaciones.index', ['desde' => date('Y-m-d'), 'hasta' => date('Y-m-d')]) }}"
-           class="bg-green-600 text-white px-4 py-2 rounded-md text-xs font-bold hover:bg-green-700 h-9 shadow-md transition-colors flex items-center gap-2"
-           title="Ver solo marcaciones de HOY">
-            <i class="fa-regular fa-calendar-check"></i>Ver día Actual
-        </a>
-
-        {{-- 3. NUEVO: Botón En Proceso (Sin cerrar) --}}
-        {{-- Mantiene las fechas actuales pero agrega el estado sin_cierre --}}
-        <a href="{{ route('marcaciones.index', [
-                'desde' => request('desde') ?? date('Y-m-01'), 
-                'hasta' => request('hasta') ?? date('Y-m-d'),
-                'estado' => 'sin_cierre'
-           ]) }}"
-           class="bg-yellow-500 text-white px-4 py-2 rounded-md text-xs font-bold hover:bg-yellow-600 h-9 shadow-md transition-colors flex items-center gap-2"
-           title="Ver empleados que marcaron entrada pero no salida">
-            <i class="fa-solid fa-clock-rotate-left"></i>Ver jornadas en proceso
-        </a>
-
-        {{-- 4. Botón Limpiar (Reset) --}}
-        <a href="{{ route('marcaciones.index') }}"
-            class="bg-white text-gray-600 border border-gray-300 px-4 py-2 rounded-md text-xs font-bold hover:bg-gray-100 h-9 shadow-sm flex items-center gap-2 transition-colors"
-            title="Quitar todos los filtros">
-            <i class="fa-solid fa-rotate-left"></i>
-        </a>
-    </div>
-</form>
+                        {{-- Botones de Acción --}}
+                        <div class="flex gap-2">
+                            <button type="submit"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow text-sm flex items-center justify-center transition-colors">
+                                <i class="fa-solid fa-filter mr-2"></i> Filtrar
+                            </button>
+                            {{-- Botón Reset --}}
+                            <a href="{{ route('marcaciones.index') }}" 
+                               class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-3 rounded shadow-sm text-sm flex items-center justify-center transition-colors"
+                               title="Limpiar filtros">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </a>
                         </div>
                     </div>
-                </div>
-
-                {{-- BLOQUE 2: TABLA --}}
-                <div class="">
-                    <div class="overflow-hidden">
-                        <table id="tablaMarcaciones" class="w-full divide-y divide-gray-200 table-fixed">
-                            <thead>
-                                <tr class="bg-gray-100 text-gray-600">
-                                    <th
-                                        class="w-[28%] px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wider">
-                                        Empleado</th>
-                                    <th
-                                        class="w-[20%] px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wider">
-                                        Sucursal</th>
-                                    <th
-                                        class="w-[14%] px-2 py-3 text-center text-[10px] font-extrabold uppercase tracking-wider bg-green-50 border-b border-green-200 text-green-800">
-                                        Entrada (Inicio de turno)</th>
-                                    <th
-                                        class="w-[14%] px-2 py-3 text-center text-[10px] font-extrabold uppercase tracking-wider bg-red-50 border-b border-red-200 text-red-800">
-                                        Salida</th>
-                                    <th
-                                        class="w-[14%] px-2 py-3 text-center text-[10px] font-extrabold uppercase tracking-wider">
-                                        Estado</th>
-                                    <th
-                                        class="w-[10%] px-2 py-3 text-center text-[10px] font-extrabold uppercase tracking-wider">
-                                        Ver</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-100 text-xs">
-                                @foreach ($marcaciones as $m)
-                                                <tr class="hover:bg-blue-50 transition-colors cursor-default group">
-
-                                                    {{-- Empleado --}}
-                                                    <td class="px-4 py-3 border-r border-gray-50 truncate">
-                                                        <div class="font-bold text-gray-900 truncate"
-                                                            title="{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}">
-                                                            {{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}
-                                                        </div>
-                                                        <div class="text-[10px] text-gray-400 font-mono mt-0.5">ID:
-                                                            {{ $m->empleado->id }}</div>
-                                                    </td>
-
-                                                    {{-- Sucursal --}}
-                                                    <td class="px-4 py-3 border-r border-gray-50 truncate">
-                                                        <div class="flex items-center gap-1.5 text-gray-600">
-                                                            <i class="fa-solid fa-store text-gray-300 text-[10px]"></i>
-                                                            <span class="truncate"
-                                                                title="{{ $m->sucursal->nombre ?? 'GPS' }}">{{ $m->sucursal->nombre ?? 'GPS' }}</span>
-                                                        </div>
-                                                    </td>
-
-                                                    {{-- Entrada (CON AÑO) --}}
-                                                    <td class="px-2 py-3 bg-green-50/20 border-r border-green-50">
-                                                        {{-- CAMBIO AQUÍ: Agregué [de] YYYY --}}
-                                                        <div class="font-bold text-gray-800 text-[10px] capitalize leading-tight">
-                                                            {{ $m->created_at->isoFormat('D [de] MMMM [de] YYYY') }}
-                                                        </div>
-                                                        <div class="text-[10px] text-gray-500 font-mono mt-0.5">
-                                                            {{ $m->created_at->format('h:i A') }}
-                                                        </div>
-
-                                                        @if($m->id_permiso_aplicado)
-                                                            <span
-                                                                class="text-[9px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold border border-blue-200 inline-block mt-1">Con
-                                                                Permiso</span>
-                                                        @elseif($m->fuera_horario)
-                                                            <span
-                                                                class="text-[9px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold border border-orange-200 inline-block mt-1">Tarde</span>
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Salida (CON AÑO) --}}
-                                                    <td class="px-2 py-3 bg-red-50/20 border-r border-red-50">
-                                                        @if($m->salida)
-                                                            {{-- CAMBIO AQUÍ: Agregué [de] YYYY --}}
-                                                            <div class="font-bold text-gray-800 text-[10px] capitalize leading-tight">
-                                                                {{ $m->salida->created_at->isoFormat('D [de] MMMM [de] YYYY') }}
-                                                            </div>
-                                                            <div class="text-[10px] text-gray-500 font-mono mt-0.5">
-                                                                {{ $m->salida->created_at->format('h:i A') }}
-                                                            </div>
-
-                                                            @if($m->salida->es_olvido || $m->salida->fuera_horario)
-                                                                <span
-                                                                    class="text-[9px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold border border-red-200 inline-block mt-1">Olvido</span>
-                                                            @endif
-                                                        @else
-                                                            @if(!$m->created_at->isToday())
-                                                                <span class="text-[9px] font-bold text-red-500 block mt-1">SIN CIERRE</span>
-                                                            @else
-                                                                <span class="text-[9px] font-bold text-gray-300 block mt-1">--:--</span>
-                                                            @endif
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Estado --}}
-                                                    <td class="px-2 py-3 border-r border-gray-50">
-                                                        @if($m->salida)
-                                                            <span
-                                                                class="inline-flex items-center px-2.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-800 border border-green-200">
-                                                                Completo
-                                                            </span>
-                                                        @else
-                                                            @if(!$m->created_at->isToday())
-                                                                <span
-                                                                    class="inline-flex items-center px-2.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-800 border border-red-200">
-                                                                    Incompleto
-                                                                </span>
-                                                            @else
-                                                                <span
-                                                                    class="inline-flex items-center px-2.5 py-0.5 rounded text-[9px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 animate-pulse">
-                                                                    En Turno
-                                                                </span>
-                                                            @endif
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Ver (Botón Modal) --}}
-                                                    <td class="px-2 py-3 ">
-                                                        @php
-                                                            $estadoTexto = '';
-                                                            $estadoClase = '';
-                                                            if ($m->salida) {
-                                                                if ($m->salida->es_olvido || $m->salida->fuera_horario) {
-                                                                    $estadoTexto = 'Jornada Finalizada (Con Retraso/Olvido)';
-                                                                    $estadoClase = 'bg-orange-100 text-orange-800 border-orange-200';
-                                                                } else {
-                                                                    $estadoTexto = 'Jornada Completada Exitosamente';
-                                                                    $estadoClase = 'bg-green-100 text-green-800 border-green-200';
-                                                                }
-                                                            } else {
-                                                                if (!$m->created_at->isToday()) {
-                                                                    $estadoTexto = 'Cierre Pendiente (Olvido de Salida)';
-                                                                    $estadoClase = 'bg-red-100 text-red-800 border-red-200 animate-pulse';
-                                                                } else {
-                                                                    $estadoTexto = 'En Turno (Jornada Activa)';
-                                                                    $estadoClase = 'bg-yellow-100 text-yellow-800 border-yellow-200';
-                                                                }
-                                                            }
-                                                        @endphp
-
-                                                        <button onclick="verDetalleCompleto({
-                                        empleado: '{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}',
-
-                                        {{-- Asegúrate que aquí también esté el año si lo quieres en el modal --}}
-                                        fecha: '{{ $m->created_at->isoFormat('dddd D [de] MMMM [del] YYYY') }}',
-
-                                        latEntrada: {{ $m->latitud }},
-                                        lngEntrada: {{ $m->longitud }},
-                                        fotoEntrada: '{{ $m->ubi_foto ? Storage::url($m->ubi_foto) : null }}',
-                                        horaEntrada: '{{ $m->created_at->format('h:i A') }}',
-
-                                        hasSalida: {{ $m->salida ? 'true' : 'false' }},
-                                        latSalida: {{ $m->salida->latitud ?? 0 }},
-                                        lngSalida: {{ $m->salida->longitud ?? 0 }},
-                                        fotoSalida: '{{ ($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null }}',
-                                        horaSalida: '{{ $m->salida ? $m->salida->created_at->format('h:i A') : '--' }}',
-
-                                        estadoTexto: '{{ $estadoTexto }}',
-                                        estadoClase: '{{ $estadoClase }}'
-                                    })" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 w-7 h-7 rounded flex items-center justify-center transition"
-                                                            title="Ver Detalle">
-                                                            <i class="fa-solid fa-eye text-xs"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                    
+                    {{-- Filtros Rápidos (Opcional) --}}
+                    <div class="mt-4 flex gap-3 text-xs">
+                        <span class="text-gray-400 font-bold uppercase self-center">Vistas Rápidas:</span>
+                        <a href="{{ route('marcaciones.index', ['desde' => date('Y-m-d'), 'hasta' => date('Y-m-d')]) }}" 
+                           class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-200 hover:bg-green-100 transition">
+                           Hoy
+                        </a>
+                        <a href="{{ route('marcaciones.index', ['estado' => 'sin_cierre']) }}" 
+                           class="px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-200 hover:bg-yellow-100 transition">
+                           Pendientes de Cierre
+                        </a>
+                        <a href="{{ route('marcaciones.index', ['incidencia' => 'tarde']) }}" 
+                           class="px-3 py-1 bg-orange-50 text-orange-700 rounded-full border border-orange-200 hover:bg-orange-100 transition">
+                           Llegadas Tarde
+                        </a>
                     </div>
+                </form>
+
+                {{-- SECCIÓN 2: TABLA DATA TABLES (Estilo Visual mejorado) --}}
+                <div class="overflow-hidden">
+                    <table id="tablaMarcaciones" class="min-w-full divide-y divide-gray-200 w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Empleado</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sucursal</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Entrada</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Salida</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100">
+                            @foreach ($marcaciones as $m)
+                                <tr class="hover:bg-blue-50/50 transition-colors">
+                                    {{-- Empleado --}}
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div>
+                                                <div class="text-sm font-bold text-gray-900">{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}</div>
+                                                <div class="text-xs text-gray-500 font-mono">{{ $m->empleado->cod_trabajador }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- Sucursal --}}
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            {{ $m->sucursal->nombre ?? 'GPS / Remoto' }}
+                                        </span>
+                                    </td>
+
+                                    {{-- Entrada --}}
+                                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                                        <div class="text-sm font-bold text-gray-800">{{ $m->created_at->format('H:i') }}</div>
+                                        <div class="text-[10px] text-gray-400 uppercase">{{ $m->created_at->format('d M') }}</div>
+                                        
+                                        @if($m->fuera_horario)
+                                            <span class="text-[9px] text-orange-600 font-bold block">TARDE</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Salida --}}
+                                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                                        @if($m->salida)
+                                            <div class="text-sm font-bold text-gray-800">{{ $m->salida->created_at->format('H:i') }}</div>
+                                            <div class="text-[10px] text-gray-400 uppercase">{{ $m->salida->created_at->format('d M') }}</div>
+                                        @else
+                                            <span class="text-gray-300 text-sm">--:--</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Estado (Badges del Historial original) --}}
+                                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                                        @if($m->salida)
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Completo
+                                            </span>
+                                        @else
+                                            @if(!$m->created_at->isToday())
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    Sin Cierre
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">
+                                                    En Curso
+                                                </span>
+                                            @endif
+                                        @endif
+                                    </td>
+
+                                    {{-- Botón Modal --}}
+                                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                                        {{-- Lógica para preparar textos del modal --}}
+                                        @php
+                                            $estadoTexto = '';
+                                            $estadoClase = '';
+                                            if ($m->salida) {
+                                                if ($m->salida->es_olvido || $m->salida->fuera_horario) {
+                                                    $estadoTexto = 'Jornada Finalizada (Con Observaciones)';
+                                                    $estadoClase = 'bg-orange-100 text-orange-800 border-orange-200';
+                                                } else {
+                                                    $estadoTexto = 'Jornada Completada Exitosamente';
+                                                    $estadoClase = 'bg-green-100 text-green-800 border-green-200';
+                                                }
+                                            } else {
+                                                if (!$m->created_at->isToday()) {
+                                                    $estadoTexto = 'Cierre Pendiente (Olvido de Salida)';
+                                                    $estadoClase = 'bg-red-100 text-red-800 border-red-200';
+                                                } else {
+                                                    $estadoTexto = 'En Turno (Jornada Activa)';
+                                                    $estadoClase = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                                                }
+                                            }
+                                        @endphp
+
+                                        <button onclick="verDetalleCompleto({
+                                            empleado: '{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}',
+                                            fecha: '{{ $m->created_at->isoFormat('dddd D [de] MMMM [del] YYYY') }}',
+                                            latEntrada: {{ $m->latitud }},
+                                            lngEntrada: {{ $m->longitud }},
+                                            fotoEntrada: '{{ $m->ubi_foto ? Storage::url($m->ubi_foto) : null }}',
+                                            horaEntrada: '{{ $m->created_at->format('h:i A') }}',
+                                            hasSalida: {{ $m->salida ? 'true' : 'false' }},
+                                            latSalida: {{ $m->salida->latitud ?? 0 }},
+                                            lngSalida: {{ $m->salida->longitud ?? 0 }},
+                                            fotoSalida: '{{ ($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null }}',
+                                            horaSalida: '{{ $m->salida ? $m->salida->created_at->format('h:i A') : '--' }}',
+                                            estadoTexto: '{{ $estadoTexto }}',
+                                            estadoClase: '{{ $estadoClase }}',
+                                            fotoEntradaFull: '{{ $m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null }}',
+                                            fotoSalidaFull: '{{ ($m->salida && $m->salida->ubi_foto_full)? Storage::url($m->salida->ubi_foto_full): null }}'
+                                        })" 
+                                        class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
+
             </div>
         </div>
     </div>
 
-    {{-- MODAL EXPEDIENTE (AQUÍ ESTÁ LO QUE FALTABA) --}}
-    <div id="modalExpediente" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
-        aria-modal="true">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-80 transition-opacity backdrop-blur-sm"
-            onclick="cerrarModal()"></div>
+    {{-- MODAL EXPEDIENTE (Conservado Intacto) --}}
+    <div id="modalExpediente" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-80 transition-opacity backdrop-blur-sm" onclick="cerrarModal()"></div>
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-                <div
-                    class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-gray-200">
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-gray-200">
 
-                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    {{-- Cabecera Modal --}}
+                    <div class="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 leading-6" id="modalEmpNombre">---</h3>
-                            <p class="text-sm text-gray-500" id="modalFecha">---</p>
-                            <span id="modalBadgeStatus"
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border">---</span>
+                            <h3 class="text-base sm:text-lg font-black text-gray-900 leading-6" id="modalEmpNombre">---</h3>
+                            <p class="text-xs sm:text-sm text-gray-500" id="modalFecha">---</p>
+                            <span id="modalBadgeStatus" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border mt-1">---</span>
                         </div>
-                        <button onclick="cerrarModal()"
-                            class="text-gray-400 hover:text-gray-600 bg-white hover:bg-gray-100 p-2 rounded-full border border-gray-200 transition">
+                        <button onclick="cerrarModal()" class="text-gray-400 hover:text-gray-600 bg-white hover:bg-gray-100 p-2 rounded-full border border-gray-200 transition">
                             <i class="fa-solid fa-xmark text-xl"></i>
                         </button>
                     </div>
 
-                    <div class="px-6 py-6">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="px-4 sm:px-6 py-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                            
+                            {{-- Columna 1: Fotos --}}
                             <div class="space-y-4">
-                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">
-                                    Evidencia Fotográfica</h4>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">Evidencia Fotográfica</h4>
                                 <div class="grid grid-cols-2 gap-3">
+                                    {{-- Foto Entrada --}}
                                     <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center">
                                         <span class="text-xs font-bold text-green-700 block mb-1">ENTRADA</span>
-                                        <div
-                                            class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
-                                            <img id="imgEntrada" src=""
-                                                class="w-full h-full object-cover hidden cursor-pointer"
-                                                onclick="zoomImagen(this.src)">
+                                        <input type="hidden" id="fotoEntradaFull">
+                                        <input type="hidden" id="fotoSalidaFull">
+                                        <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
+                                            <img id="imgEntrada" src="" class="w-full h-full object-cover hidden cursor-pointer" onclick="zoomImagen(document.getElementById('fotoEntradaFull').value)">
                                             <span id="noImgEntrada" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
-                                        <p id="horaEntradaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">
-                                            --:--</p>
+                                        <p id="horaEntradaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">--:--</p>
                                     </div>
+                                    {{-- Foto Salida --}}
                                     <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center">
                                         <span class="text-xs font-bold text-red-700 block mb-1">SALIDA</span>
-                                        <div
-                                            class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
-                                            <img id="imgSalida" src=""
-                                                class="w-full h-full object-cover hidden cursor-pointer"
-                                                onclick="zoomImagen(this.src)">
+                                        <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
+                                            <img id="imgSalida" src="" class="w-full h-full object-cover hidden cursor-pointer" onclick="zoomImagen(document.getElementById('fotoSalidaFull').value)">
                                             <span id="noImgSalida" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
-                                        <p id="horaSalidaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">
-                                            --:--</p>
+                                        <p id="horaSalidaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">--:--</p>
                                     </div>
                                 </div>
                             </div>
 
+                            {{-- Columna 2: Mapa --}}
                             <div class="flex flex-col h-full">
-                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">
-                                    Ubicación</h4>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">Ubicación</h4>
                                 <div class="flex gap-2 mb-3" id="mapToggles">
-                                    <button onclick="cambiarMapa('entrada')" id="btnMapEntrada"
-                                        class="flex-1 text-xs py-1.5 rounded-md font-bold bg-green-100 text-green-800 border border-green-200 transition">Ver
-                                        Entrada</button>
-                                    <button onclick="cambiarMapa('salida')" id="btnMapSalida"
-                                        class="flex-1 text-xs py-1.5 rounded-md font-bold bg-white text-gray-500 border border-gray-200 transition">Ver
-                                        Salida</button>
+                                    <button onclick="cambiarMapa('entrada')" id="btnMapEntrada" class="flex-1 text-xs py-1.5 rounded-md font-bold bg-green-100 text-green-800 border border-green-200 transition">Ver Entrada</button>
+                                    <button onclick="cambiarMapa('salida')" id="btnMapSalida" class="flex-1 text-xs py-1.5 rounded-md font-bold bg-white text-gray-500 border border-gray-200 transition">Ver Salida</button>
                                 </div>
-                                <div
-                                    class="flex-grow bg-gray-100 rounded-xl overflow-hidden border border-gray-300 relative min-h-[250px]">
+                                <div class="flex-grow bg-gray-100 rounded-xl overflow-hidden border border-gray-300 relative min-h-[250px]">
                                     <div id="mapaExpediente" class="w-full h-full absolute inset-0"></div>
                                 </div>
-                                <div
-                                    class="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start gap-3">
+                                <div class="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start gap-3">
                                     <i class="fa-solid fa-map-location-dot text-blue-500 mt-0.5"></i>
                                     <div>
-                                        <p class="text-[10px] font-bold text-blue-400 uppercase">Dirección Detectada
-                                            (API)</p>
-                                        <p id="txtDireccion" class="text-xs text-blue-900 font-medium leading-snug">
-                                            Cargando...</p>
+                                        <p class="text-[10px] font-bold text-blue-400 uppercase">Dirección Detectada (API)</p>
+                                        <p id="txtDireccion" class="text-xs text-blue-900 font-medium leading-snug">Cargando...</p>
                                     </div>
                                 </div>
                             </div>
@@ -337,32 +287,25 @@
         </div>
     </div>
 
-    {{-- SCRIPTS (AQUÍ ESTÁ LA LÓGICA QUE FALTABA) --}}
     @push('scripts')
         <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
-
-
         <script>
+            // DataTables con estilo minimalista
             let table = new DataTable('#tablaMarcaciones', {
                 responsive: true,
-                paging: true,
-                pageLength: 10,
-                searching: true,
-                info: true,
-                ordering: true,
-                order: [],
                 language: {
                     url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/es-ES.json',
-                    search: "Buscar Empleado:",
-                    lengthMenu: "Mostrar _MENU_",
+                    search: "Buscar:",
                 },
-                columnDefs: [{ orderable: false, targets: [5] }]
+                columnDefs: [{ orderable: false, targets: [5] }] // Desactivar orden en columna Acción
             });
 
+            // Lógica del Modal (Copiada del original)
             let map, marker, geocoder;
             let currentData = {};
 
             function initMap() {
+                if(typeof google === 'undefined') return; 
                 geocoder = new google.maps.Geocoder();
                 map = new google.maps.Map(document.getElementById("mapaExpediente"), {
                     zoom: 16,
@@ -379,6 +322,8 @@
                 document.getElementById('modalFecha').innerText = data.fecha;
                 document.getElementById('horaEntradaModal').innerText = data.horaEntrada;
                 document.getElementById('horaSalidaModal').innerText = data.horaSalida;
+                document.getElementById('fotoEntradaFull').value = data.fotoEntradaFull;
+                document.getElementById('fotoSalidaFull').value = data.fotoSalidaFull;
 
                 const badge = document.getElementById('modalBadgeStatus');
                 badge.innerText = data.estadoTexto;
@@ -415,6 +360,7 @@
             }
 
             function cambiarMapa(tipo) {
+                if(!map) return;
                 let lat, lng;
                 const btnEntrada = document.getElementById('btnMapEntrada');
                 const btnSalida = document.getElementById('btnMapSalida');
@@ -449,7 +395,7 @@
                 document.body.style.overflow = 'auto';
             }
 
-            function zoomImagen(src) { window.open(src, '_blank'); }
+            function zoomImagen(src) { if(src) window.open(src, '_blank'); }
             document.addEventListener('keydown', function (event) { if (event.key === "Escape") cerrarModal(); });
         </script>
     @endpush
@@ -457,49 +403,20 @@
     @push('styles')
         <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
         <style>
-            .dataTables_wrapper .dataTables_filter {
-                margin-bottom: 10px;
-                margin-right: 15px;
-                margin-top: 10px;
-            }
-
-            .dataTables_wrapper .dataTables_info {
-                margin-left: 15px;
-                margin-bottom: 10px;
-                font-size: 0.75rem;
-                color: #6b7280;
-            }
-
-            .dataTables_wrapper .dataTables_paginate {
-                margin-right: 15px;
-                margin-bottom: 10px;
-                font-size: 0.75rem;
-            }
-
+            /* Limpieza visual de DataTables */
             .dataTables_wrapper .dataTables_filter input {
-                border-radius: 0.5rem;
-                border-color: #d1d5db;
+                border-radius: 0.375rem;
+                border: 1px solid #d1d5db;
                 padding: 0.25rem 0.5rem;
                 font-size: 0.875rem;
             }
-
-            .dataTables_wrapper .dataTables_length {
-                margin-left: 15px;
-                margin-top: 10px;
-                font-size: 0.75rem;
-                color: #6b7280;
-            }
-
             .dataTables_wrapper .dataTables_length select {
-                border-radius: 0.5rem;
-                border-color: #d1d5db;
+                border-radius: 0.375rem;
+                border: 1px solid #d1d5db;
+                padding: 0.25rem 2rem 0.25rem 0.5rem;
                 font-size: 0.875rem;
-                padding: 2px 25px 2px 10px;
             }
-
-            table.dataTable.no-footer {
-                border-bottom: none;
-            }
+            table.dataTable.no-footer { border-bottom: 0; }
         </style>
     @endpush
 </x-app-layout>

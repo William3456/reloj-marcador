@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('turno_txt',100); 
             $table->time('hora_ini');
             $table->time('hora_fin');
+            $table->json('dias')->nullable(); // ["LUN","MAR","MIE"]
             $table->integer('permitido_marcacion')->default(1); //(0=No, En este caso es para empleados 1= Sí, En este caso es para lapsos en los cuales la sucursal permite marcacion por el empleado)
             $table->integer('estado')->default(1);
             $table->integer('tolerancia_minutos');

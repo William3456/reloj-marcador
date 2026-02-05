@@ -18,7 +18,7 @@ class SucursalController extends Controller
     public function index()
     {
         $sucursales = Sucursal::visiblePara(Auth::user())
-        ->with('empresa')->get();
+            ->with('empresa')->get();
 
         return view('sucursales.index', compact('sucursales'));
     }
@@ -29,8 +29,7 @@ class SucursalController extends Controller
     public function create()
     {
         $empresas = Empresa::all();
-        $horarios = horario::where('permitido_marcacion', '=', 1)->get();
-
+        
         // $estados = Estado::all();
         $estados = collect([
             (object) ['id' => 1, 'nombre_estado' => 'activo'],
@@ -38,7 +37,7 @@ class SucursalController extends Controller
         ]);
         $dias = config('dias.laborales');
 
-        return view('sucursales.create', compact('empresas', 'horarios', 'estados', 'dias'));
+        return view('sucursales.create', compact('empresas',  'estados', 'dias'));
     }
 
     /**
@@ -51,14 +50,13 @@ class SucursalController extends Controller
             'direccion' => 'required|string|max:500',
             'correo_encargado' => 'required|email|max:150',
             'id_empresa' => 'required|exists:empresas,id',
-            'id_horario' => 'required|exists:horarios,id',
             'cant_empleados' => 'required|integer|min:1',
             'rango_marcacion_mts' => 'required|integer|min:1',
             'estado' => 'required|exists:estados,id',
             'latitud' => 'required|numeric',
             'longitud' => 'required|numeric',
             'dias_laborales' => 'array|required|min:1',
-            'telefono'=>'required|max:10',
+            'telefono' => 'required|max:10',
             'margen_error_gps_mts' => 'required|integer|min:1',
         ]);
         Sucursal::create($validated);
@@ -82,7 +80,7 @@ class SucursalController extends Controller
     {
 
         $sucursal = Sucursal::visiblePara(Auth::user())->findOrFail($id);
-        $horarios = horario::where('permitido_marcacion', '=', 1)->get();
+        
         $estados = collect([
             (object) ['id' => 1, 'nombre_estado' => 'activo'],
             (object) ['id' => 0, 'nombre_estado' => 'inactivo'],
@@ -91,7 +89,7 @@ class SucursalController extends Controller
 
         $dias = config('dias.laborales');
 
-        return view('sucursales.edit', compact('sucursal', 'horarios', 'estados', 'empresas', 'dias'));
+        return view('sucursales.edit', compact('sucursal', 'estados', 'empresas', 'dias'));
     }
 
     /**
@@ -105,11 +103,10 @@ class SucursalController extends Controller
             'direccion' => 'required|string',
             'correo_encargado' => 'required|email',
             'id_empresa' => 'required|exists:empresas,id',
-            'id_horario' => 'required|exists:horarios,id',
             'cant_empleados' => 'required|integer|min:1',
             'rango_marcacion_mts' => 'required|integer|min:1',
             'estado' => 'required|exists:estados,id',
-            'telefono'=>'required|max:10',
+            'telefono' => 'required|max:10',
             'margen_error_gps_mts' => 'required|integer|min:1',
 
             // días laborales: al menos 1 requerido
@@ -150,5 +147,13 @@ class SucursalController extends Controller
         return redirect()
             ->route('sucursales.index')
             ->with('success', 'Sucursal inactivada correctamente.');
+    }
+
+    public function showInfo($id)
+    {
+
+        $sucursal = Sucursal::with('horarios')->findOrFail($id);
+
+        return response()->json($sucursal);
     }
 }

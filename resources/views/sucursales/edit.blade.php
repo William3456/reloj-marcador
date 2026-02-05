@@ -24,7 +24,6 @@
                     @include('sucursales._form', [
                         'sucursal' => $sucursal,
                         'empresas' => $empresas,
-                        'horarios' => $horarios,
                         'estados' => $estados
                     ])
                     <input type="hidden" id='esEditar' value="1">
