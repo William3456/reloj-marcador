@@ -212,11 +212,12 @@ Route::get('/test-mail', function () {
         $m->to('tu_correo@gmail.com')->subject('Prueba');
     });
 });
-Route::get('/donde-esta-el-ini', function () {
-    return [
-        'Archivo cargado' => php_ini_loaded_file(),
-        'Limite actual subida' => ini_get('upload_max_filesize'),
-        'Limite actual post' => ini_get('post_max_size'),
-    ];
+Route::get('/crear-enlace', function () {
+    try {
+        Artisan::call('storage:link');
+        return "¡Enlace simbólico creado exitosamente!";
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
 });
 require __DIR__.'/auth.php';
