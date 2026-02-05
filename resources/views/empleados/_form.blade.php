@@ -23,8 +23,8 @@
     {{-- Edad --}}
     <div>
         <x-input-label value="Fecha de Nacimiento" />
-        <x-text-input type="date" name="fecha_nacimiento" value="{{ old('fecha_nacimiento', $empleado->fecha_nacimiento ?? '') }}" class="w-full"
-            required />
+        <x-text-input type="date" name="fecha_nacimiento"
+            value="{{ old('fecha_nacimiento', $empleado->fecha_nacimiento ?? '') }}" class="w-full" required />
     </div>
 
     {{-- Correo --}}
@@ -34,6 +34,12 @@
             required />
     </div>
 
+    {{-- Teléfono --}}
+    <div>
+        <x-input-label value="Teléfono" />
+        <x-text-input id="telefono" type="text" name="telefono" maxlength="9"
+            value="{{ old('telefono', $empleado->telefono ?? '') }}" class="mt-1 w-full" required />
+    </div>
     {{-- Dirección --}}
     <div>
         <x-input-label value="Dirección" />
@@ -132,14 +138,14 @@
                 let opcionSinRol = '<option value="0" selected>Sin rol</option>';
                 rolSelect.html(opcionSinRol);
 
-                
+
                 rolSelect.prop('disabled', true);
 
             } else {
-            
+
                 rolSelect.prop('disabled', false);
 
-            
+
                 rolSelect.html(opcionesRoles);
             }
         });
@@ -212,6 +218,14 @@
         }
         $('#puesto').trigger('change');
         $('#departamento').trigger('change');
+
+        document.getElementById('telefono').addEventListener('input', function (e) {
+            let valor = e.target.value.replace(/\D/g, ''); // solo números
+            if (valor.length > 4) {
+                valor = valor.slice(0, 4) + ' ' + valor.slice(4, 8);
+            }
+            e.target.value = valor;
+        });
     });
 
 </script>

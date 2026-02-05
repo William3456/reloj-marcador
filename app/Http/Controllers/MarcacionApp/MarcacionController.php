@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\MarcacionApp;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empleado\Empleado;
 use App\Models\Horario\horario;
 use App\Models\Horario\HorarioHistorico;
 use App\Models\Marcacion\MarcacionEmpleado;
 use App\Models\Permiso\Permiso;
+use App\Models\Sucursales\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -39,47 +41,55 @@ class MarcacionController extends Controller
         // \Carbon\Carbon::setTestNow(now()->setTime(15, 0, 0));
 
         // 🕒 ESCENARIO 4: Mañana a las 8:00 AM //martes = 10
-        //Carbon::setTestNow(now()->addDay()->setTime(19, 0, 0));
+        //Carbon::setTestNow(now()->addDay(3)->setTime( 13,0, 0));
 
     }
 
-    public function indexPanel(Request $request)
-    {
-        $query = MarcacionEmpleado::visiblePara(Auth::user())->with(['empleado', 'sucursal', 'salida'])
-            ->where('tipo_marcacion', 1);
+ public function indexPanel(Request $request)
+{
+    // 1. Obtener datos auxiliares para los filtros (Selects)
+    $sucursales = Sucursal::visiblePara(Auth::user())
+        ->where('estado', 1)
+        ->get();
+        
+    $empleadosList = Empleado::where('estado', 1)
+        ->orderBy('nombres')
+        ->get();
 
-        // 1. Filtro por Nombre (Igual que antes)
-        if ($request->has('empleado') && $request->empleado != '') {
-            $query->whereHas('empleado', function ($q) use ($request) {
-                $q->where('nombres', 'like', '%'.$request->empleado.'%')
-                    ->orWhere('apellidos', 'like', '%'.$request->empleado.'%');
-            });
-        }
+    // 2. Construir la consulta principal
+    $query = MarcacionEmpleado::visiblePara(Auth::user())->with(['empleado', 'sucursal', 'salida'])
+        ->where('tipo_marcacion', 1);
 
-        // 2. NUEVO FILTRO: "En Proceso" (Sin Salida)
-        if ($request->get('estado') == 'sin_cierre') {
-            // Busca marcaciones que NO tengan una salida registrada
-            $query->doesntHave('salida');
-
-            // Opcional: Si quieres ver marcaciones "En proceso" históricas o solo las de hoy.
-            // Si quieres ver TODAS las que quedaron abiertas alguna vez, quita el filtro de fechas abajo.
-            // Si quieres ver solo las de hoy que siguen abiertas, deja el filtro de fechas.
-        }
-
-        // 3. Filtro de Fechas
-        // Nota: Si presionas el botón "Turno Actual", el request ya traerá la fecha de hoy
-        $desde = $request->input('desde', date('Y-m-01'));
-        $hasta = $request->input('hasta', date('Y-m-d'));
-
-        $query->whereBetween('created_at', [
-            Carbon::parse($desde)->startOfDay(),
-            Carbon::parse($hasta)->endOfDay(),
-        ]);
-
-        $marcaciones = $query->latest()->get();
-
-        return view('marcaciones.index', compact('marcaciones'));
+    // ... (Tus filtros existentes: Empleado, Estado, Fechas) ...
+    if ($request->has('empleado') && $request->empleado != '') {
+        $query->whereHas('empleado', function ($q) use ($request) {
+            $q->where('nombres', 'like', '%'.$request->empleado.'%')
+                ->orWhere('apellidos', 'like', '%'.$request->empleado.'%');
+        });
     }
+    
+    // Filtro por Sucursal (¡Faltaba agregarlo a la query!)
+    if ($request->filled('sucursal')) {
+        $query->where('id_sucursal', $request->sucursal);
+    }
+
+    if ($request->get('estado') == 'sin_cierre') {
+        $query->doesntHave('salida');
+    }
+
+    $desde = $request->input('desde', date('Y-m-d')); // Cambiado a date('Y-m-d') para que por defecto sea hoy, no inicio de mes
+    $hasta = $request->input('hasta', date('Y-m-d'));
+
+    $query->whereBetween('created_at', [
+        Carbon::parse($desde)->startOfDay(),
+        Carbon::parse($hasta)->endOfDay(),
+    ]);
+
+    $marcaciones = $query->latest()->get();
+
+    // 3. Retornar vista con TODAS las variables
+    return view('marcaciones.index', compact('marcaciones', 'sucursales', 'empleadosList'));
+}
 
     public function index()
     {

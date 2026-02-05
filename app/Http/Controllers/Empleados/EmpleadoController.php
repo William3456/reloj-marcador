@@ -67,6 +67,7 @@ class EmpleadoController extends Controller
             'login' => 'required|in:0,1',
             'estado' => 'required|in:0,1',
             'id_rol' => 'required_if:login,1|exists:roles,id',
+            'telefono' => 'required|max:10',
         ], [
             'nombres.required' => 'El campo nombres es obligatorio.',
             'apellidos.required' => 'El campo apellidos es obligatorio.',
@@ -93,6 +94,9 @@ class EmpleadoController extends Controller
 
             'estado.required' => 'Debes seleccionar un estado.',
             'estado.in' => 'Valor inválido para el estado.',
+
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'telefono.max' => 'El teléfono no debe exceder los 10 caracteres.',
         ]);
 
         $codigo = $this->armaCodigo($validated['nombres'], $validated['apellidos']);
@@ -101,6 +105,7 @@ class EmpleadoController extends Controller
         $empleado = Empleado::create([
             'cod_trabajador' => 'TEMP',
             'correo' => $validated['correo'],
+            'telefono' => $validated['telefono'],
             'direccion' => $validated['direccion'],
             'fecha_nacimiento' => $validated['fecha_nacimiento'],
             'documento' => $validated['documento'],
@@ -225,6 +230,7 @@ class EmpleadoController extends Controller
             'login' => 'required|in:0,1',
             'estado' => 'required|in:0,1',
             'id_rol' => 'required_if:login,1|exists:roles,id',
+            'telefono' => 'required|max:10',
         ], [
             'nombres.required' => 'El campo nombres es obligatorio.',
             'apellidos.required' => 'El campo apellidos es obligatorio.',
@@ -250,6 +256,9 @@ class EmpleadoController extends Controller
 
             'estado.required' => 'Debes seleccionar un estado.',
             'estado.in' => 'Valor inválido para el estado.',
+
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'telefono.max' => 'El teléfono no debe exceder los 10 caracteres.',
         ]);
 
         if(Empleado::where('correo', $validated['correo'])->where('id', '!=', $id)->exists()){

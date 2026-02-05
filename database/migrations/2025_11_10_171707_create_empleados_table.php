@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('cod_trabajador', 20)->comment('Formado por ID+IDSuc.+Iniciales');
             $table->string('correo', length: 150)->unique();
+            $table->string('telefono', 10)->nullable();
             $table->string('direccion', 200);
             $table->date('fecha_nacimiento');
             $table->string('documento', 200)->unique();
