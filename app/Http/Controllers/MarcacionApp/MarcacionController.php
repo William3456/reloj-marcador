@@ -57,7 +57,14 @@ class MarcacionController extends Controller
         ->get();
 
     // 2. Construir la consulta principal
-    $query = MarcacionEmpleado::visiblePara(Auth::user())->with(['empleado', 'sucursal', 'salida'])
+    $query = MarcacionEmpleado::visiblePara(Auth::user())
+        ->with([
+            'empleado', 
+            'sucursal', 
+            'salida',
+            'permiso.tipoPermiso',       
+            'salida.permiso.tipoPermiso' 
+        ])
         ->where('tipo_marcacion', 1);
 
     // ... (Tus filtros existentes: Empleado, Estado, Fechas) ...
@@ -468,7 +475,7 @@ class MarcacionController extends Controller
         if ($tipoMarcacion == 2 && $entradaAbierta) {
             // Si la entrada ya tiene el ID guardado, lo usamos directo.
             if ($entradaAbierta->id_horario) {
-                return \App\Models\Horario\Horario::find($entradaAbierta->id_horario);
+                return horario::find($entradaAbierta->id_horario);
             }
 
             // FALLBACK PARA REGISTROS VIEJOS (SIN ID)

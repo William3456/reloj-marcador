@@ -55,7 +55,7 @@ class HistorialController extends Controller
         // 2. Traer marcaciones
         $todasMarcaciones = MarcacionEmpleado::where('id_empleado', $empleado->id)
             ->whereBetween('created_at', [$desde, $hasta])
-            ->with(['sucursal', 'entrada'])
+            ->with(['sucursal', 'entrada', 'permiso.tipoPermiso']) // Cargar relación de permiso y su tipo
             ->get();
 
         // 3. Generar historial
@@ -64,7 +64,8 @@ class HistorialController extends Controller
 
         if ($desde->lessThanOrEqualTo($hasta)) {
             $periodo = CarbonPeriod::create($desde, $hasta);
-
+            
+            
             foreach ($periodo as $dia) {
                 $nombreDia = Str::lower($dia->locale('es')->isoFormat('dddd'));
 
@@ -76,7 +77,7 @@ class HistorialController extends Controller
 
                 $turnosData = [];
                 $completados = 0;
-
+                
                 foreach ($horariosDelDia as $horario) {
 
                     $horaInicioTurno = Carbon::parse($dia->format('Y-m-d').' '.$horario->hora_ini);
@@ -95,6 +96,7 @@ class HistorialController extends Controller
                     })->first();
 
                     if ($marcacionEncontrada) {
+                        
                         $completados++;
                         $idsUsados[] = $marcacionEncontrada->id; // <--- MARCAR COMO USADA
 
@@ -113,23 +115,28 @@ class HistorialController extends Controller
                                     && $item->created_at->lt($dia->copy()->endOfDay());
                             });
                         }
-                        // ... (fin lógica salida)
-
+                        
+                        //dd($marcacionEncontrada);
                         $turnosData[] = [
                             'estado' => 'completado',
                             'horario_info' => $horario,
                             'entrada' => $marcacionEncontrada,
                             'salida' => $salida,
+                            'id_permiso_aplicado' => $marcacionEncontrada->id_permiso_aplicado 
+                                 ?? ($salida->id_permiso_aplicado ?? null),
+                            'permiso_info' => $marcacionEncontrada->permiso ?? ($salida->permiso ?? null),
                         ];
                     } else {
+                        
                         if ($horaInicioTurno->isPast()) {
                             $turnosData[] = ['estado' => 'perdido', 'horario_info' => $horario];
                         } else {
                             $turnosData[] = ['estado' => 'pendiente', 'horario_info' => $horario];
                         }
                     }
+                   
                 }
-
+                
                 // Resto de tu lógica para agregar al historial...
                 $tieneMarcacionesSueltas = $todasMarcaciones->filter(function ($m) use ($dia) {
                     return $m->created_at->isSameDay($dia);
@@ -149,6 +156,8 @@ class HistorialController extends Controller
         }
 
         $historial = $historial->sortByDesc('fecha');
+        
+
 
         return view('app_marcacion.marcaciones.historial', [
             'historial' => $historial,

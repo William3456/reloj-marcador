@@ -5,6 +5,7 @@ namespace App\Models\Marcacion;
 use App\Models\Empleado\Empleado;
 use App\Models\Horario\horario;
 use App\Models\Horario\HorarioHistorico;
+use App\Models\Permiso\Permiso;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Model;
 
@@ -49,6 +50,11 @@ class MarcacionEmpleado extends Model
         return $this->belongsTo(Empleado::class, 'id_empleado');
     }
 
+    public function permiso()
+    {
+        return $this->belongsTo(Permiso::class, 'id_permiso_aplicado','id');
+    }
+
     public function salida()
     {
         return $this->hasOne(self::class, 'id_marcacion_entrada');
@@ -72,10 +78,10 @@ class MarcacionEmpleado extends Model
     {
         return $this->belongsTo(horario::class, 'id_horario');
     }
+
     public function horarioHistorico()
     {
         // Esta relación conecta la marcación con la "foto" del horario en ese momento
         return $this->belongsTo(HorarioHistorico::class, 'id_horario_historico_empleado');
     }
-    
 }

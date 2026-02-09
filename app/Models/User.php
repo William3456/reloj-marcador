@@ -50,13 +50,19 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-        public function empleado()
+
+    public function empleado()
     {
         return $this->belongsTo(Empleado::class, 'id_empleado');
     }
 
-public function rol()
+    public function rol()
     {
         return $this->belongsTo(Rol::class, 'id_rol');
+    }
+
+    public function isSuperAdmin()
+    {
+        return $this->id_rol === 1;
     }
 }

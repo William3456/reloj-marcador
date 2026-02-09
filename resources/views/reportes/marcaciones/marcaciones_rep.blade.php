@@ -10,7 +10,7 @@
 
             <div class="bg-white shadow rounded-lg p-6">
 
-                {{-- SECCIÓN 1: FILTROS (Igual que antes) --}}
+                {{-- SECCIÓN 1: FILTROS --}}
                 <form method="GET" class="mb-6 border-b border-gray-100 pb-6">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         {{-- Rango Fechas --}}
@@ -110,12 +110,12 @@
                                     </div>
                                     <div class="text-right text-xs">
                                         <span class="block font-bold text-gray-600">Resumen:</span>
-                                        <span
-                                            class="text-red-600 font-bold mr-2">{{ $turnos->where('estado_key', 'ausente')->count() }}
-                                            Ausencias</span>
-                                        <span
-                                            class="text-orange-600 font-bold">{{ $turnos->where('estado_key', 'tarde')->count() }}
-                                            Tardanzas</span>
+                                        <span class="text-red-600 font-bold mr-2">{{ $turnos->where('estado_key', 'ausente')->count() }} Ausencias</span>
+                                        <span class="text-orange-600 font-bold mr-2">{{ $turnos->where('estado_key', 'tarde')->count() }} Tardanzas</span>
+                                        {{-- NUEVO: Contador de Permisos en Resumen --}}
+                                        <span class="text-blue-600 font-bold">
+                                            {{ $turnos->filter(function($t){ return in_array($t['estado_key'], ['permiso', 'tarde_con_permiso']); })->count() }} Permisos
+                                        </span>
                                     </div>
                                 </div>
 
@@ -124,50 +124,55 @@
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-white">
                                             <tr>
-                                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Fecha
-                                                </th>
-                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">
-                                                    Turno Asignado</th>
-                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">
-                                                    Entrada</th>
-                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">
-                                                    Salida</th>
-                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">
-                                                    Incidencia</th>
+                                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Fecha</th>
+                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Turno Asignado</th>
+                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Entrada</th>
+                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Salida</th>
+                                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Estado</th>
+                                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase w-1/4">Incidencia / Notas</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
                                             @foreach($turnos as $turno)
                                                 @php
-    $bgRow = 'hover:bg-gray-50';
-    $estadoHtml = '<span class="text-green-600 font-bold text-xs">OK</span>';
+                                                    $bgRow = 'hover:bg-gray-50';
+                                                    $estadoHtml = '<span class="text-green-600 font-bold text-xs">OK</span>';
 
-    if ($turno['estado_key'] == 'ausente') {
-        $bgRow = 'bg-red-50 hover:bg-red-100';
-        $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">AUSENTE</span>';
-    } elseif ($turno['estado_key'] == 'tarde') {
-        $bgRow = 'bg-orange-50 hover:bg-orange-100';
+                                                    // --- Lógica de Estados Actualizada ---
+                                                    switch ($turno['estado_key']) {
+                                                        case 'ausente':
+                                                            $bgRow = 'bg-red-50 hover:bg-red-100';
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">AUSENTE</span>';
+                                                            break;
 
-        // --- Lógica de Conversión a Horas CORREGIDA ---
-        // 1. Usamos abs() para quitar el negativo (-93 -> 93)
-        $minTotal = abs(round($turno['minutos_tarde'])); 
-        
-        // 2. Calculamos horas y minutos restantes
-        $horas = floor($minTotal / 60);
-        $minutos = $minTotal % 60;
+                                                        case 'tarde':
+                                                            $bgRow = 'bg-orange-50 hover:bg-orange-100';
+                                                            $minTotal = abs(round($turno['minutos_tarde']));
+                                                            $horas = floor($minTotal / 60);
+                                                            $minutos = $minTotal % 60;
+                                                            $textoTiempo = $horas > 0 ? "+{$horas}h {$minutos}m" : "+{$minTotal} min";
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">TARDE (' . $textoTiempo . ')</span>';
+                                                            break;
 
-        // 3. Formateamos el texto
-        $textoTiempo = $horas > 0
-            ? "+{$horas}h {$minutos}m"  // Ej: +1h 33m
-            : "+{$minTotal} min";       // Ej: +45 min
+                                                        case 'tarde_con_permiso':
+                                                            $bgRow = 'bg-orange-50/50 hover:bg-orange-100';
+                                                            $minTotal = abs(round($turno['minutos_tarde']));
+                                                            $textoTiempo = $minTotal . "m"; // Simplificado para que quepa
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">RETARDO (' . $textoTiempo . ')</span>';
+                                                            break;
 
-        $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">TARDE (' . $textoTiempo . ')</span>';
-        
-    } elseif ($turno['estado_key'] == 'sin_cierre') {
-        $bgRow = 'bg-yellow-50 hover:bg-yellow-100';
-        $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">SIN SALIDA</span>';
-    }
-@endphp
+                                                        case 'permiso':
+                                                            $bgRow = 'bg-blue-50 hover:bg-blue-100';
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">PERMISO</span>';
+                                                            break;
+
+                                                        case 'sin_cierre':
+                                                            $bgRow = 'bg-yellow-50 hover:bg-yellow-100';
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">SIN SALIDA</span>';
+                                                            break;
+                                                    }
+                                                @endphp
+
                                                 <tr class="{{ $bgRow }}">
                                                     {{-- Fecha --}}
                                                     <td class="px-4 py-2 whitespace-nowrap">
@@ -179,8 +184,7 @@
 
                                                     {{-- Turno --}}
                                                     <td class="px-4 py-2 text-center">
-                                                        <span
-                                                            class="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-600 border border-gray-200">
+                                                        <span class="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-600 border border-gray-200">
                                                             {{ $turno['horario_programado'] }}
                                                         </span>
                                                     </td>
@@ -188,8 +192,7 @@
                                                     {{-- Entrada --}}
                                                     <td class="px-4 py-2 text-center text-sm">
                                                         @if($turno['entrada_real'])
-                                                            <span
-                                                                class="font-bold text-gray-700">{{ $turno['entrada_real']->format('H:i') }}</span>
+                                                            <span class="font-bold text-gray-700">{{ $turno['entrada_real']->format('H:i') }}</span>
                                                         @else
                                                             <span class="text-gray-300">--:--</span>
                                                         @endif
@@ -198,8 +201,7 @@
                                                     {{-- Salida --}}
                                                     <td class="px-4 py-2 text-center text-sm">
                                                         @if($turno['salida_real'])
-                                                            <span
-                                                                class="font-bold text-gray-700">{{ $turno['salida_real']->format('H:i') }}</span>
+                                                            <span class="font-bold text-gray-700">{{ $turno['salida_real']->format('H:i') }}</span>
                                                         @else
                                                             <span class="text-gray-300">--:--</span>
                                                         @endif
@@ -208,6 +210,30 @@
                                                     {{-- Estado --}}
                                                     <td class="px-4 py-2 text-center">
                                                         {!! $estadoHtml !!}
+                                                    </td>
+
+                                                    {{-- Incidencia / Notas (NUEVA COLUMNA) --}}
+                                                    <td class="px-4 py-2 text-left">
+                                                        @if(!empty($turno['permiso_info']))
+                                                            <div class="bg-white/60 border border-blue-200 rounded p-1.5 shadow-sm inline-block max-w-xs">
+                                                                <div class="text-[10px] font-bold text-blue-700 leading-tight flex items-center gap-1">
+                                                                    <i class="fa-solid fa-file-contract"></i> 
+                                                                    {{ $turno['permiso_info']['tipo'] }}
+                                                                </div>
+                                                                
+                                                                @if($turno['permiso_info']['motivo'])
+                                                                    <div class="text-[9px] text-gray-600 italic mt-0.5 truncate max-w-[150px]" title="{{ $turno['permiso_info']['motivo'] }}">
+                                                                        "{{ $turno['permiso_info']['motivo'] }}"
+                                                                    </div>
+                                                                @endif
+
+                                                                <div class="text-[8px] text-gray-400 mt-0.5">
+                                                                    Vigencia: 
+                                                                    {{ \Carbon\Carbon::parse($turno['permiso_info']['desde'])->format('d/m') }} - 
+                                                                    {{ \Carbon\Carbon::parse($turno['permiso_info']['hasta'])->format('d/m') }}
+                                                                </div>
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -234,10 +260,9 @@
         </div>
     </div>
 
-    {{-- MODAL DE CONFIRMACIÓN (Reutilizar el mismo código del modal anterior) --}}
+    {{-- MODAL DE CONFIRMACIÓN --}}
     <div id="pdfModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
         aria-modal="true">
-        {{-- ... (Tu código del modal existente) ... --}}
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closePdfModal()"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>

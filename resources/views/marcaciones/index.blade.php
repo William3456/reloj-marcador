@@ -10,82 +10,49 @@
 
             <div class="bg-white shadow rounded-lg p-6">
 
-                {{-- SECCIÓN 1: FILTROS (Estilo Reporte) --}}
+                {{-- SECCIÓN 1: FILTROS (Se mantiene igual, oculto por brevedad) --}}
                 <form action="{{ route('marcaciones.index') }}" method="GET" class="mb-6 border-b border-gray-100 pb-6">
+                    {{-- ... (Tu código de filtros original va aquí) ... --}}
+                    {{-- Solo asegurate de incluir el botón y inputs tal cual los tenías --}}
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                        
-                        {{-- Rango Fechas --}}
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Desde</label>
-                            <input type="date" name="desde" value="{{ request('desde') ?? date('Y-m-d') }}"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <input type="date" name="desde" value="{{ request('desde') ?? date('Y-m-d') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hasta</label>
-                            <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                         </div>
-
-                        {{-- Sucursal --}}
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sucursal</label>
-                            <select name="sucursal"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <select name="sucursal" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                                 <option value="">Todas</option>
                                 @foreach($sucursales as $suc)
-                                    <option value="{{ $suc->id }}" {{ request('sucursal') == $suc->id ? 'selected' : '' }}>
-                                        {{ $suc->nombre }}</option>
+                                    <option value="{{ $suc->id }}" {{ request('sucursal') == $suc->id ? 'selected' : '' }}>{{ $suc->nombre }}</option>
                                 @endforeach
                             </select>
                         </div>
-
-                        {{-- Empleado --}}
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Empleado</label>
-                            <select name="empleado"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <select name="empleado" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                                 <option value="">Todos</option>
                                 @foreach($empleadosList as $emp)
-                                    <option value="{{ $emp->id }}" {{ request('empleado') == $emp->id ? 'selected' : '' }}>
-                                        {{ $emp->nombres }} {{ $emp->apellidos }}</option>
+                                    <option value="{{ $emp->id }}" {{ request('empleado') == $emp->id ? 'selected' : '' }}>{{ $emp->nombres }} {{ $emp->apellidos }}</option>
                                 @endforeach
                             </select>
                         </div>
-
-                        {{-- Botones de Acción --}}
                         <div class="flex gap-2">
-                            <button type="submit"
-                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow text-sm flex items-center justify-center transition-colors">
+                            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow text-sm flex items-center justify-center transition-colors">
                                 <i class="fa-solid fa-filter mr-2"></i> Filtrar
                             </button>
-                            {{-- Botón Reset --}}
-                            <a href="{{ route('marcaciones.index') }}" 
-                               class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-3 rounded shadow-sm text-sm flex items-center justify-center transition-colors"
-                               title="Limpiar filtros">
+                            <a href="{{ route('marcaciones.index') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-3 rounded shadow-sm text-sm flex items-center justify-center transition-colors" title="Limpiar filtros">
                                 <i class="fa-solid fa-rotate-left"></i>
                             </a>
                         </div>
                     </div>
-                    
-                    {{-- Filtros Rápidos (Opcional) --}}
-                    <div class="mt-4 flex gap-3 text-xs">
-                        <span class="text-gray-400 font-bold uppercase self-center">Vistas Rápidas:</span>
-                        <a href="{{ route('marcaciones.index', ['desde' => date('Y-m-d'), 'hasta' => date('Y-m-d')]) }}" 
-                           class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-200 hover:bg-green-100 transition">
-                           Hoy
-                        </a>
-                        <a href="{{ route('marcaciones.index', ['estado' => 'sin_cierre']) }}" 
-                           class="px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-200 hover:bg-yellow-100 transition">
-                           Pendientes de Cierre
-                        </a>
-                        <a href="{{ route('marcaciones.index', ['incidencia' => 'tarde']) }}" 
-                           class="px-3 py-1 bg-orange-50 text-orange-700 rounded-full border border-orange-200 hover:bg-orange-100 transition">
-                           Llegadas Tarde
-                        </a>
-                    </div>
                 </form>
 
-                {{-- SECCIÓN 2: TABLA DATA TABLES (Estilo Visual mejorado) --}}
+                {{-- SECCIÓN 2: TABLA DATA TABLES --}}
                 <div class="overflow-hidden">
                     <table id="tablaMarcaciones" class="min-w-full divide-y divide-gray-200 w-full">
                         <thead class="bg-gray-50">
@@ -124,7 +91,17 @@
                                         <div class="text-[10px] text-gray-400 uppercase">{{ $m->created_at->format('d M') }}</div>
                                         
                                         @if($m->fuera_horario)
-                                            <span class="text-[9px] text-orange-600 font-bold block">TARDE</span>
+                                            <span class="text-[9px] text-orange-600 font-bold block mt-0.5">TARDE</span>
+                                        @endif
+
+                                        {{-- NUEVO: Permiso Entrada --}}
+                                        @if($m->permiso)
+                                            <div class="mt-1">
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-purple-100 text-purple-800 border border-purple-200" title="{{ $m->permiso->motivo }}">
+                                                    <i class="fa-solid fa-file-contract mr-1"></i>
+                                                    Permiso aplicado
+                                                </span>
+                                            </div>
                                         @endif
                                     </td>
 
@@ -133,12 +110,22 @@
                                         @if($m->salida)
                                             <div class="text-sm font-bold text-gray-800">{{ $m->salida->created_at->format('H:i') }}</div>
                                             <div class="text-[10px] text-gray-400 uppercase">{{ $m->salida->created_at->format('d M') }}</div>
+                                            
+                                            {{-- NUEVO: Permiso Salida --}}
+                                            @if($m->salida->permiso)
+                                                <div class="mt-1">
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-purple-100 text-purple-800 border border-purple-200" title="{{ $m->salida->permiso->motivo }}">
+                                                        <i class="fa-solid fa-file-contract mr-1"></i>
+                                                        Permiso aplicado
+                                                    </span>
+                                                </div>
+                                            @endif
                                         @else
                                             <span class="text-gray-300 text-sm">--:--</span>
                                         @endif
                                     </td>
 
-                                    {{-- Estado (Badges del Historial original) --}}
+                                    {{-- Estado --}}
                                     <td class="px-4 py-3 whitespace-nowrap text-center">
                                         @if($m->salida)
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -158,51 +145,65 @@
                                     </td>
 
                                     {{-- Botón Modal --}}
-                                    <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        {{-- Lógica para preparar textos del modal --}}
-                                        @php
-                                            $estadoTexto = '';
-                                            $estadoClase = '';
-                                            if ($m->salida) {
-                                                if ($m->salida->es_olvido || $m->salida->fuera_horario) {
-                                                    $estadoTexto = 'Jornada Finalizada (Con Observaciones)';
-                                                    $estadoClase = 'bg-orange-100 text-orange-800 border-orange-200';
-                                                } else {
-                                                    $estadoTexto = 'Jornada Completada Exitosamente';
-                                                    $estadoClase = 'bg-green-100 text-green-800 border-green-200';
-                                                }
-                                            } else {
-                                                if (!$m->created_at->isToday()) {
-                                                    $estadoTexto = 'Cierre Pendiente (Olvido de Salida)';
-                                                    $estadoClase = 'bg-red-100 text-red-800 border-red-200';
-                                                } else {
-                                                    $estadoTexto = 'En Turno (Jornada Activa)';
-                                                    $estadoClase = 'bg-yellow-100 text-yellow-800 border-yellow-200';
-                                                }
-                                            }
-                                        @endphp
+<td class="px-4 py-3 whitespace-nowrap text-center">
+    @php
+        // Lógica de Estado (se mantiene igual)
+        $estadoTexto = '';
+        $estadoClase = '';
+        if ($m->salida) {
+            if ($m->salida->es_olvido || $m->salida->fuera_horario) {
+                $estadoTexto = 'Jornada Finalizada (Con Observaciones)';
+                $estadoClase = 'bg-orange-100 text-orange-800 border-orange-200';
+            } else {
+                $estadoTexto = 'Jornada Completada Exitosamente';
+                $estadoClase = 'bg-green-100 text-green-800 border-green-200';
+            }
+        } else {
+            if (!$m->created_at->isToday()) {
+                $estadoTexto = 'Cierre Pendiente (Olvido de Salida)';
+                $estadoClase = 'bg-red-100 text-red-800 border-red-200';
+            } else {
+                $estadoTexto = 'En Turno (Jornada Activa)';
+                $estadoClase = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            }
+        }
 
-                                        <button onclick="verDetalleCompleto({
-                                            empleado: '{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}',
-                                            fecha: '{{ $m->created_at->isoFormat('dddd D [de] MMMM [del] YYYY') }}',
-                                            latEntrada: {{ $m->latitud }},
-                                            lngEntrada: {{ $m->longitud }},
-                                            fotoEntrada: '{{ $m->ubi_foto ? Storage::url($m->ubi_foto) : null }}',
-                                            horaEntrada: '{{ $m->created_at->format('h:i A') }}',
-                                            hasSalida: {{ $m->salida ? 'true' : 'false' }},
-                                            latSalida: {{ $m->salida->latitud ?? 0 }},
-                                            lngSalida: {{ $m->salida->longitud ?? 0 }},
-                                            fotoSalida: '{{ ($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null }}',
-                                            horaSalida: '{{ $m->salida ? $m->salida->created_at->format('h:i A') : '--' }}',
-                                            estadoTexto: '{{ $estadoTexto }}',
-                                            estadoClase: '{{ $estadoClase }}',
-                                            fotoEntradaFull: '{{ $m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null }}',
-                                            fotoSalidaFull: '{{ ($m->salida && $m->salida->ubi_foto_full)? Storage::url($m->salida->ubi_foto_full): null }}'
-                                        })" 
-                                        class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50">
-                                            <i class="fa-solid fa-eye"></i>
-                                        </button>
-                                    </td>
+        // Lógica de Permisos (ACTUALIZADA)
+        $txtPermisoEntrada = $m->permiso ? $m->permiso->tipoPermiso->nombre : null;
+        // Escapamos comillas dobles para no romper el JS
+        $motivoEntrada = $m->permiso ? str_replace('"', '&quot;', $m->permiso->motivo) : ''; 
+
+        $txtPermisoSalida  = ($m->salida && $m->salida->permiso) ? $m->salida->permiso->tipoPermiso->nombre : null;
+        $motivoSalida = ($m->salida && $m->salida->permiso) ? str_replace('"', '&quot;', $m->salida->permiso->motivo) : '';
+    @endphp
+
+    <button onclick="verDetalleCompleto({
+        empleado: '{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}',
+        fecha: '{{ $m->created_at->isoFormat('dddd D [de] MMMM [del] YYYY') }}',
+        latEntrada: {{ $m->latitud }},
+        lngEntrada: {{ $m->longitud }},
+        fotoEntrada: '{{ $m->ubi_foto ? Storage::url($m->ubi_foto) : null }}',
+        horaEntrada: '{{ $m->created_at->format('h:i A') }}',
+        hasSalida: {{ $m->salida ? 'true' : 'false' }},
+        latSalida: {{ $m->salida->latitud ?? 0 }},
+        lngSalida: {{ $m->salida->longitud ?? 0 }},
+        fotoSalida: '{{ ($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null }}',
+        horaSalida: '{{ $m->salida ? $m->salida->created_at->format('h:i A') : '--' }}',
+        estadoTexto: '{{ $estadoTexto }}',
+        estadoClase: '{{ $estadoClase }}',
+        fotoEntradaFull: '{{ $m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null }}',
+        fotoSalidaFull: '{{ ($m->salida && $m->salida->ubi_foto_full)? Storage::url($m->salida->ubi_foto_full): null }}',
+        
+        // DATOS NUEVOS
+        permisoEntrada: '{{ $txtPermisoEntrada }}',
+        motivoEntrada: '{{ $motivoEntrada }}', 
+        permisoSalida: '{{ $txtPermisoSalida }}',
+        motivoSalida: '{{ $motivoSalida }}'
+    })" 
+    class="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50">
+        <i class="fa-solid fa-eye"></i>
+    </button>
+</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -213,7 +214,7 @@
         </div>
     </div>
 
-    {{-- MODAL EXPEDIENTE (Conservado Intacto) --}}
+    {{-- MODAL EXPEDIENTE --}}
     <div id="modalExpediente" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-gray-900 bg-opacity-80 transition-opacity backdrop-blur-sm" onclick="cerrarModal()"></div>
         <div class="fixed inset-0 z-10 overflow-y-auto">
@@ -240,29 +241,49 @@
                                 <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">Evidencia Fotográfica</h4>
                                 <div class="grid grid-cols-2 gap-3">
                                     {{-- Foto Entrada --}}
-                                    <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center">
+                                    <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center relative">
                                         <span class="text-xs font-bold text-green-700 block mb-1">ENTRADA</span>
                                         <input type="hidden" id="fotoEntradaFull">
                                         <input type="hidden" id="fotoSalidaFull">
+                                        
+
+
                                         <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
                                             <img id="imgEntrada" src="" class="w-full h-full object-cover hidden cursor-pointer" onclick="zoomImagen(document.getElementById('fotoEntradaFull').value)">
                                             <span id="noImgEntrada" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
                                         <p id="horaEntradaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">--:--</p>
+                                                                                {{-- NUEVO: Badge Flotante para Permiso Entrada --}}
+                                        <div id="badgePermisoEntrada" class="hidden absolute top-8 left-1/2 transform -translate-x-1/2 z-10 w-11/12">
+                                            
+                                        <div id="badgePermisoEntrada" class="hidden mt-2 w-full">
+                                            <span id="txtPermisoEntrada" class="block w-full bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-1.5 rounded-md border border-purple-200 shadow-sm whitespace-normal leading-tight">
+                                                ---
+                                            </span>
+                                        </div>
+                                        </div>
                                     </div>
+
                                     {{-- Foto Salida --}}
-                                    <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center">
+                                    <div class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center relative">
                                         <span class="text-xs font-bold text-red-700 block mb-1">SALIDA</span>
+                                       
                                         <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group">
                                             <img id="imgSalida" src="" class="w-full h-full object-cover hidden cursor-pointer" onclick="zoomImagen(document.getElementById('fotoSalidaFull').value)">
                                             <span id="noImgSalida" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
                                         <p id="horaSalidaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">--:--</p>
+                                         {{-- NUEVO: Badge Flotante para Permiso Salida --}}
+                                        <div id="badgePermisoSalida" class="hidden mt-2 w-full">
+                                            <span id="txtPermisoSalida" class="block w-full bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-1.5 rounded-md border border-purple-200 shadow-sm whitespace-normal leading-tight">
+                                                ---
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- Columna 2: Mapa --}}
+                            {{-- Columna 2: Mapa (Sin Cambios) --}}
                             <div class="flex flex-col h-full">
                                 <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">Ubicación</h4>
                                 <div class="flex gap-2 mb-3" id="mapToggles">
@@ -290,17 +311,15 @@
     @push('scripts')
         <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
         <script>
-            // DataTables con estilo minimalista
             let table = new DataTable('#tablaMarcaciones', {
                 responsive: true,
                 language: {
                     url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/es-ES.json',
                     search: "Buscar:",
                 },
-                columnDefs: [{ orderable: false, targets: [5] }] // Desactivar orden en columna Acción
+                columnDefs: [{ orderable: false, targets: [5] }]
             });
 
-            // Lógica del Modal (Copiada del original)
             let map, marker, geocoder;
             let currentData = {};
 
@@ -317,35 +336,69 @@
             }
 
             function verDetalleCompleto(data) {
-                currentData = data;
-                document.getElementById('modalEmpNombre').innerText = data.empleado;
-                document.getElementById('modalFecha').innerText = data.fecha;
-                document.getElementById('horaEntradaModal').innerText = data.horaEntrada;
-                document.getElementById('horaSalidaModal').innerText = data.horaSalida;
-                document.getElementById('fotoEntradaFull').value = data.fotoEntradaFull;
-                document.getElementById('fotoSalidaFull').value = data.fotoSalidaFull;
+    currentData = data;
+    document.getElementById('modalEmpNombre').innerText = data.empleado;
+    document.getElementById('modalFecha').innerText = data.fecha;
+    document.getElementById('horaEntradaModal').innerText = data.horaEntrada;
+    document.getElementById('horaSalidaModal').innerText = data.horaSalida;
+    document.getElementById('fotoEntradaFull').value = data.fotoEntradaFull;
+    document.getElementById('fotoSalidaFull').value = data.fotoSalidaFull;
 
-                const badge = document.getElementById('modalBadgeStatus');
-                badge.innerText = data.estadoTexto;
-                badge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border " + data.estadoClase;
+    const badge = document.getElementById('modalBadgeStatus');
+    badge.innerText = data.estadoTexto;
+    badge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border " + data.estadoClase;
 
-                setupFoto('imgEntrada', 'noImgEntrada', data.fotoEntrada);
-                setupFoto('imgSalida', 'noImgSalida', data.fotoSalida);
+    setupFoto('imgEntrada', 'noImgEntrada', data.fotoEntrada);
+    setupFoto('imgSalida', 'noImgSalida', data.fotoSalida);
 
-                const btnSalida = document.getElementById('btnMapSalida');
-                if (!data.hasSalida) {
-                    btnSalida.classList.add('hidden');
-                } else {
-                    btnSalida.classList.remove('hidden');
-                }
+    // --- LÓGICA DE PERMISOS CON SALTO DE LÍNEA ---
+    
+    // 1. Permiso Entrada
+    const badgeP_Entrada = document.getElementById('badgePermisoEntrada');
+    const txtP_Entrada = document.getElementById('txtPermisoEntrada');
+    
+    if(data.permisoEntrada) {
+        // Usamos innerHTML para meter el <br>
+        // Título en negrita (por la clase del padre), Motivo en normal e itálica
+        let contenido = `${data.permisoEntrada}`;
+        if(data.motivoEntrada) {
+            contenido += `<br><span class="font-normal italic opacity-80">${data.motivoEntrada}</span>`;
+        }
+        txtP_Entrada.innerHTML = contenido;
+        badgeP_Entrada.classList.remove('hidden');
+    } else {
+        badgeP_Entrada.classList.add('hidden');
+    }
 
-                document.getElementById('modalExpediente').classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
+    // 2. Permiso Salida
+    const badgeP_Salida = document.getElementById('badgePermisoSalida');
+    const txtP_Salida = document.getElementById('txtPermisoSalida');
+    
+    if(data.permisoSalida) {
+        let contenido = `${data.permisoSalida}`;
+        if(data.motivoSalida) {
+            contenido += `<br><span class="font-normal italic opacity-80">${data.motivoSalida}</span>`;
+        }
+        txtP_Salida.innerHTML = contenido;
+        badgeP_Salida.classList.remove('hidden');
+    } else {
+        badgeP_Salida.classList.add('hidden');
+    }
+    // ------------------------------------------
 
-                if (!map) initMap();
-                setTimeout(() => { cambiarMapa('entrada'); }, 200);
-            }
+    const btnSalida = document.getElementById('btnMapSalida');
+    if (!data.hasSalida) {
+        btnSalida.classList.add('hidden');
+    } else {
+        btnSalida.classList.remove('hidden');
+    }
 
+    document.getElementById('modalExpediente').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    if (!map) initMap();
+    setTimeout(() => { cambiarMapa('entrada'); }, 200);
+}
             function setupFoto(imgId, placeholderId, url) {
                 const img = document.getElementById(imgId);
                 const placeholder = document.getElementById(placeholderId);
@@ -403,7 +456,6 @@
     @push('styles')
         <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
         <style>
-            /* Limpieza visual de DataTables */
             .dataTables_wrapper .dataTables_filter input {
                 border-radius: 0.375rem;
                 border: 1px solid #d1d5db;

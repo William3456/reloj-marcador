@@ -86,7 +86,7 @@
                         @else
                             @foreach($dia['detalles'] as $index => $turno)
 
-                                {{-- SEPARADOR DE TURNO (Para saber que es Turno 1, Turno 2...) --}}
+                                {{-- SEPARADOR DE TURNO --}}
                                 <div
                                     class="bg-gray-50/50 px-4 py-1.5 border-b border-gray-100 border-t {{ $index == 0 ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center">
                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -98,49 +98,10 @@
                                     @endif
                                 </div>
 
-                                {{-- CASO A: TURNO COMPLETADO (Muestro Entrada y Salida con tu diseño) --}}
+                                {{-- CASO A: TURNO COMPLETADO --}}
                                 @if($turno['estado'] == 'completado')
 
-                                    {{-- ENTRADA --}}
-                                    <div onclick="abrirDetalle(this)"
-                                        class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
-                                        data-tipo="Entrada" data-hora="{{ $turno['entrada']->created_at->format('h:i A') }}"
-                                        data-fecha="{{ $turno['entrada']->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
-                                        data-sucursal="{{ $turno['entrada']->sucursal->nombre ?? 'Ubicación GPS' }}"
-                                        data-foto="{{ Storage::url($turno['entrada']->ubi_foto) }}"
-                                        data-lat="{{ $turno['entrada']->latitud }}" data-lng="{{ $turno['entrada']->longitud }}"
-                                        data-etiqueta="{{ $turno['entrada']->fuera_horario ? 'Tarde' : '' }}"
-                                        data-clase-color="bg-orange-100 text-orange-700">
-
-                                        {{-- Icono Entrada --}}
-                                        <div
-                                            class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
-                                                </path>
-                                            </svg>
-                                        </div>
-
-                                        <div class="ml-4 flex-grow">
-                                            <div class="flex items-center justify-between">
-                                                <p class="text-sm font-bold text-gray-800">Entrada</p>
-                                                @if($turno['entrada']->fuera_horario)
-                                                    <span
-                                                        class="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-orange-100 text-orange-700 border-orange-200">Tarde</span>
-                                                @endif
-                                            </div>
-                                            <p class="text-xs text-gray-500">
-                                                {{ $turno['entrada']->created_at->format('h:i A') }} •
-                                                {{ $turno['entrada']->sucursal->nombre ?? 'GPS' }}
-                                            </p>
-                                        </div>
-                                        <div class="text-gray-300">
-                                            <i class="fa-solid fa-chevron-right"></i>
-                                        </div>
-                                    </div>
-
-                                    {{-- SALIDA --}}
+                                    {{-- 1. SALIDA --}}
                                     @if($turno['salida'])
                                         <div onclick="abrirDetalle(this)"
                                             class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
@@ -148,7 +109,8 @@
                                             data-fecha="{{ $turno['salida']->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
                                             data-sucursal="{{ $turno['salida']->sucursal->nombre ?? 'Ubicación GPS' }}"
                                             data-foto="{{ Storage::url($turno['salida']->ubi_foto) }}"
-                                            data-lat="{{ $turno['salida']->latitud }}" data-lng="{{ $turno['salida']->longitud }}">
+                                            data-lat="{{ $turno['salida']->latitud }}" data-lng="{{ $turno['salida']->longitud }}"
+                                            data-permiso-txt="{{ $turno['salida']->permiso ? $turno['salida']->permiso->tipoPermiso->nombre . ' - ' . $turno['salida']->permiso->motivo : '' }}">
 
                                             {{-- Icono Salida --}}
                                             <div
@@ -161,7 +123,19 @@
                                             </div>
 
                                             <div class="ml-4 flex-grow">
-                                                <p class="text-sm font-bold text-gray-800">Salida</p>
+                                                {{-- AQUI AGREGAMOS EL PERMISO EN LA SALIDA --}}
+                                                <div class="flex items-center justify-between">
+                                                    <p class="text-sm font-bold text-gray-800">Salida</p>
+
+                                                    {{-- Badge de Permiso en Salida --}}
+                                                    @if($turno['salida']->id_permiso_aplicado ?? false)
+                                                        <span
+                                                            class="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-blue-100 text-blue-700 border-blue-200">
+                                                            Permiso
+                                                        </span>
+                                                    @endif
+                                                </div>
+
                                                 <p class="text-xs text-gray-500">
                                                     {{ $turno['salida']->created_at->format('h:i A') }} •
                                                     {{ $turno['salida']->sucursal->nombre ?? 'GPS' }}
@@ -172,8 +146,8 @@
                                             </div>
                                         </div>
                                     @else
-                                        {{-- SALIDA PENDIENTE/OLVIDADA (Visual gris dentro del mismo turno) --}}
-                                        <div class="flex items-center p-4 bg-gray-50/50">
+                                        {{-- SALIDA PENDIENTE --}}
+                                        <div class="flex items-center p-4 bg-gray-50/50 border-b border-gray-50">
                                             <div
                                                 class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-gray-200 text-gray-400 border border-gray-300 border-dashed">
                                                 <i class="fa-regular fa-clock"></i>
@@ -185,7 +159,61 @@
                                         </div>
                                     @endif
 
-                                    {{-- CASO B: TURNO PERDIDO (Visual Rojo) --}}
+                                    {{-- 2. ENTRADA --}}
+                                    <div onclick="abrirDetalle(this)"
+                                        class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
+                                        data-tipo="Entrada" data-hora="{{ $turno['entrada']->created_at->format('h:i A') }}"
+                                        data-fecha="{{ $turno['entrada']->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
+                                        data-sucursal="{{ $turno['entrada']->sucursal->nombre ?? 'Ubicación GPS' }}"
+                                        data-foto="{{ Storage::url($turno['entrada']->ubi_foto) }}"
+                                        data-lat="{{ $turno['entrada']->latitud }}" data-lng="{{ $turno['entrada']->longitud }}"
+                                        data-etiqueta="{{ $turno['entrada']->fuera_horario ? 'Tarde' : '' }}"
+                                        data-clase-color="bg-orange-100 text-orange-700"
+                                        data-permiso-txt="{{ $turno['entrada']->permiso ? $turno['entrada']->permiso->tipoPermiso->nombre . ': ' . $turno['entrada']->permiso->descripcion : '' }}">
+
+                                        {{-- Icono Entrada --}}
+                                        <div
+                                            class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
+                                                </path>
+                                            </svg>
+                                        </div>
+
+                                        <div class="ml-4 flex-grow">
+                                            {{-- AQUI AGREGAMOS EL PERMISO EN LA ENTRADA (Junto a Tarde) --}}
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-sm font-bold text-gray-800">Entrada</p>
+
+                                                <div class="flex gap-1">
+                                                    {{-- 1. Badge de Permiso --}}
+                                                    @if($turno['entrada']->id_permiso_aplicado ?? false)
+                                                        <span
+                                                            class="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-blue-100 text-blue-700 border-blue-200">
+                                                            Permiso
+                                                        </span>
+                                                    @endif
+
+                                                    {{-- 2. Badge de Tarde --}}
+                                                    @if($turno['entrada']->fuera_horario)
+                                                        <span
+                                                            class="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-orange-100 text-orange-700 border-orange-200">Tarde</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                            <p class="text-xs text-gray-500">
+                                                {{ $turno['entrada']->created_at->format('h:i A') }} •
+                                                {{ $turno['entrada']->sucursal->nombre ?? 'GPS' }}
+                                            </p>
+                                        </div>
+                                        <div class="text-gray-300">
+                                            <i class="fa-solid fa-chevron-right"></i>
+                                        </div>
+                                    </div>
+
+                                    {{-- CASO B: TURNO PERDIDO --}}
                                 @elseif($turno['estado'] == 'perdido')
                                     <div class="flex items-center p-4 bg-red-50 border-b border-red-100">
                                         <div
@@ -269,7 +297,18 @@
                         </svg>
                     </button>
                 </div>
-
+                <div id="modal-permiso-box"
+                    class="hidden mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 transition-all">
+                    <div
+                        class="bg-white p-2 rounded-full text-blue-500 shadow-sm shrink-0 flex items-center justify-center w-8 h-8">
+                        <i class="fa-solid fa-file-contract text-sm"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Permiso Aplicado:
+                        </h4>
+                        <p id="modal-permiso-texto" class="text-sm font-bold text-blue-800 leading-snug">---</p>
+                    </div>
+                </div>
                 {{-- Foto con Fallback (Mejora visual) --}}
                 <div
                     class="mb-6 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner min-h-[14rem]">
@@ -328,44 +367,64 @@
         let markerModal;
         let geocoderModal;
 
-        function abrirDetalle(elemento) {
-            const tipo = elemento.getAttribute('data-tipo');
-            const hora = elemento.getAttribute('data-hora');
-            const fecha = elemento.getAttribute('data-fecha');
-            const sucursal = elemento.getAttribute('data-sucursal');
-            const fotoUrl = elemento.getAttribute('data-foto');
-            const etiqueta = elemento.getAttribute('data-etiqueta');
-            const claseColor = elemento.getAttribute('data-clase-color');
-            const lat = parseFloat(elemento.getAttribute('data-lat'));
-            const lng = parseFloat(elemento.getAttribute('data-lng'));
+function abrirDetalle(elemento) {
+    // 1. Obtener todos los datos
+    const tipo = elemento.getAttribute('data-tipo');
+    const hora = elemento.getAttribute('data-hora');
+    const fecha = elemento.getAttribute('data-fecha');
+    const sucursal = elemento.getAttribute('data-sucursal');
+    const fotoUrl = elemento.getAttribute('data-foto');
+    const etiqueta = elemento.getAttribute('data-etiqueta');
+    const claseColor = elemento.getAttribute('data-clase-color');
+    const lat = parseFloat(elemento.getAttribute('data-lat'));
+    const lng = parseFloat(elemento.getAttribute('data-lng'));
+    
+    // NUEVO: Obtener el texto del permiso
+    const permisoTxt = elemento.getAttribute('data-permiso-txt');
 
-            // UI Básica
-            document.getElementById('modal-titulo').innerText = tipo;
-            document.getElementById('modal-fecha').innerText = fecha + ' • ' + hora;
-            document.getElementById('modal-img').src = fotoUrl; // El onerror del HTML maneja si falla
-            document.getElementById('modal-sucursal-texto').innerText = sucursal;
+    // 2. Llenar UI Básica
+    document.getElementById('modal-titulo').innerText = tipo;
+    document.getElementById('modal-fecha').innerText = fecha + ' • ' + hora;
+    document.getElementById('modal-img').src = fotoUrl;
+    document.getElementById('modal-sucursal-texto').innerText = sucursal;
 
-            // Resetear dirección GPS
-            document.getElementById('modal-direccion-gps').innerText = "Cargando dirección exacta...";
-            document.getElementById('modal-direccion-gps').classList.add('text-gray-400');
+    // Resetear dirección GPS
+    document.getElementById('modal-direccion-gps').innerText = "Cargando dirección exacta...";
+    document.getElementById('modal-direccion-gps').classList.add('text-gray-400');
 
-            // Badge
-            const badgeModal = document.getElementById('modal-etiqueta');
-            if (etiqueta) {
-                badgeModal.innerText = etiqueta;
-                badgeModal.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
-                badgeModal.classList.remove('hidden');
-            } else {
-                badgeModal.classList.add('hidden');
-            }
+    // 3. Lógica del Badge (Tarde, etc)
+    const badgeModal = document.getElementById('modal-etiqueta');
+    if (etiqueta) {
+        badgeModal.innerText = etiqueta;
+        badgeModal.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
+        badgeModal.classList.remove('hidden');
+    } else {
+        badgeModal.classList.add('hidden');
+    }
 
-            const modal = document.getElementById('modal-detalle');
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+    // 4. NUEVO: Lógica para mostrar/ocultar la caja de Permiso
+    const boxPermiso = document.getElementById('modal-permiso-box');
+    const txtPermiso = document.getElementById('modal-permiso-texto');
 
-            initOrUpdateMap(lat, lng);
-            obtenerDireccionGoogle(lat, lng);
-        }
+    if (permisoTxt && permisoTxt.trim() !== "") {
+        // Si hay texto de permiso, lo ponemos y mostramos la caja
+        txtPermiso.innerText = permisoTxt;
+        boxPermiso.classList.remove('hidden');
+    } else {
+        // Si no hay permiso, ocultamos la caja y limpiamos el texto
+        boxPermiso.classList.add('hidden');
+        txtPermiso.innerText = "";
+    }
+
+    // 5. Mostrar Modal
+    const modal = document.getElementById('modal-detalle');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // 6. Mapas
+    initOrUpdateMap(lat, lng);
+    obtenerDireccionGoogle(lat, lng);
+}
 
         function initOrUpdateMap(lat, lng) {
             const position = { lat: lat, lng: lng };

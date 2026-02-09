@@ -344,149 +344,207 @@
 
                     {{-- Cuerpo del Modal --}}
                     {{-- Cuerpo del Modal COMPACTO --}}
-                    <div class="px-4 py-4 space-y-4">
-                        
-                        {{-- Icono y Nombre Sucursal (Más pequeño) --}}
-                        <div class="text-center">
-                            <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 mb-2">
-                                <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </div>
-                            <h4 class="text-base font-bold text-gray-900 leading-tight">
-                                {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal' }}
-                            </h4>
-                            <p class="text-xs text-gray-500">
-                                {{ Auth::user()->empleado->sucursal->direccion ?? '' }}
-                            </p>
-                        </div>
-                        
-                        {{-- CAJA CONTENEDORA --}}
-                        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    {{-- ... (código anterior del modal) ... --}}
 
-                            {{-- 1. SECCIÓN: MIS TURNOS --}}
-                            {{-- 1. SECCIÓN: MIS TURNOS --}}
-                            <div class="mb-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-blue-700 font-bold text-[10px] uppercase tracking-wide">
-                                        <i class="fa-solid fa-user-clock mr-1"></i> Mis Turnos
+{{-- Cuerpo del Modal COMPACTO --}}
+<div class="px-4 py-4 space-y-4">
+    
+    {{-- Icono y Nombre Sucursal --}}
+    <div class="text-center">
+        <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 mb-2">
+            <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+        </div>
+        <h4 class="text-base font-bold text-gray-900 leading-tight">
+            {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal' }}
+        </h4>
+        <p class="text-xs text-gray-500">
+            {{ Auth::user()->empleado->sucursal->direccion ?? '' }}
+        </p>
+    </div>
+    
+    {{-- CAJA CONTENEDORA --}}
+    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+
+        {{-- ======================================================= --}}
+        {{-- NUEVA SECCIÓN: PERMISOS VIGENTES --}}
+        {{-- ======================================================= --}}
+        @php
+            // Consultamos los permisos del empleado que aún no han vencido (fecha_fin >= hoy)
+            // Asumiendo que la relación en el modelo Empleado es 'permisos'
+            $misPermisos = Auth::user()->empleado->permisos()
+                ->where('estado', 1)
+                ->whereDate('fecha_fin', '>=', \Carbon\Carbon::today())
+                ->with('tipoPermiso') // Cargamos el tipo para mostrar el nombre
+                ->orderBy('fecha_inicio', 'asc')
+                ->get();
+        @endphp
+
+        @if($misPermisos->isNotEmpty())
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-orange-700 font-bold text-[10px] uppercase tracking-wide">
+                        <i class="fa-solid fa-file-contract mr-1"></i> Permisos Activos
+                    </span>
+                </div>
+
+                <div class="space-y-2">
+                    @foreach($misPermisos as $permiso)
+                        @php
+                             $esHoy = \Carbon\Carbon::now()->between($permiso->fecha_inicio, $permiso->fecha_fin);
+                        @endphp
+                        <div class="bg-white border-l-4 {{ $esHoy ? 'border-orange-500 shadow-sm' : 'border-orange-200 opacity-80' }} rounded-r px-3 py-2 border-y border-r border-gray-200">
+                            
+                            {{-- Título y Badge --}}
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-bold text-gray-800 leading-tight">
+                                    {{ $permiso->tipoPermiso->nombre ?? 'Permiso' }}
+                                </span>
+                                @if($esHoy)
+                                    <span class="text-[8px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                                        ACTIVO HOY
                                     </span>
-                                </div>
-                                
-                                {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    @forelse(Auth::user()->empleado->horarios as $miHorario)
-                                        @php
-                                            // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
-                                            $esTurnoActual = false;
-                                            $now = \Carbon\Carbon::now();
-                                            
-                                            // 1. Verificar Día (Normalizamos a 3 letras minúsculas para comparar: lun, mar, mié...)
-                                            $hoySlug = \Str::slug($now->locale('es')->isoFormat('ddd')); 
-                                            // A veces isoFormat devuelve "mié" con tilde, Str::slug lo pasa a "mie"
-                                            
-                                            $esDiaCorrecto = collect($miHorario->dias)->contains(function($d) use ($hoySlug) {
-                                                // Normalizamos el día de la BD también (quitamos tildes y mayúsculas)
-                                                $diaDbSlug = \Str::slug(mb_substr($d, 0, 3));
-                                                return $diaDbSlug === $hoySlug;
-                                            });
-
-                                            // 2. Verificar Hora
-                                            if ($esDiaCorrecto) {
-                                                $inicio = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_ini);
-                                                $fin = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_fin);
-                                                
-                                                // Ajuste para turnos nocturnos (ej: 22:00 a 06:00)
-                                                if ($fin->lessThan($inicio)) {
-                                                    $fin->addDay();
-                                                }
-
-                                                // Damos 30 min de gracia antes y 15 despues para que se "ilumine" un poco antes
-                                                if ($now->between($inicio->copy()->subMinutes(30), $fin->copy()->addMinutes(15))) {
-                                                    $esTurnoActual = true;
-                                                }
-                                            }
-                                        @endphp
-
-                                        <div class="border-l-4 rounded px-2 py-1.5 shadow-sm relative transition-all duration-500
-                                            {{-- ESTILOS CONDICIONALES --}}
-                                            {{ $esTurnoActual 
-                                                ? 'bg-green-50 border-green-500 border border-green-200 animate-pulse' 
-                                                : 'bg-white border-blue-500 border-blue-200' 
-                                            }}">
-                                            
-                                            {{-- Etiqueta "AHORA" si está activo --}}
-                                            @if($esTurnoActual)
-                                                <div class="absolute top-1 right-1">
-                                                    <span class="flex h-2 w-2 relative">
-                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                                    </span>
-                                                </div>
-                                            @endif
-
-                                            {{-- Hora compacta --}}
-                                            <div class="text-xs font-black mb-1 {{ $esTurnoActual ? 'text-green-800' : 'text-gray-800' }}">
-                                                {{ \Carbon\Carbon::parse($miHorario->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($miHorario->hora_fin)->format('H:i') }}
-                                            </div>
-                                            
-                                            {{-- Días Mini --}}
-                                            <div class="flex flex-wrap gap-0.5">
-                                                @foreach($miHorario->dias ?? [] as $dia)
-                                                    <span class="text-[8px] px-1 rounded capitalize leading-tight border
-                                                        {{ $esTurnoActual 
-                                                            ? 'bg-green-100 text-green-700 border-green-200 font-bold' 
-                                                            : 'bg-blue-50 text-blue-700 border-blue-100' 
-                                                        }}">
-                                                        {{ mb_substr($dia, 0, 3) }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    @empty
-                                        <div class="col-span-full text-center py-2 border border-dashed border-gray-200 rounded bg-white">
-                                            <span class="text-gray-400 italic text-xs">Sin asignación personal</span>
-                                        </div>
-                                    @endforelse
-                                </div>
+                                @endif
                             </div>
 
-                            <div class="border-t border-gray-200 my-2"></div>
-
-                            {{-- 2. SECCIÓN: HORARIOS SUCURSAL --}}
-                            <div class="mb-2">
-                                <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención General:</span>
-                                
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    @forelse(Auth::user()->empleado->sucursal->horarios as $h)
-                                        <div class="bg-white border border-gray-200 rounded px-2 py-1.5 shadow-sm opacity-80">
-                                            <div class="text-xs font-bold text-gray-600 mb-1">
-                                                {{ \Carbon\Carbon::parse($h->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
-                                            </div>
-                                            <div class="flex flex-wrap gap-0.5">
-                                                @foreach($h->dias ?? [] as $dia)
-                                                    <span class="text-[8px] bg-gray-100 text-gray-500 border border-gray-200 px-1 rounded capitalize leading-tight">
-                                                        {{ mb_substr($dia, 0, 3) }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    @empty
-                                        <span class="text-gray-400 italic text-xs col-span-full">No definido</span>
-                                    @endforelse
-                                </div>
-                            </div>
-
-                            {{-- 3. TELÉFONO COMPACTO --}}
-                            <div class="mt-3 bg-white border border-gray-200 rounded p-2 flex justify-between items-center">
-                                <span class="text-gray-500 text-xs">Teléfono:</span>
-                                <span class="font-bold text-gray-800 text-xs flex items-center">
-                                    <i class="fa-solid fa-phone mr-1.5 text-gray-400"></i>
-                                    {{ Auth::user()->empleado->sucursal->telefono ?? 'N/A' }}
+                            {{-- Fechas --}}
+                            <div class="text-[10px] text-gray-500 flex items-center gap-1">
+                                <i class="fa-regular fa-calendar text-gray-400"></i>
+                                <span>
+                                    {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d M') }} 
+                                    - 
+                                    {{ \Carbon\Carbon::parse($permiso->fecha_fin)->format('d M') }}
                                 </span>
                             </div>
+                            
+                            <div class="text-[10px] text-gray-500 flex items-center gap-1">
+                                <i class="fa-regular fa-clock text-gray-400"></i>
+                                <span>
+                                    @if($permiso->valor !== null)
+                                    {{ $permiso->valor ? 'Valor: ' . $permiso->valor .' mins.' : 'Sin valor asignado' }} 
+                                    @elseif($permiso->cantidad_mts !== null)
+                                    {{ 'Cantidad: ' . $permiso->cantidad_mts . ' mts.' }}
+                                    @endif
+                                </span>
+                            </div>
+                            {{-- Motivo (Opcional, cortado si es muy largo) --}}
+                            @if($permiso->motivo)
+                                <p class="text-[9px] text-gray-400 mt-1 italic truncate">
+                                    {{ $permiso->motivo }}
+                                </p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+                {{-- Separador visual --}}
+                <div class="border-t border-gray-200 mt-4 border-dashed"></div>
+            </div>
+        @endif
+        {{-- ======================================================= --}}
+
+
+        {{-- 1. SECCIÓN: MIS TURNOS (Código existente) --}}
+        <div class="mb-3 mt-2">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-blue-700 font-bold text-[10px] uppercase tracking-wide">
+                    <i class="fa-solid fa-user-clock mr-1"></i> Mis Turnos
+                </span>
+            </div>
+            
+            {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                @forelse(Auth::user()->empleado->horarios as $miHorario)
+                    {{-- ... (Tu código de horarios existente se mantiene IGUAL AQUÍ) ... --}}
+                    @php
+                        // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
+                        $esTurnoActual = false;
+                        $now = \Carbon\Carbon::now();
+                        $hoySlug = \Str::slug($now->locale('es')->isoFormat('ddd')); 
+                        
+                        $esDiaCorrecto = collect($miHorario->dias)->contains(function($d) use ($hoySlug) {
+                            $diaDbSlug = \Str::slug(mb_substr($d, 0, 3));
+                            return $diaDbSlug === $hoySlug;
+                        });
+
+                        if ($esDiaCorrecto) {
+                            $inicio = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_ini);
+                            $fin = \Carbon\Carbon::parse($now->format('Y-m-d') . ' ' . $miHorario->hora_fin);
+                            if ($fin->lessThan($inicio)) { $fin->addDay(); }
+                            if ($now->between($inicio->copy()->subMinutes(30), $fin->copy()->addMinutes(15))) {
+                                $esTurnoActual = true;
+                            }
+                        }
+                    @endphp
+
+                    <div class="border-l-4 rounded px-2 py-1.5 shadow-sm relative transition-all duration-500
+                        {{ $esTurnoActual ? 'bg-green-50 border-green-500 border border-green-200 animate-pulse' : 'bg-white border-blue-500 border-blue-200' }}">
+                        
+                        @if($esTurnoActual)
+                            <div class="absolute top-1 right-1">
+                                <span class="flex h-2 w-2 relative">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                            </div>
+                        @endif
+
+                        <div class="text-xs font-black mb-1 {{ $esTurnoActual ? 'text-green-800' : 'text-gray-800' }}">
+                            {{ \Carbon\Carbon::parse($miHorario->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($miHorario->hora_fin)->format('H:i') }}
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-0.5">
+                            @foreach($miHorario->dias ?? [] as $dia)
+                                <span class="text-[8px] px-1 rounded capitalize leading-tight border
+                                    {{ $esTurnoActual ? 'bg-green-100 text-green-700 border-green-200 font-bold' : 'bg-blue-50 text-blue-700 border-blue-100' }}">
+                                    {{ mb_substr($dia, 0, 3) }}
+                                </span>
+                            @endforeach
                         </div>
                     </div>
+                @empty
+                    <div class="col-span-full text-center py-2 border border-dashed border-gray-200 rounded bg-white">
+                        <span class="text-gray-400 italic text-xs">Sin asignación personal</span>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="border-t border-gray-200 my-2"></div>
+
+        {{-- 2. SECCIÓN: HORARIOS SUCURSAL (Código existente se mantiene) --}}
+        <div class="mb-2">
+            <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención General:</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                @forelse(Auth::user()->empleado->sucursal->horarios as $h)
+                    <div class="bg-white border border-gray-200 rounded px-2 py-1.5 shadow-sm opacity-80">
+                        <div class="text-xs font-bold text-gray-600 mb-1">
+                            {{ \Carbon\Carbon::parse($h->hora_ini)->format('H:i') }} - {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
+                        </div>
+                        <div class="flex flex-wrap gap-0.5">
+                            @foreach($h->dias ?? [] as $dia)
+                                <span class="text-[8px] bg-gray-100 text-gray-500 border border-gray-200 px-1 rounded capitalize leading-tight">
+                                    {{ mb_substr($dia, 0, 3) }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                @empty
+                    <span class="text-gray-400 italic text-xs col-span-full">No definido</span>
+                @endforelse
+            </div>
+        </div>
+
+        {{-- 3. TELÉFONO COMPACTO --}}
+        <div class="mt-3 bg-white border border-gray-200 rounded p-2 flex justify-between items-center">
+            <span class="text-gray-500 text-xs">Teléfono:</span>
+            <span class="font-bold text-gray-800 text-xs flex items-center">
+                <i class="fa-solid fa-phone mr-1.5 text-gray-400"></i>
+                {{ Auth::user()->empleado->sucursal->telefono ?? 'N/A' }}
+            </span>
+        </div>
+    </div>
+</div>
 
                     {{-- Footer Modal --}}
                     <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
