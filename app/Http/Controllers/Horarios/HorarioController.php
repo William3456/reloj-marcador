@@ -56,7 +56,9 @@ class HorarioController extends Controller
             $validated['sucursal_creacion'] = 0;
         } else {
             $validated['sucursal_id'] = $user->empleado->id_sucursal;
+            $validated['sucursal_creacion'] = $validated['sucursal_id'];
         }
+     
         $contaErrr = 0;
 
         // 1. Forzamos el orden y aseguramos que las tildes no se codifiquen (JSON_UNESCAPED_UNICODE)
@@ -160,7 +162,7 @@ public function update(Request $request, string $id)
                 // entonces $horario->dias ya es array. json_encode lo convierte a string.
                 // Verifica si HorarioHistorico espera string o array (cast).
                 // Asumimos que la BD espera un TEXT/JSON string:
-                'dias'            => json_encode($horario->dias), 
+                'dias'            => $horario->dias, 
                 'vigente_desde'   => now(),
                 'vigente_hasta'   => null,
             ]);

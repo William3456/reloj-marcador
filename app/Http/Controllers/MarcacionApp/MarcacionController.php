@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
@@ -35,68 +36,68 @@ class MarcacionController extends Controller
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
 
         // 🕒 ESCENARIO 2: Salida OLVIDADA (8:30 PM hoy)
-         //Carbon::setTestNow(now()->setTime( 8, 0, 0));
+        // Carbon::setTestNow(now()->setTime( 8, 0, 0));
 
         // 🕒 ESCENARIO 3: Salida Temprana (3:00 PM hoy)
         // \Carbon\Carbon::setTestNow(now()->setTime(15, 0, 0));
 
         // 🕒 ESCENARIO 4: Mañana a las 8:00 AM //martes = 10
-        //Carbon::setTestNow(now()->addDay(3)->setTime( 13,0, 0));
+        // Carbon::setTestNow(now()->addDay(3)->setTime( 13,0, 0));
 
     }
 
- public function indexPanel(Request $request)
-{
-    // 1. Obtener datos auxiliares para los filtros (Selects)
-    $sucursales = Sucursal::visiblePara(Auth::user())
-        ->where('estado', 1)
-        ->get();
-        
-    $empleadosList = Empleado::where('estado', 1)
-        ->orderBy('nombres')
-        ->get();
+    public function indexPanel(Request $request)
+    {
+        // 1. Obtener datos auxiliares para los filtros (Selects)
+        $sucursales = Sucursal::visiblePara(Auth::user())
+            ->where('estado', 1)
+            ->get();
 
-    // 2. Construir la consulta principal
-    $query = MarcacionEmpleado::visiblePara(Auth::user())
-        ->with([
-            'empleado', 
-            'sucursal', 
-            'salida',
-            'permiso.tipoPermiso',       
-            'salida.permiso.tipoPermiso' 
-        ])
-        ->where('tipo_marcacion', 1);
+        $empleadosList = Empleado::where('estado', 1)
+            ->orderBy('nombres')
+            ->get();
 
-    // ... (Tus filtros existentes: Empleado, Estado, Fechas) ...
-    if ($request->has('empleado') && $request->empleado != '') {
-        $query->whereHas('empleado', function ($q) use ($request) {
-            $q->where('nombres', 'like', '%'.$request->empleado.'%')
-                ->orWhere('apellidos', 'like', '%'.$request->empleado.'%');
-        });
+        // 2. Construir la consulta principal
+        $query = MarcacionEmpleado::visiblePara(Auth::user())
+            ->with([
+                'empleado',
+                'sucursal',
+                'salida',
+                'permiso.tipoPermiso',
+                'salida.permiso.tipoPermiso',
+            ])
+            ->where('tipo_marcacion', 1);
+
+        // ... (Tus filtros existentes: Empleado, Estado, Fechas) ...
+        if ($request->has('empleado') && $request->empleado != '') {
+            $query->whereHas('empleado', function ($q) use ($request) {
+                $q->where('nombres', 'like', '%'.$request->empleado.'%')
+                    ->orWhere('apellidos', 'like', '%'.$request->empleado.'%');
+            });
+        }
+
+        // Filtro por Sucursal (¡Faltaba agregarlo a la query!)
+        if ($request->filled('sucursal')) {
+            $query->where('id_sucursal', $request->sucursal);
+        }
+
+        if ($request->get('estado') == 'sin_cierre') {
+            $query->doesntHave('salida');
+        }
+
+        $desde = $request->input('desde', date('Y-m-d')); // Cambiado a date('Y-m-d') para que por defecto sea hoy, no inicio de mes
+        $hasta = $request->input('hasta', date('Y-m-d'));
+
+        $query->whereBetween('created_at', [
+            Carbon::parse($desde)->startOfDay(),
+            Carbon::parse($hasta)->endOfDay(),
+        ]);
+
+        $marcaciones = $query->latest()->get();
+
+        // 3. Retornar vista con TODAS las variables
+        return view('marcaciones.index', compact('marcaciones', 'sucursales', 'empleadosList'));
     }
-    
-    // Filtro por Sucursal (¡Faltaba agregarlo a la query!)
-    if ($request->filled('sucursal')) {
-        $query->where('id_sucursal', $request->sucursal);
-    }
-
-    if ($request->get('estado') == 'sin_cierre') {
-        $query->doesntHave('salida');
-    }
-
-    $desde = $request->input('desde', date('Y-m-d')); // Cambiado a date('Y-m-d') para que por defecto sea hoy, no inicio de mes
-    $hasta = $request->input('hasta', date('Y-m-d'));
-
-    $query->whereBetween('created_at', [
-        Carbon::parse($desde)->startOfDay(),
-        Carbon::parse($hasta)->endOfDay(),
-    ]);
-
-    $marcaciones = $query->latest()->get();
-
-    // 3. Retornar vista con TODAS las variables
-    return view('marcaciones.index', compact('marcaciones', 'sucursales', 'empleadosList'));
-}
 
     public function index()
     {
@@ -104,7 +105,7 @@ class MarcacionController extends Controller
         $user = Auth::user();
         $empleado = $user->empleado;
         $sucursal = $empleado->sucursal;
-        $diaSemanaHoy = $this->getDiaSemanaEspanol(now());
+        $diaSemanaHoy = Carbon::now()->locale('es')->isoFormat('dddd');
         // ---------------------------------------------------------
         // 0. VERIFICAR PERMISOS (NUEVO)
         // ---------------------------------------------------------
@@ -148,11 +149,10 @@ class MarcacionController extends Controller
         // 3. BUSCAR Y FILTRAR HORARIOS
         // =========================================================
         $normalizarDia = function ($dia) {
-            $dia = mb_strtolower($dia, 'UTF-8');
-            $buscar = ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'sábado', 'miércoles'];
-            $reemplazar = ['a', 'e', 'i', 'o', 'u', 'n', 'sabado', 'miercoles'];
-            $limpio = str_replace($buscar, $reemplazar, $dia);
+            // 1. Convertir a limpio (miércoles -> miercoles)
+            $limpio = Str::slug($dia); // Str::slug es excelente para esto
 
+            // 2. Obtener las primeras 3 letras (mie)
             return substr($limpio, 0, 3);
         };
 
@@ -254,11 +254,18 @@ class MarcacionController extends Controller
                     $fin->addDay();
                 }
 
-                $inicioHabilitado = $inicio->copy()->subMinutes(30);
+                $inicioHabilitado = $inicio->copy()->subMinutes(60); // Permitir marcar hasta 60 minutos antes del inicio
 
                 // 1. ¿Turno VIGENTE? (Dentro del rango)
                 if ($ahora->between($inicioHabilitado, $fin)) {
-                    $yaCompletado = $historialHoy->contains(function ($m) use ($h) {
+                    $yaCompletado =
+                        // Debe existir una entrada hoy...
+                    $historialHoy->contains(function ($m) use ($h) {
+                        return $m->tipo_marcacion == 1 && $m->id_horario == $h->id;
+                    })
+                    &&
+                    // ...Y una salida hoy
+                    $historialHoy->contains(function ($m) use ($h) {
                         return $m->tipo_marcacion == 2 && $m->id_horario == $h->id;
                     });
 
@@ -390,14 +397,15 @@ class MarcacionController extends Controller
     {
         $diaSemana = $this->getDiaSemanaEspanol($fechaHora);
 
-        // 1. Normalizar texto para buscar en JSON (Viernes vs viernes)
+        // CORRECCIÓN: Usar Str::slug para estandarizar (quita tildes y mayúsculas)
         $normalizar = function ($s) {
-            return mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $s));
+            return Str::slug($s);
         };
         $diaNormalizado = $normalizar($diaSemana);
 
         // 2. Obtener horarios de la sucursal para HOY
         $horariosSucursal = $sucursal->horarios->filter(function ($h) use ($diaNormalizado, $normalizar) {
+            // Aplicamos slug a los días que vienen de la BD para comparar peras con peras
             $dias = array_map($normalizar, $h->dias ?? []);
 
             return in_array($diaNormalizado, $dias);
@@ -405,21 +413,17 @@ class MarcacionController extends Controller
 
         if ($horariosSucursal->isEmpty()) {
             return false;
-        } // No abre hoy
+        }
 
         // 3. Verificar si la hora encaja en algún rango
         foreach ($horariosSucursal as $hs) {
             $inicio = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_ini);
             $fin = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_fin);
 
-            // Ajuste nocturno (si cierra al día siguiente)
             if ($fin->lessThan($inicio)) {
                 $fin->addDay();
             }
 
-            // RANGO PERMISIVO:
-            // Permitimos marcar desde 30 mins antes de abrir hasta 1 hora después de cerrar
-            // Ajusta estos valores según tu política real.
             if ($fechaHora->between($inicio->copy()->subMinutes(30), $fin->copy()->addHour())) {
                 return true;
             }
@@ -430,9 +434,9 @@ class MarcacionController extends Controller
 
     private function getDiaSemanaEspanol($fecha)
     {
-        $dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-        return $dias[$fecha->dayOfWeek];
+        // Esto garantiza que siempre salga 'miércoles' en UTF-8 válido,
+        // sin importar si el servidor es Linux, Windows o si el archivo está en ANSI.
+        return $fecha->locale('es')->isoFormat('dddd');
     }
 
     /**
@@ -460,11 +464,14 @@ class MarcacionController extends Controller
     private function isDiaLaboralSucursal($sucursal, $diaSemana)
     {
         $diasLaboralesSucursal = $sucursal->dias_laborales ?? [];
+
+        // Normalizamos la lista de la BD
         $diasLaboralesNorm = array_map(function ($d) {
-            return mb_strtolower($d, 'UTF-8');
+            return Str::slug($d);
         }, $diasLaboralesSucursal);
 
-        return in_array(mb_strtolower($diaSemana, 'UTF-8'), $diasLaboralesNorm);
+        // Comparamos usando slug en ambos lados
+        return in_array(Str::slug($diaSemana), $diasLaboralesNorm);
     }
 
     private function determinarHorario($empleado, $sucursal, $diaSemana, $tipoMarcacion, $entradaAbierta)
@@ -630,7 +637,15 @@ class MarcacionController extends Controller
         // Pero generalmente el GPS siempre se valida si estás marcando.
 
         $permisos = $this->validaPermisos();
-        $rango = ($permisos['fuera_rango']->cantidad_mts ?? $sucursal->rango_marcacion_mts) ?? PHP_INT_MAX;
+
+        $rango = $sucursal->rango_marcacion_mts;
+        if ($permisos['fuera_rango']) {
+            if ($permisos['fuera_rango']->cantidad_mts == null) {
+                $rango = PHP_INT_MAX;
+            } else {
+                $rango += $permisos['fuera_rango']->cantidad_mts;
+            }
+        }
 
         $distancia = $this->distanciaEnMetros(
             $validated['latitud'],
@@ -675,7 +690,7 @@ class MarcacionController extends Controller
                     'hora_entrada' => $horarioEmpleado->hora_ini,
                     'hora_salida' => $horarioEmpleado->hora_fin,
                     'tolerancia' => $horarioEmpleado->tolerancia,
-                    'dias' => json_encode($horarioEmpleado->dias),
+                    'dias' => $horarioEmpleado->dias,
                     'vigente_desde' => now(),
                 ]);
             }
@@ -685,9 +700,6 @@ class MarcacionController extends Controller
                 $historicoSucursal = HorarioHistorico::mismoHorario($horarioSucursal)
                     ->vigente()->first();
 
-                
-
-                
                 if ($historicoSucursal == null) {
 
                     HorarioHistorico::where('id_horario', $horarioSucursal->id)
@@ -701,7 +713,7 @@ class MarcacionController extends Controller
                         'hora_entrada' => $horarioSucursal->hora_ini,
                         'hora_salida' => $horarioSucursal->hora_fin,
                         'tolerancia' => $horarioSucursal->tolerancia,
-                        'dias' => json_encode($horarioSucursal->dias),
+                        'dias' => $horarioSucursal->dias,
                         'vigente_desde' => now(),
                     ]);
                 }

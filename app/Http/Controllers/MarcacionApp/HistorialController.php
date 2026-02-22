@@ -69,11 +69,42 @@ class HistorialController extends Controller
             foreach ($periodo as $dia) {
                 $nombreDia = Str::lower($dia->locale('es')->isoFormat('dddd'));
 
-                // A. Buscar horarios
-                $horariosDelDia = $empleado->horarios()
-                    ->where('dias', 'like', "%$nombreDia%")
-                    ->orderBy('hora_ini')
-                    ->get();
+                // A. Buscar horarios (RESPETANDO LA LÍNEA DE TIEMPO HISTÓRICA)
+                $horariosDelDia = collect();
+
+                foreach ($empleado->horarios as $horarioBase) {
+                    
+                    // 1. Buscamos la versión exacta de este horario que estaba vigente en ESTA fecha ($dia)
+                    $historico = \App\Models\Horario\HorarioHistorico::where('id_horario', $horarioBase->id)
+                        ->where('vigente_desde', '<=', $dia->copy()->endOfDay())
+                        ->where(function ($query) use ($dia) {
+                            $query->whereNull('vigente_hasta')
+                                  ->orWhere('vigente_hasta', '>=', $dia->copy()->startOfDay());
+                        })
+                        ->orderBy('vigente_desde', 'desc')
+                        ->first();
+
+                    if ($historico) {
+                        // 2. Revisamos si en ESA época, el horario incluía el día de la semana actual
+                        $diasArray = is_array($historico->dias) ? $historico->dias : json_decode($historico->dias, true);
+
+                        if ($diasArray && in_array($nombreDia, $diasArray)) {
+                            
+                            // 3. "Disfrazamos" el histórico como un horario normal para no romper tu vista Blade ni tu lógica de abajo
+                            $horariosDelDia->push((object)[
+                                'id' => $horarioBase->id, 
+                                'hora_ini' => $historico->hora_entrada,
+                                'hora_fin' => $historico->hora_salida,
+                                'tolerancia' => $historico->tolerancia,
+                                'dias' => $diasArray,
+                                'permitido_marcacion' => $historico->tipo_horario
+                            ]);
+                        }
+                    }
+                }
+
+                // Ordenamos cronológicamente los turnos del día
+                $horariosDelDia = $horariosDelDia->sortBy('hora_ini')->values();
 
                 $turnosData = [];
                 $completados = 0;

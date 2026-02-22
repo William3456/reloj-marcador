@@ -72,7 +72,7 @@
                             <span class="text-xs uppercase tracking-widest text-indigo-300">Faltan</span>
                             <div class="text-xl font-bold text-white">{{ $tiempoRestante }}</div>
                         </div>
-                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 30 minutos antes.</p>
+                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 1 hora antes del inicio del turno.</p>
                     </div>
                 </div>
 
@@ -419,12 +419,19 @@
                             </div>
                             
                             <div class="text-[10px] text-gray-500 flex items-center gap-1">
-                                <i class="fa-regular fa-clock text-gray-400"></i>
+                                
                                 <span>
                                     @if($permiso->valor !== null)
-                                    {{ $permiso->valor ? 'Valor: ' . $permiso->valor .' mins.' : 'Sin valor asignado' }} 
-                                    @elseif($permiso->cantidad_mts !== null)
-                                    {{ 'Cantidad: ' . $permiso->cantidad_mts . ' mts.' }}
+                                        <i class="fa-regular fa-clock text-gray-400"></i>
+                                        {{ $permiso->valor ? 'Valor: ' . $permiso->valor .' mins.' : 'Sin valor asignado' }} 
+                                    @elseif($permiso->id_tipo_permiso == 1)
+                                        @if($permiso->cantidad_mts != null)
+                                            <i class="fa-solid fa-arrows-left-right text-gray-400"></i>
+                                            {{ 'Cantidad: ' . $permiso->cantidad_mts . ' mts.' }}
+                                        @else
+                                            <i class="fa-solid fa-arrows-left-right text-gray-400"></i>
+                                            Es posible marcar en cualquier ubicación   
+                                        @endif   
                                     @endif
                                 </span>
                             </div>
@@ -625,7 +632,7 @@
 @endif
 @push('scripts')
 <script>
-    const MODO_PRUEBAS = true; // Cambiar a true solo para desarrollo
+    const MODO_PRUEBAS = false; // Cambiar a true solo para desarrollo
     const PRECISION_REQUERIDA = 100; // Metros aceptables
 
     // Ubicación fija de prueba
@@ -789,6 +796,7 @@
     function actualizarEstadoBoton() {
         if (!btnMarcar) return;
 
+        if (enviandoFormulario) return;
         // El botón se habilita SOLO si hay GPS preciso Y Foto tomada
         if (gpsValido && fotoValida) {
             btnMarcar.disabled = false;
@@ -870,6 +878,59 @@
                 }, 100);
             }
         }
+
+    // --- LÓGICA DE LOADER Y BLOQUEO DE DOBLE CLICK ---
+    let enviandoFormulario = false;
+
+    function activarLoader(btnId) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+
+        // 1. Bandera para evitar que la validación GPS lo reactive
+        enviandoFormulario = true;
+
+        // 2. Bloquear botón y cambiar estilos
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-wait');
+        
+        // 3. Guardar texto original y reemplazar por Loader
+        const textoOriginal = btn.innerText;
+        btn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Procesando...
+        `;
+    }
+
+    // Listener para el formulario PRINCIPAL
+    const formPrincipal = document.getElementById('form-marcacion');
+    if (formPrincipal) {
+        formPrincipal.addEventListener('submit', function(e) {
+            if (enviandoFormulario) {
+                e.preventDefault(); // Prevenir doble envío si ya está procesando
+                return;
+            }
+            activarLoader('btn-marcar');
+        });
+    }
+
+    // Listener para el formulario del MODAL DE BLOQUEO (si existe)
+    const btnModal = document.getElementById('btn-marcar-modal');
+    if (btnModal) {
+        // Buscamos el formulario padre del botón del modal
+        const formModal = btnModal.closest('form');
+        if (formModal) {
+            formModal.addEventListener('submit', function(e) {
+                if (enviandoFormulario) {
+                    e.preventDefault();
+                    return;
+                }
+                activarLoader('btn-marcar-modal');
+            });
+        }
+    }
 </script>
 @endpush
 </x-app-layout>

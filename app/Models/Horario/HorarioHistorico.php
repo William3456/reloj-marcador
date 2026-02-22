@@ -22,7 +22,10 @@ class HorarioHistorico extends Model
     /* =========================
      * RELACIONES
      * ========================= */
-
+    protected $casts = [
+        'dias' => 'array',
+    ];
+    
     public function horario()
     {
         return $this->belongsTo(horario::class, 'id_horario');
@@ -62,5 +65,16 @@ class HorarioHistorico extends Model
         );
 
         return $query;
+    }
+    /**
+     * Codifica el valor dado a JSON.
+     *
+     * @param  mixed  $value
+     * @return string
+     */
+    protected function asJson($value)
+    {
+        // El flag JSON_UNESCAPED_UNICODE evita que PHP convierta la 'é' en '\u00e9'
+        return json_encode($value, JSON_UNESCAPED_UNICODE);
     }
 }

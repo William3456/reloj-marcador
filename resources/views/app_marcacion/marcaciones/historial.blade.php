@@ -169,7 +169,7 @@
                                         data-lat="{{ $turno['entrada']->latitud }}" data-lng="{{ $turno['entrada']->longitud }}"
                                         data-etiqueta="{{ $turno['entrada']->fuera_horario ? 'Tarde' : '' }}"
                                         data-clase-color="bg-orange-100 text-orange-700"
-                                        data-permiso-txt="{{ $turno['entrada']->permiso ? $turno['entrada']->permiso->tipoPermiso->nombre . ': ' . $turno['entrada']->permiso->descripcion : '' }}">
+                                        data-permiso-txt="{{ $turno['entrada']->permiso ? $turno['entrada']->permiso->tipoPermiso->nombre . ': ' . $turno['entrada']->permiso->motivo : '' }}">
 
                                         {{-- Icono Entrada --}}
                                         <div
@@ -304,7 +304,8 @@
                         <i class="fa-solid fa-file-contract text-sm"></i>
                     </div>
                     <div>
-                        <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Permiso Aplicado:
+                        <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Permiso
+                            Aplicado:
                         </h4>
                         <p id="modal-permiso-texto" class="text-sm font-bold text-blue-800 leading-snug">---</p>
                     </div>
@@ -367,64 +368,64 @@
         let markerModal;
         let geocoderModal;
 
-function abrirDetalle(elemento) {
-    // 1. Obtener todos los datos
-    const tipo = elemento.getAttribute('data-tipo');
-    const hora = elemento.getAttribute('data-hora');
-    const fecha = elemento.getAttribute('data-fecha');
-    const sucursal = elemento.getAttribute('data-sucursal');
-    const fotoUrl = elemento.getAttribute('data-foto');
-    const etiqueta = elemento.getAttribute('data-etiqueta');
-    const claseColor = elemento.getAttribute('data-clase-color');
-    const lat = parseFloat(elemento.getAttribute('data-lat'));
-    const lng = parseFloat(elemento.getAttribute('data-lng'));
-    
-    // NUEVO: Obtener el texto del permiso
-    const permisoTxt = elemento.getAttribute('data-permiso-txt');
+        function abrirDetalle(elemento) {
+            // 1. Obtener todos los datos
+            const tipo = elemento.getAttribute('data-tipo');
+            const hora = elemento.getAttribute('data-hora');
+            const fecha = elemento.getAttribute('data-fecha');
+            const sucursal = elemento.getAttribute('data-sucursal');
+            const fotoUrl = elemento.getAttribute('data-foto');
+            const etiqueta = elemento.getAttribute('data-etiqueta');
+            const claseColor = elemento.getAttribute('data-clase-color');
+            const lat = parseFloat(elemento.getAttribute('data-lat'));
+            const lng = parseFloat(elemento.getAttribute('data-lng'));
 
-    // 2. Llenar UI Básica
-    document.getElementById('modal-titulo').innerText = tipo;
-    document.getElementById('modal-fecha').innerText = fecha + ' • ' + hora;
-    document.getElementById('modal-img').src = fotoUrl;
-    document.getElementById('modal-sucursal-texto').innerText = sucursal;
+            // NUEVO: Obtener el texto del permiso
+            const permisoTxt = elemento.getAttribute('data-permiso-txt');
 
-    // Resetear dirección GPS
-    document.getElementById('modal-direccion-gps').innerText = "Cargando dirección exacta...";
-    document.getElementById('modal-direccion-gps').classList.add('text-gray-400');
+            // 2. Llenar UI Básica
+            document.getElementById('modal-titulo').innerText = tipo;
+            document.getElementById('modal-fecha').innerText = fecha + ' • ' + hora;
+            document.getElementById('modal-img').src = fotoUrl;
+            document.getElementById('modal-sucursal-texto').innerText = sucursal;
 
-    // 3. Lógica del Badge (Tarde, etc)
-    const badgeModal = document.getElementById('modal-etiqueta');
-    if (etiqueta) {
-        badgeModal.innerText = etiqueta;
-        badgeModal.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
-        badgeModal.classList.remove('hidden');
-    } else {
-        badgeModal.classList.add('hidden');
-    }
+            // Resetear dirección GPS
+            document.getElementById('modal-direccion-gps').innerText = "Cargando dirección exacta...";
+            document.getElementById('modal-direccion-gps').classList.add('text-gray-400');
 
-    // 4. NUEVO: Lógica para mostrar/ocultar la caja de Permiso
-    const boxPermiso = document.getElementById('modal-permiso-box');
-    const txtPermiso = document.getElementById('modal-permiso-texto');
+            // 3. Lógica del Badge (Tarde, etc)
+            const badgeModal = document.getElementById('modal-etiqueta');
+            if (etiqueta) {
+                badgeModal.innerText = etiqueta;
+                badgeModal.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
+                badgeModal.classList.remove('hidden');
+            } else {
+                badgeModal.classList.add('hidden');
+            }
 
-    if (permisoTxt && permisoTxt.trim() !== "") {
-        // Si hay texto de permiso, lo ponemos y mostramos la caja
-        txtPermiso.innerText = permisoTxt;
-        boxPermiso.classList.remove('hidden');
-    } else {
-        // Si no hay permiso, ocultamos la caja y limpiamos el texto
-        boxPermiso.classList.add('hidden');
-        txtPermiso.innerText = "";
-    }
+            // 4. NUEVO: Lógica para mostrar/ocultar la caja de Permiso
+            const boxPermiso = document.getElementById('modal-permiso-box');
+            const txtPermiso = document.getElementById('modal-permiso-texto');
 
-    // 5. Mostrar Modal
-    const modal = document.getElementById('modal-detalle');
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+            if (permisoTxt && permisoTxt.trim() !== "") {
+                // Si hay texto de permiso, lo ponemos y mostramos la caja
+                txtPermiso.innerText = permisoTxt;
+                boxPermiso.classList.remove('hidden');
+            } else {
+                // Si no hay permiso, ocultamos la caja y limpiamos el texto
+                boxPermiso.classList.add('hidden');
+                txtPermiso.innerText = "";
+            }
 
-    // 6. Mapas
-    initOrUpdateMap(lat, lng);
-    obtenerDireccionGoogle(lat, lng);
-}
+            // 5. Mostrar Modal
+            const modal = document.getElementById('modal-detalle');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            history.pushState({ modalOpen: true }, "", "#detalle");
+            // 6. Mapas
+            initOrUpdateMap(lat, lng);
+            obtenerDireccionGoogle(lat, lng);
+        }
 
         function initOrUpdateMap(lat, lng) {
             const position = { lat: lat, lng: lng };
@@ -477,8 +478,27 @@ function abrirDetalle(elemento) {
         }
 
         function cerrarDetalle() {
-            document.getElementById('modal-detalle').classList.add('hidden');
-            document.body.style.overflow = 'auto';
+            // Si el historial dice que el modal está abierto, damos "Atrás"
+            // Esto disparará el evento 'popstate' que definimos abajo
+            if (history.state && history.state.modalOpen) {
+                history.back();
+            } else {
+                // Fallback: Si por alguna razón no hay historial, lo cerramos manual
+                ocultarModalVisualmente();
+            }
         }
+        function ocultarModalVisualmente() {
+            const modal = document.getElementById('modal-detalle');
+            if (!modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Escuchar cuando el usuario da al botón de RETROCEDER del navegador/móvil
+        window.addEventListener('popstate', function (event) {
+            // Cuando esto pasa, simplemente ocultamos el modal
+            ocultarModalVisualmente();
+        });
     </script>
 </x-app-layout>
