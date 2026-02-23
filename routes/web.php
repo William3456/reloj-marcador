@@ -38,14 +38,14 @@ Route::get('/', function () {
 
     // Si es Admin o Gerente (Rol 1 o 2), mostrar Dashboard
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('home');
+})->middleware(['auth', 'verified','prevent-back-history'])->name('home');
 
 /*
 |--------------------------------------------------------------------------
 | RUTAS PARA EMPLEADOS (ROL 3) - LA APP MÓVIL
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'check.role:3'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.role:3','prevent-back-history'])->group(function () {
 
     Route::controller(MarcacionController::class)->prefix('marcacion')->name('marcacion.')->group(function () {
         Route::get('/inicio', 'index')->name('inicio');
@@ -60,7 +60,7 @@ Route::middleware(['auth', 'verified', 'check.role:3'])->group(function () {
 | RUTAS ADMINISTRATIVAS (ROLES 1 y 2) - GESTIÓN
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.role:1-2','prevent-back-history'])->group(function () {
 
     // Dashboard Administrativo
     Route::get('/dashboard', function () {
@@ -169,7 +169,7 @@ Route::middleware(['auth', 'verified', 'check.role:1-2'])->group(function () {
 | RUTAS SUPER ADMIN (SOLO ROL 1)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'check.role:1'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.role:1','prevent-back-history'])->group(function () {
     Route::controller(EmpresaController::class)->prefix('empresa')->name('empresas.')->group(function () {
         Route::post('/', 'store')->name('store');
         Route::get('/show', 'show')->name('show');
@@ -181,7 +181,7 @@ Route::middleware(['auth', 'verified', 'check.role:1'])->group(function () {
 | PERFIL DE USUARIO (COMÚN PARA TODOS)
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth','prevent-back-history'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
