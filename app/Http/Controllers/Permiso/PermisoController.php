@@ -55,21 +55,11 @@ class PermisoController extends Controller
     {
         $data = $this->buildPermisoData($request);
 
-        $existeActivo = Permiso::where('id_empleado', $data['id_empleado'])
-            ->where('estado', 1)
-            ->exists();
-        if ($existeActivo) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['id_empleado' => 'El empleado ya tiene un permiso activo. Favor inactivar el permiso antes de asignar uno nuevo.']);
-        } else {
-            Permiso::create($data);
+        Permiso::create($data);
 
-            return redirect()
-                ->route('permisos.index')
-                ->with('success', 'Permiso asignado correctamente.');
-        }
+        return redirect()
+            ->route('permisos.index')
+            ->with('success', 'Permiso asignado correctamente.');
 
     }
 
@@ -103,23 +93,11 @@ class PermisoController extends Controller
 
         $data = $this->buildPermisoData($request);
 
-        $existeActivo = Permiso::where('id_empleado', $data['id_empleado'])
-            ->where('estado', 1)
-            ->where('id', '!=', $permiso->id)
-            ->exists();
+        $permiso->update($data);
 
-        if ($existeActivo) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['id_empleado' => 'El empleado ya tiene un permiso activo.']);
-        } else {
-            $permiso->update($data);
-
-            return redirect()
-                ->route('permisos.index')
-                ->with('success', 'Permiso actualizado correctamente.');
-        }
+        return redirect()
+            ->route('permisos.index')
+            ->with('success', 'Permiso actualizado correctamente.');
 
     }
 

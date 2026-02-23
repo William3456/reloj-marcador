@@ -50,9 +50,14 @@ class MarcacionEmpleado extends Model
         return $this->belongsTo(Empleado::class, 'id_empleado');
     }
 
-    public function permiso()
+    public function permisos()
     {
-        return $this->belongsTo(Permiso::class, 'id_permiso_aplicado','id');
+        return $this->belongsToMany(
+            Permiso::class,          // 1. El modelo final que queremos obtener
+            'permisos_marcaciones',  // 2. El nombre de tu nueva tabla pivote
+            'id_marcacion',          // 3. La columna que representa a la marcación en la pivote
+            'id_permiso'             // 4. La columna que representa al permiso en la pivote
+        )->withTimestamps();         // Agregamos esto porque tu tabla tiene created_at y updated_at
     }
 
     public function salida()

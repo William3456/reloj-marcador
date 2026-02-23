@@ -48,18 +48,10 @@
             value="{{ old('tolerancia', $horario->tolerancia ?? '') }}" class="mt-1 w-full" required />
     </div>
 
-    <!-- Requiere salida -->
-    <div>
-        <x-input-label value="Requiere salida" />
-        <select name="requiere_salida" id="requiere_salida" class="mt-1 w-full rounded-md border-gray-300" required>
-            <option value="0" {{ old('requiere_salida', $horario->requiere_salida ?? '') == '0' ? 'selected' : '' }}>
-                No requiere salida
-            </option>
-            <option value="1" {{ old('requiere_salida', $horario->requiere_salida ?? '') == '1' ? 'selected' : '' }}>
-                Sí requiere salida
-            </option>
-        </select>
-    </div>
+
+    <input type="hidden" name="requiere_salida" value="1">
+
+
     <div class="md:col-span-2">
         <x-input-label value="Días laborales (Inicios de)" />
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-lg border mt-1">
@@ -190,7 +182,7 @@
         let selectPermitido = document.getElementById('permitido_marcacion');
         let mensaje = document.getElementById('mensajeTipoHorario');
         let tolerancia = document.getElementById('tolerancia');
-        let requiere_salida = document.getElementById('requiere_salida');
+        
 
         if (selectPermitido.value === "1") {
             // Sucursal → horario continuo
@@ -199,10 +191,6 @@
             tolerancia.style.backgroundColor = "";
             tolerancia.readOnly = false;
 
-            // habilitar select
-            requiere_salida.style.pointerEvents = "auto";
-            requiere_salida.style.backgroundColor = "";
-            requiere_salida.tabIndex = 0;
 
         } else if (selectPermitido.value === "0") {
             // Trabajador → horario partido
@@ -212,20 +200,12 @@
             tolerancia.value = 0;
             tolerancia.readOnly = true;
 
-            // deshabilitar visualmente (readonly real para select)
-            requiere_salida.value = "0";
-            requiere_salida.style.pointerEvents = "none";
-            requiere_salida.style.backgroundColor = "#f3f4f6";
-            requiere_salida.tabIndex = -1;
 
         } else {
             mensaje.style.display = "none";
             tolerancia.style.backgroundColor = "";
             tolerancia.readOnly = false;
 
-            requiere_salida.style.pointerEvents = "auto";
-            requiere_salida.style.backgroundColor = "";
-            requiere_salida.tabIndex = 0;
         }
     }
 

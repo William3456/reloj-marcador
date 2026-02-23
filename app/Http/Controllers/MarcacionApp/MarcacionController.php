@@ -57,14 +57,14 @@ class MarcacionController extends Controller
             ->orderBy('nombres')
             ->get();
 
-        // 2. Construir la consulta principal
+// 2. Construir la consulta principal
         $query = MarcacionEmpleado::visiblePara(Auth::user())
             ->with([
                 'empleado',
                 'sucursal',
                 'salida',
-                'permiso.tipoPermiso',
-                'salida.permiso.tipoPermiso',
+                'permisos.tipoPermiso',        // <-- CORREGIDO AL PLURAL
+                'salida.permisos.tipoPermiso', // <-- CORREGIDO AL PLURAL
             ])
             ->where('tipo_marcacion', 1);
 
@@ -129,8 +129,9 @@ class MarcacionController extends Controller
         // =========================================================
         // 1. OBTENER HISTORIAL DE HOY
         // =========================================================
-        $historialHoy = MarcacionEmpleado::where('id_empleado', $empleado->id)
+            $historialHoy = MarcacionEmpleado::where('id_empleado', $empleado->id)
             ->whereDate('created_at', $hoy)
+            ->with(['sucursal', 'permisos.tipoPermiso']) // <-- EL BLINDAJE DE RENDIMIENTO
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -377,9 +378,13 @@ class MarcacionController extends Controller
         if (isset($validacionGPS['error'])) {
             return back()->withErrors(['error' => $validacionGPS['error']]);
         }
-
+        // --- NUEVO: FUSIONAR TODOS LOS PERMISOS UTILIZADOS ---
+        $permisosTotales = array_unique(array_merge(
+            $validacionTiempo['permisos_aplicados'] ?? [],
+            $validacionGPS['permisos_aplicados'] ?? []
+        ));
         // 7. Guardar en BD
-        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana);
+        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana, $permisosTotales);
 
         // 8. Procesar Foto
         $this->procesarImagen($request->file('ubi_foto'), $marcacion, $empleado, $validated['tipo_marcacion']);
@@ -562,7 +567,7 @@ class MarcacionController extends Controller
     private function validarTiemposTurno($horario, $fechaReferencia, $tipoMarcacion, $entradaAbierta)
     {
         $permisos = $this->validaPermisos(); // Tu función existente
-
+        $permisosUsados = [];
         // Verificar permiso eximente
         $permisoExime = collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first();
         if ($permisoExime) {
@@ -582,7 +587,7 @@ class MarcacionController extends Controller
         $resultado = [
             'fuera_horario' => null,
             'es_olvido' => false,
-            'permiso_aplicado' => collect($permisos)->except('permisos')->filter()->first()?->id,
+            'permisos_aplicados' => [],
         ];
 
         if ($tipoMarcacion == 1) {
@@ -591,6 +596,7 @@ class MarcacionController extends Controller
                 $tolerancia = $horario->tolerancia;
                 if ($permisos['llegada_tarde']) {
                     $tolerancia += $permisos['llegada_tarde']->valor;
+                    $permisosUsados[] = $permisos['llegada_tarde']->id;
                 }
 
                 $horaMaxima = $inicioTurno->copy()->addMinutes($tolerancia);
@@ -607,6 +613,7 @@ class MarcacionController extends Controller
                 $momentoMinimo = $finTurno->copy();
                 if ($permisos['salida_temprana']) {
                     $momentoMinimo->subMinutes($permisos['salida_temprana']->valor);
+                    $permisosUsados[] = $permisos['salida_temprana']->id;
                 }
 
                 if (now()->greaterThan($limiteOlvido)) {
@@ -619,7 +626,7 @@ class MarcacionController extends Controller
                 }
             }
         }
-
+        $resultado['permisos_aplicados'] = $permisosUsados;
         return $resultado;
     }
 
@@ -627,7 +634,7 @@ class MarcacionController extends Controller
     {
         // Regla: Si es salida por olvido, NO validamos
         if ($validated['tipo_marcacion'] == 2 && $esOlvido) {
-            return ['distancia' => 0]; // Distancia irrelevante
+            return ['distancia' => 0, 'permisos_aplicados' => []];
         }
 
         // Regla de Sucursal
@@ -637,7 +644,7 @@ class MarcacionController extends Controller
         // Pero generalmente el GPS siempre se valida si estás marcando.
 
         $permisos = $this->validaPermisos();
-
+        $permisosUsados = [];
         $rango = $sucursal->rango_marcacion_mts;
         if ($permisos['fuera_rango']) {
             if ($permisos['fuera_rango']->cantidad_mts == null) {
@@ -645,6 +652,7 @@ class MarcacionController extends Controller
             } else {
                 $rango += $permisos['fuera_rango']->cantidad_mts;
             }
+            $permisosUsados[] = $permisos['fuera_rango']->id;
         }
 
         $distancia = $this->distanciaEnMetros(
@@ -658,13 +666,13 @@ class MarcacionController extends Controller
             return ['error' => "Estás fuera del rango permitido ($distancia mts)."];
         }
 
-        return ['distancia' => $distancia];
+       return ['distancia' => $distancia, 'permisos_aplicados' => $permisosUsados];
     }
 
-    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana)
+    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana, $permisosTotales)
     {
         return DB::transaction(function () use (
-            $diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta) {
+            $diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $permisosTotales) {
             $horarioEmpleado = $horario;
             $horarioSucursal = null;
 
@@ -719,23 +727,34 @@ class MarcacionController extends Controller
                 }
             }
 
-            // Guardar marcación (mínimo cambio)
-            return MarcacionEmpleado::create([
+            // 1. Crear marcación (eliminamos 'id_permiso_aplicado' del array)
+            $marcacion = MarcacionEmpleado::create([
                 'id_empleado' => $empleado->id,
                 'id_sucursal' => $sucursal->id,
                 'id_horario' => $horario->id,
-                'id_horario_historico_empleado' => $historicoEmpleado->id,
-                'id_horario_historico_sucursal' => $historicoSucursal?->id,
+                'id_horario_historico_empleado' => $historicoEmpleado->id ?? null,
+                'id_horario_historico_sucursal' => $historicoSucursal->id ?? null,
                 'latitud' => $validated['latitud'],
                 'longitud' => $validated['longitud'],
                 'distancia_real_mts' => $distancia,
                 'tipo_marcacion' => $validated['tipo_marcacion'],
-                'id_permiso_aplicado' => $validacionTiempo['permiso_aplicado'],
                 'fuera_horario' => $validacionTiempo['fuera_horario'],
-                'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2
-                    ? $entradaAbierta?->id
-                    : null,
+                'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
             ]);
+
+            // 2. NUEVO: Insertar en la tabla pivote de permisos
+            if (!empty($permisosTotales)) {
+                $insertData = [];
+                foreach ($permisosTotales as $idPermiso) {
+                    $insertData[] = [
+                        'id_marcacion' => $marcacion->id,
+                        'id_permiso' => $idPermiso,
+                    ];
+                }
+                DB::table('permisos_marcaciones')->insert($insertData);
+            }
+
+            return $marcacion;
         });
     }
 

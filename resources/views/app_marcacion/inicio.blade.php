@@ -72,7 +72,7 @@
                             <span class="text-xs uppercase tracking-widest text-indigo-300">Faltan</span>
                             <div class="text-xl font-bold text-white">{{ $tiempoRestante }}</div>
                         </div>
-                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 1 hora antes del inicio del turno.</p>
+                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 30 minutos antes.</p>
                     </div>
                 </div>
 
@@ -212,21 +212,35 @@
                         {{-- LISTA DE MARCACIONES DEL TURNO --}}
                         @foreach($registros as $reg)
                             @php
-                                $etiqueta = null;
-                                $claseColor = ''; // Solo para badge
                                 $tipoTexto = $reg->tipo_marcacion == 1 ? 'Entrada' : 'Salida';
+                                $iconoBg = $reg->tipo_marcacion == 1 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600';
                                 
-                                // Lógica visual de colores
-                                if($reg->tipo_marcacion == 1) { // Entrada
-                                    $iconoBg = 'bg-green-100 text-green-600';
-                                    if($reg->fuera_horario) { $etiqueta = 'Tarde'; $claseColor = 'bg-orange-100 text-orange-700 border-orange-200'; }
-                                } else { // Salida
-                                    $iconoBg = 'bg-red-100 text-red-600';
-                                    if($reg->fuera_horario) { $etiqueta = 'Olvido/Extra'; $claseColor = 'bg-red-100 text-red-700 border-red-200'; }
+                                // 1. Recolector dinámico de Badges
+                                $badges = [];
+                                
+                                // Estado Nativo (Tarde / Olvido)
+                                if($reg->tipo_marcacion == 1 && $reg->fuera_horario) { 
+                                    $badges[] = ['texto' => 'Tarde', 'color' => 'bg-orange-100 text-orange-700 border-orange-200']; 
+                                } elseif($reg->tipo_marcacion == 2 && $reg->fuera_horario) { 
+                                    $badges[] = ['texto' => 'Olvido/Extra', 'color' => 'bg-red-100 text-red-700 border-red-200']; 
+                                }
+
+                                // Permisos Múltiples (Relación a tabla pivote)
+                                if(isset($reg->permisos)) {
+                                    foreach($reg->permisos as $permiso) {
+                                        $nombrePermiso = $permiso->tipoPermiso->nombre ?? 'Permiso';
+                                        $badges[] = ['texto' => $nombrePermiso, 'color' => 'bg-blue-100 text-blue-700 border-blue-200'];
+                                    }
+                                }
+
+                                // Convertir a HTML crudo para enviarlo al Modal
+                                $badgesHtml = '';
+                                foreach($badges as $b) {
+                                    $badgesHtml .= '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>';
                                 }
                             @endphp
 
-                            <div onclick="abrirDetalleHistorial(this)"
+<div onclick="abrirDetalleHistorial(this)"
                                  class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
                                  data-tipo="{{ $tipoTexto }}"
                                  data-hora="{{ $reg->created_at->format('h:i A') }}"
@@ -235,8 +249,7 @@
                                  data-foto="{{ Storage::url($reg->ubi_foto) }}"
                                  data-lat="{{ $reg->latitud }}"
                                  data-lng="{{ $reg->longitud }}"
-                                 data-etiqueta="{{ $etiqueta }}"
-                                 data-clase-color="{{ $claseColor }}">
+                                 data-badges="{{ $badgesHtml }}"> {{-- Pasamos todos los badges en HTML --}}
                                 
                                 {{-- Icono --}}
                                 <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $iconoBg }}">
@@ -247,15 +260,15 @@
                                     @endif
                                 </div>
 
-                                {{-- Textos --}}
+                                {{-- Textos y Múltiples Badges --}}
                                 <div class="ml-4 flex-grow">
-                                    <div class="flex items-center gap-2">
-                                        <p class="text-sm font-bold text-gray-800">{{ $tipoTexto }}</p>
-                                        @if($etiqueta)
-                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $claseColor }}">
-                                                {{ $etiqueta }}
+                                    <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
+                                        <p class="text-sm font-bold text-gray-800 mr-1">{{ $tipoTexto }}</p>
+                                        @foreach($badges as $badge)
+                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $badge['color'] }}">
+                                                {{ $badge['texto'] }}
                                             </span>
-                                        @endif
+                                        @endforeach
                                     </div>
                                     <p class="text-xs text-gray-500">
                                         {{ $reg->created_at->format('h:i A') }} • {{ $reg->sucursal->nombre ?? 'GPS' }}
@@ -284,9 +297,10 @@
                 {{-- Encabezado --}}
                 <div class="flex justify-between items-start mb-6">
                     <div>
-                        <div class="flex items-center gap-2 mb-1">
+                        <div class="flex items-center flex-wrap gap-2 mb-1">
                             <h3 id="md-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
-                            <span id="md-etiqueta" class="hidden text-[10px] font-bold px-2 py-0.5 rounded border"></span>
+                            {{-- Contenedor dinámico para inyectar los múltiples badges --}}
+                            <div id="md-badges-container" class="flex items-center flex-wrap gap-1"></div>
                         </div>
                         <p id="md-fecha" class="text-blue-600 font-medium text-sm"></p>
                     </div>
@@ -461,7 +475,7 @@
             
             {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                @forelse(Auth::user()->empleado->horarios as $miHorario)
+                @forelse(Auth::user()->empleado->horarios->sortBy('hora_ini') as $miHorario)
                     {{-- ... (Tu código de horarios existente se mantiene IGUAL AQUÍ) ... --}}
                     @php
                         // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
@@ -632,7 +646,7 @@
 @endif
 @push('scripts')
 <script>
-    const MODO_PRUEBAS = false; // Cambiar a true solo para desarrollo
+    const MODO_PRUEBAS = true; // Cambiar a true solo para desarrollo
     const PRECISION_REQUERIDA = 100; // Metros aceptables
 
     // Ubicación fija de prueba
@@ -817,10 +831,11 @@
             const fecha = elemento.getAttribute('data-fecha');
             const sucursal = elemento.getAttribute('data-sucursal');
             const fotoUrl = elemento.getAttribute('data-foto');
-            const etiqueta = elemento.getAttribute('data-etiqueta');
-            const claseColor = elemento.getAttribute('data-clase-color');
             const lat = parseFloat(elemento.getAttribute('data-lat'));
             const lng = parseFloat(elemento.getAttribute('data-lng'));
+            
+            // Recibimos el HTML generado desde Blade
+            const badgesHtml = elemento.getAttribute('data-badges');
 
             // Llenar datos
             document.getElementById('md-titulo').innerText = tipo;
@@ -828,15 +843,8 @@
             document.getElementById('md-img').src = fotoUrl;
             document.getElementById('md-sucursal').innerText = sucursal;
 
-            // Etiqueta
-            const badge = document.getElementById('md-etiqueta');
-            if(etiqueta) {
-                badge.innerText = etiqueta;
-                badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded border ' + claseColor;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
+            // Inyectar los badges
+            document.getElementById('md-badges-container').innerHTML = badgesHtml;
 
             // Mostrar Modal
             const modal = document.getElementById('modal-detalle-historial');

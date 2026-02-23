@@ -3,6 +3,8 @@
 namespace App\Models\Permiso;
 
 use App\Models\Empleado\Empleado;
+use App\Models\Marcacion\MarcacionEmpleado;
+use App\Models\PermisoMarcacion;
 use Illuminate\Database\Eloquent\Model;
 
 class Permiso extends Model
@@ -59,5 +61,14 @@ class Permiso extends Model
         }
 
         return $query;
+    }
+    public function marcaciones()
+    {
+        return $this->belongsToMany(
+            MarcacionEmpleado::class, 
+            'permisos_marcaciones', 
+            'id_permiso', 
+            'id_marcacion'
+        )->using(PermisoMarcacion::class);
     }
 }
