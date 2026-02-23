@@ -22,9 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // 2. AGREGA ESTA LÍNEA: Confiar en Ngrok para detectar HTTPS
         $middleware->trustProxies(at: '*');
-
+        $middleware->web(append: [
+            \App\Http\Middleware\MatarCookieFantasma::class,
+        ]);
         // 3. Tu redirección de login (lo que hicimos antes)
-        $middleware->redirectTo(
+        $middleware->redirectTo(           
             guests: '/login',
             users: function (Request $request) {
                 if ($request->user() && $request->user()->id_rol === 3) {
