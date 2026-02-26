@@ -27,14 +27,6 @@ class HorarioSucursalController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -52,18 +44,49 @@ class HorarioSucursalController extends Controller
         try {
             DB::beginTransaction();
 
-            // 2. ELIMINAR ANTERIORES
-            // Como estamos re-asignando todo el set, borramos lo que había para esa sucursal
-            // Usamos el modelo Eloquent HorarioSucursal
-            HorarioSucursal::where('id_sucursal', $idSucursal)->delete();
+            $fechaHoy = now()->toDateString();
+            $fechaAyer = now()->subDay()->toDateString();
 
-            // 3. CREAR NUEVOS
-            // Recorremos el array de IDs y creamos los registros uno a uno usando Eloquent
-            foreach ($nuevosHorarios as $idHorario) {
-                HorarioSucursal::create([
-                    'id_sucursal' => $idSucursal,
-                    'id_horario' => $idHorario,
-                ]);
+            // Obtenemos los IDs de los horarios que la sucursal tiene activos actualmente
+            $activosActualmente = HorarioSucursal::where('id_sucursal', $idSucursal)
+                ->where('es_actual', true)
+                ->pluck('id_horario')
+                ->toArray();
+
+            // Magia de PHP: Comparamos arrays para saber qué hacer
+            // 1. A Cerrar: Los que están activos pero ya NO vienen en la nueva lista
+            $horariosACerrar = array_diff($activosActualmente, $nuevosHorarios);
+
+            // 2. A Agregar: Los que vienen en la nueva lista pero NO estaban activos
+            $horariosAAgregar = array_diff($nuevosHorarios, $activosActualmente);
+
+            // CERRAR ANTERIORES (Historial)
+            if (! empty($horariosACerrar)) {
+                HorarioSucursal::where('id_sucursal', $idSucursal)
+                    ->whereIn('id_horario', $horariosACerrar)
+                    ->where('es_actual', true)
+                    ->update([
+                            'fecha_fin' => DB::raw("
+                                CASE 
+                                    WHEN fecha_inicio = '{$fechaHoy}' THEN '{$fechaHoy}'
+                                    ELSE '{$fechaAyer}'
+                                END
+                            "),
+                        'es_actual' => false,
+                    ]);
+            }
+
+            // CREAR NUEVOS
+            if (! empty($horariosAAgregar)) {
+                foreach ($horariosAAgregar as $idHorario) {
+                    HorarioSucursal::create([
+                        'id_sucursal' => $idSucursal,
+                        'id_horario' => $idHorario,
+                        'fecha_inicio' => $fechaHoy,
+                        'fecha_fin' => null,
+                        'es_actual' => true,
+                    ]);
+                }
             }
 
             DB::commit();
@@ -81,8 +104,11 @@ class HorarioSucursalController extends Controller
 
     public function getBySucursal($idSucursal)
     {
-        // Usamos Eloquent con 'with' para traer la relación del horario (horas, dias, turno)
+        // IMPORTANTE: Agregamos el filtro ->where('es_actual', true) para que
+        // el frontend (JS) solo cargue los horarios vigentes de la sucursal
         $asignaciones = HorarioSucursal::where('id_sucursal', $idSucursal)
+            ->where('es_actual', true)
+            ->whereNull('fecha_fin') // Doble seguridad
             ->with('horario') // Carga la relación definida en tu modelo
             ->get();
 
@@ -98,6 +124,11 @@ class HorarioSucursalController extends Controller
         });
 
         return response()->json($data);
+    }
+
+    public function create()
+    {
+        //
     }
 
     /**

@@ -12,7 +12,11 @@ class HorarioEmpleado extends Model
 
     protected $fillable = [
         'id_empleado',
-        'id_horario'
+        'id_horario',
+        'id_horario_historico',
+        'fecha_inicio',
+        'fecha_fin',
+        'es_actual'
     ];
 
     public function empleado()

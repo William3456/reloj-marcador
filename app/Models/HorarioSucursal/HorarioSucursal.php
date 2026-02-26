@@ -13,7 +13,10 @@ class HorarioSucursal extends Model
     protected $fillable = [
         'id_sucursal',
         'id_horario',
-        'id_horario_historico'
+        'id_horario_historico',
+        'fecha_inicio',
+        'fecha_fin',
+        'es_actual'
     ];
     public function sucursal()
     {

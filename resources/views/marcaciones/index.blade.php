@@ -30,7 +30,8 @@
                                 <option value="">Todas</option>
                                 @foreach($sucursales as $suc)
                                     <option value="{{ $suc->id }}" {{ request('sucursal') == $suc->id ? 'selected' : '' }}>
-                                        {{ $suc->nombre }}</option>
+                                        {{ $suc->nombre }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -41,7 +42,8 @@
                                 <option value="">Todos</option>
                                 @foreach($empleadosList as $emp)
                                     <option value="{{ $emp->id }}" {{ request('empleado') == $emp->id ? 'selected' : '' }}>
-                                        {{ $emp->nombres }} {{ $emp->apellidos }}</option>
+                                        {{ $emp->nombres }} {{ $emp->apellidos }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -59,191 +61,185 @@
                     </div>
                 </form>
 
-                {{-- SECCIÓN 2: GRID DE TARJETAS (CARDS) --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @forelse ($marcaciones as $m)
+                
+                {{-- SECCIÓN 2: GRID AGRUPADO (EMPLEADO -> FECHA -> TURNOS) --}}
+                <div class="space-y-8">
+                    @forelse ($datosAgrupados as $empData)
                         @php
-                            // 1. Lógica de Estado y Colores
-                            $estadoTexto = '';
-                            $estadoClase = '';
-                            $bordeTop = '';
-
-                            if ($m->salida) {
-                                if ($m->salida->es_olvido || $m->salida->fuera_horario) {
-                                    $estadoTexto = 'Completado c/ Obs.';
-                                    $estadoClase = 'bg-orange-100 text-orange-800 border-orange-200';
-                                    $bordeTop = 'bg-orange-400';
-                                } else {
-                                    $estadoTexto = 'Jornada Completada';
-                                    $estadoClase = 'bg-green-100 text-green-800 border-green-200';
-                                    $bordeTop = 'bg-green-500';
-                                }
-                            } else {
-                                if (!$m->created_at->isToday()) {
-                                    $estadoTexto = 'Sin Salida';
-                                    $estadoClase = 'bg-red-100 text-red-800 border-red-200';
-                                    $bordeTop = 'bg-red-500';
-                                } else {
-                                    $estadoTexto = 'En Turno';
-                                    $estadoClase = 'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse';
-                                    $bordeTop = 'bg-yellow-400';
-                                }
-                            }
-
-                            // 2. Extraer TODOS los Permisos en Arrays (Para JS)
-                            $permisosE = $m->permisos->map(function ($p) {
-                                return [
-                                    'nombre' => $p->tipoPermiso->nombre ?? 'Permiso',
-                                    'motivo' => $p->motivo ?? ''
-                                ];
-                            })->toArray();
-
-                            $permisosS = $m->salida ? $m->salida->permisos->map(function ($p) {
-                                return [
-                                    'nombre' => $p->tipoPermiso->nombre ?? 'Permiso',
-                                    'motivo' => $p->motivo ?? ''
-                                ];
-                            })->toArray() : [];
-
-                            // 3. Iniciales para el Avatar
-                            $iniciales = mb_substr($m->empleado->nombres, 0, 1) . mb_substr($m->empleado->apellidos, 0, 1);
+                            $emp = $empData['empleado'];
+                            $iniciales = mb_substr($emp->nombres, 0, 1) . mb_substr($emp->apellidos, 0, 1);
                         @endphp
 
-                        {{-- INICIO DE LA TARJETA --}}
-                        <div
-                            class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 relative flex flex-col overflow-hidden group">
-                            <div class="h-1.5 w-full {{ $bordeTop }}"></div>
-                            <div class="p-5 flex-grow">
-                                <div class="flex justify-between items-start mb-5">
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="h-10 w-10 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-black text-sm uppercase shadow-sm">
-                                            {{ $iniciales }}
-                                        </div>
-                                        <div>
-                                            <h3 class="font-bold text-gray-900 text-sm leading-tight truncate w-32 sm:w-40"
-                                                title="{{ $m->empleado->nombres }} {{ $m->empleado->apellidos }}">
-                                                {{ $m->empleado->nombres }} <br> <span
-                                                    class="text-xs text-gray-500 font-normal">{{ $m->empleado->apellidos }}</span>
-                                            </h3>
-                                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                            
+                            {{-- Cabecera del Empleado --}}
+                            <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-lg border-2 border-white shadow-sm">
+                                        {{ $iniciales }}
                                     </div>
-                                    <div class="text-right">
-                                        <span
-                                            class="inline-block px-2 py-1 rounded-md text-[10px] font-bold border {{ $estadoClase }}">
-                                            {{ $estadoTexto }}
-                                        </span>
-                                        <p class="text-[10px] text-gray-400 mt-1 font-mono">
-                                            {{ $m->created_at->format('d M Y') }}</p>
+                                    <div>
+                                        <h2 class="text-lg font-black text-gray-900 leading-tight">{{ $emp->nombres }} {{ $emp->apellidos }}</h2>
+                                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                                            <i class="fa-solid fa-briefcase mr-1.5"></i> {{ $emp->puesto->nombre ?? 'Sin Puesto' }}
+                                            <span class="mx-2">•</span>
+                                            <i class="fa-solid fa-store mr-1.5"></i> {{ $emp->sucursal->nombre ?? 'Sin Sucursal' }}
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div
-                                    class="grid grid-cols-2 gap-3 bg-gray-50 rounded-lg p-3 border border-gray-100 relative">
+                            {{-- Días y Turnos --}}
+                            <div class="p-6 space-y-8">
+                                @foreach ($empData['fechas'] as $fechaStr => $fechaData)
+                                    <div>
+                                        {{-- Encabezado de la Fecha --}}
+                                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b border-gray-100 pb-2 uppercase tracking-wide flex items-center gap-2">
+                                            <i class="fa-regular fa-calendar-days text-blue-500"></i>
+                                            {{ $fechaData['fecha_obj']->locale('es')->isoFormat('dddd, D [de] MMMM YYYY') }}
+                                        </h3>
 
-                                    <div
-                                        class="absolute left-1/2 top-4 bottom-4 w-px bg-gray-200 transform -translate-x-1/2">
-                                    </div>
+                                        {{-- Grid de Turnos de ese Día --}}
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                            @foreach ($fechaData['turnos'] as $t)
+                                                @php
+                                                    $m = $t->marcacion;
+                                                    $h = $t->horario;
+                                                    
+                                                    $permisosE = []; $permisosS = [];
+                                                    $horaSalidaStr = '--:--';
+                                                    
+                                                    // Banderas para el Modal
+                                                    $esEntradaTarde = false;
+                                                    $esOlvidoSalida = false;
+                                                    $salidaReal = null;
+                                                    $esDiaDiferente = false;
+                                                    
+                                                    if ($m) {
+                                                        $esEntradaTarde = $m->fuera_horario ? true : false;
+                                                        $permisosE = $m->permisos->map(fn($p) => ['nombre' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo])->toArray();
+                                                        
+                                                        if ($m->salida) {
+                                                            $salidaReal = $m->salida->created_at;
+                                                            $esDiaDiferente = $m->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
+                                                            $esOlvidoSalida = $m->salida->es_olvido || $esDiaDiferente;
+                                                            
+                                                            if ($h && !$esOlvidoSalida) {
+                                                                $finTurno = \Carbon\Carbon::parse($fechaData['fecha_obj']->format('Y-m-d') . ' ' . $h->hora_fin);
+                                                                if ($h->hora_fin < $h->hora_ini) $finTurno->addDay();
+                                                                
+                                                                if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) {
+                                                                    $esOlvidoSalida = true;
+                                                                }
+                                                            }
 
-                                    <div class="pr-2">
-                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Entrada
-                                        </p>
-                                        <div class="flex items-end gap-1 mb-1">
-                                            <p class="font-black text-gray-800 text-lg leading-none">
-                                                {{ $m->created_at->format('H:i') }}</p>
-                                            @if($m->fuera_horario) <span class="text-[9px] text-orange-500 font-bold mb-0.5"
-                                            title="Marcó Tarde">TARDE</span> @endif
-                                        </div>
-                                        <p class="text-[10px] text-gray-500 truncate"
-                                            title="{{ $m->sucursal->nombre ?? 'GPS Remoto' }}">
-                                            <i class="fa-solid fa-location-dot text-gray-400 mr-1"></i>
-                                            {{ $m->sucursal->nombre ?? 'GPS Remoto' }}
-                                        </p>
+                                                            if ($esDiaDiferente) {
+                                                                $horaSalidaStr = $salidaReal->format('h:i A') . ' (' . $salidaReal->format('d/m') . ')';
+                                                            } else {
+                                                                $horaSalidaStr = $salidaReal->format('h:i A');
+                                                            }
+                                                            
+                                                            $permisosS = $m->salida->permisos->map(fn($p) => ['nombre' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo])->toArray();
+                                                        }
+                                                    }
+                                                @endphp
 
-                                        @if($m->permisos->count() > 0)
-                                            <div class="mt-2 flex flex-col gap-1">
-                                                @foreach($m->permisos as $permiso)
-                                                    <div class="inline-flex items-center gap-1.5 px-1.5 py-1 rounded bg-purple-100 text-purple-800 border border-purple-200 w-full"
-                                                        title="{{ $permiso->motivo }}">
-                                                        <i class="fa-solid fa-file-contract text-[10px]"></i>
-                                                        <span
-                                                            class="text-[9px] font-bold truncate">{{ $permiso->tipoPermiso->nombre ?? 'Permiso' }}</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                    </div>
-
-                                    <div class="pl-2">
-                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Salida
-                                        </p>
-                                        @if($m->salida)
-                                            <div class="flex items-end gap-1 mb-1">
-                                                <p class="font-black text-gray-800 text-lg leading-none">
-                                                    {{ $m->salida->created_at->format('H:i') }}</p>
-                                            </div>
-                                            <p class="text-[10px] text-gray-500 truncate"
-                                                title="{{ $m->salida->sucursal->nombre ?? 'GPS Remoto' }}">
-                                                <i class="fa-solid fa-location-dot text-gray-400 mr-1"></i>
-                                                {{ $m->salida->sucursal->nombre ?? 'GPS Remoto' }}
-                                            </p>
-
-                                            @if($m->salida->permisos->count() > 0)
-                                                <div class="mt-2 flex flex-col gap-1">
-                                                    @foreach($m->salida->permisos as $permiso)
-                                                        <div class="inline-flex items-center gap-1.5 px-1.5 py-1 rounded bg-purple-100 text-purple-800 border border-purple-200 w-full"
-                                                            title="{{ $permiso->motivo }}">
-                                                            <i class="fa-solid fa-file-contract text-[10px]"></i>
-                                                            <span
-                                                                class="text-[9px] font-bold truncate">{{ $permiso->tipoPermiso->nombre ?? 'Permiso' }}</span>
+                                                <div class="bg-white rounded-xl border border-gray-200 shadow-sm relative flex flex-col overflow-hidden group hover:border-blue-300 transition-colors">
+                                                    <div class="h-1.5 w-full {{ $t->estado->borde }}"></div>
+                                                    
+                                                    <div class="p-4 flex-grow">
+                                                        <div class="flex justify-between items-center mb-3">
+                                                            <span class="text-xs font-bold text-gray-600 flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded">
+                                                                <i class="fa-regular fa-clock"></i>
+                                                                {{ $h ? \Carbon\Carbon::parse($h->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($h->hora_fin)->format('H:i') : 'Turno Extra' }}
+                                                            </span>
+                                                            <span class="inline-block px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border {{ $t->estado->clase }}">
+                                                                {{ $t->estado->texto }}
+                                                            </span>
                                                         </div>
-                                                    @endforeach
+
+                                                        <div class="grid grid-cols-2 gap-2 mt-4">
+                                                            <div class="pr-2 border-r border-gray-100">
+                                                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Entrada</p>
+                                                                @if($m)
+                                                                    <div class="flex items-end gap-1">
+                                                                        <p class="font-black text-gray-800 text-lg leading-none">{{ $m->created_at->format('H:i') }}</p>
+                                                                        @if($esEntradaTarde) <span class="text-[8px] text-orange-500 font-bold mb-0.5">TARDE</span> @endif
+                                                                    </div>
+                                                                @else
+                                                                    <p class="font-bold text-gray-300 text-lg leading-none">--:--</p>
+                                                                @endif
+                                                            </div>
+                                                            <div class="pl-2">
+                                                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Salida</p>
+                                                                @if($m && $m->salida)
+                                                                    <div class="flex items-end gap-1">
+                                                                        <p class="font-black text-gray-800 text-lg leading-none">{{ $salidaReal->format('H:i') }}</p>
+                                                                        @if($esOlvidoSalida)
+                                                                            <span class="text-[8px] text-red-500 font-bold mb-0.5">OLVIDO</span>
+                                                                        @endif
+                                                                    </div>
+                                                                    @if($esDiaDiferente)
+                                                                        <p class="text-[9px] text-red-500 font-bold mt-1 truncate" title="Marcó salida en un día distinto">
+                                                                            <i class="fa-regular fa-calendar mr-0.5"></i> {{ $salidaReal->format('d M') }}
+                                                                        </p>
+                                                                    @endif
+                                                                @else
+                                                                    <p class="font-bold text-gray-300 text-lg leading-none">--:--</p>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    @if($m)
+                                                        <button onclick='verDetalleCompleto({
+                                                            empleado: @json($emp->nombres . " " . $emp->apellidos),
+                                                            fecha: @json($m->created_at->isoFormat("dddd D [de] MMMM [del] YYYY")),
+                                                            latEntrada: {{ (float)($m->latitud ?? 0) }},
+                                                            lngEntrada: {{ (float)($m->longitud ?? 0) }},
+                                                            latSalida: {{ (float)(optional($m->salida)->latitud ?? 0) }},
+                                                            lngSalida: {{ (float)(optional($m->salida)->longitud ?? 0) }},
+                                                            fotoEntrada: @json($m->ubi_foto ? Storage::url($m->ubi_foto) : null),
+                                                            horaEntrada: @json($m->created_at->format("h:i A")),
+                                                            hasSalida: {{ $m->salida ? 'true' : 'false' }},
+                                                            fotoSalida: @json(($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null),
+                                                            horaSalida: @json($horaSalidaStr),
+                                                            esEntradaTarde: @json($esEntradaTarde), {{-- NUEVO --}}
+                                                            esOlvidoSalida: @json($esOlvidoSalida), {{-- NUEVO --}}
+                                                            estadoTexto: @json($t->estado->texto),
+                                                            estadoClase: @json($t->estado->clase),
+                                                            fotoEntradaFull: @json($m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null),
+                                                            fotoSalidaFull: @json(($m->salida && $m->salida->ubi_foto_full) ? Storage::url($m->salida->ubi_foto_full) : null),
+                                                            permisosEntrada: @json($permisosE),
+                                                            permisosSalida: @json($permisosS)
+                                                        })' class="w-full bg-blue-50/50 hover:bg-blue-600 text-blue-600 hover:text-white py-2 px-4 text-[10px] uppercase tracking-wider font-bold transition-colors flex items-center justify-center gap-1.5 border-t border-gray-100">
+                                                            <i class="fa-solid fa-expand"></i> Detalles
+                                                        </button>
+                                                    @else
+                                                        @if(str_contains($t->estado->clase, 'blue'))
+                                                            <div class="w-full bg-blue-50/50 text-blue-600 py-2 px-4 text-[10px] uppercase tracking-wider font-bold text-center border-t border-blue-100">
+                                                                <i class="fa-solid fa-file-shield mr-1"></i> Día Exonerado
+                                                            </div>
+                                                        @else
+                                                            <div class="w-full bg-gray-50/50 text-gray-400 py-2 px-4 text-[10px] uppercase tracking-wider font-bold text-center border-t border-gray-100">
+                                                                <i class="fa-solid fa-ban mr-1"></i> Sin Registros
+                                                            </div>
+                                                        @endif
+                                                    @endif
                                                 </div>
-                                            @endif
-                                        @else
-                                            <p class="font-bold text-gray-300 text-lg leading-none mt-1">--:--</p>
-                                        @endif
+                                            @endforeach
+                                        </div>
                                     </div>
-                                </div>
+                                @endforeach
                             </div>
-
-                            <button onclick='verDetalleCompleto({
-                                    empleado: @json($m->empleado->nombres . " " . $m->empleado->apellidos),
-                                    fecha: @json($m->created_at->isoFormat("dddd D [de] MMMM [del] YYYY")),
-
-                                    /* CORRECCIÓN: Forzamos a que sean números para Google Maps */
-                                    latEntrada: {{ (float) ($m->latitud ?? 0) }},
-                                    lngEntrada: {{ (float) ($m->longitud ?? 0) }},
-                                    latSalida: {{ (float) ($m->salida->latitud ?? 0) }},
-                                    lngSalida: {{ (float) ($m->salida->longitud ?? 0) }},
-
-                                    fotoEntrada: @json($m->ubi_foto ? Storage::url($m->ubi_foto) : null),
-                                    horaEntrada: @json($m->created_at->format("h:i A")),
-                                    hasSalida: {{ $m->salida ? 'true' : 'false' }},
-                                    fotoSalida: @json(($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null),
-                                    horaSalida: @json($m->salida ? $m->salida->created_at->format("h:i A") : "--"),
-                                    estadoTexto: @json($estadoTexto),
-                                    estadoClase: @json($estadoClase),
-                                    fotoEntradaFull: @json($m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null),
-                                    fotoSalidaFull: @json(($m->salida && $m->salida->ubi_foto_full) ? Storage::url($m->salida->ubi_foto_full) : null),
-                                    permisosEntrada: @json($permisosE),
-                                    permisosSalida: @json($permisosS)
-                                })'
-                                class="w-full bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white py-3 px-4 text-xs font-bold transition-colors flex items-center justify-center gap-2 border-t border-blue-100 group-hover:border-blue-600">
-                                <i class="fa-solid fa-map-location-dot"></i> Ver Expediente Completo
-                            </button>
                         </div>
-                        {{-- FIN DE LA TARJETA --}}
-
                     @empty
-                        <div
-                            class="col-span-full py-16 px-4 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                                <i class="fa-solid fa-inbox text-2xl text-gray-400"></i>
+                        <div class="col-span-full py-20 px-4 text-center bg-white rounded-3xl border border-gray-200 shadow-sm">
+                            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 border border-gray-100 mb-4">
+                                <i class="fa-solid fa-clipboard-user text-3xl text-gray-300"></i>
                             </div>
-                            <h3 class="text-sm font-bold text-gray-900 mb-1">No hay marcaciones</h3>
-                            <p class="text-sm text-gray-500">No se encontraron registros de asistencia para los filtros
-                                seleccionados.</p>
+                            <h3 class="text-base font-bold text-gray-900 mb-1">Cero resultados</h3>
+                            <p class="text-sm text-gray-500 max-w-md mx-auto">No se encontraron empleados con horarios asignados o marcaciones para los filtros seleccionados.</p>
                         </div>
                     @endforelse
                 </div>
@@ -300,8 +296,10 @@
                                                 onclick="zoomImagen(document.getElementById('fotoEntradaFull').value)">
                                             <span id="noImgEntrada" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
-                                        <p id="horaEntradaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">
-                                            --:--</p>
+                                        <div class="flex items-center justify-center gap-1.5 mt-1 mb-1">
+                                            <p id="horaEntradaModal" class="text-xs text-gray-600 font-mono font-bold">--:--</p>
+                                            <span id="badgeEntradaTarde" class="hidden text-[9px] bg-orange-100 text-orange-600 font-black px-1.5 py-0.5 rounded shadow-sm">TARDE</span>
+                                        </div>
 
                                         {{-- Contenedor dinámico de permisos para ENTRADA --}}
                                         <div id="contenedorPermisosEntrada" class="w-full flex flex-col gap-1 mt-1">
@@ -319,8 +317,10 @@
                                                 onclick="zoomImagen(document.getElementById('fotoSalidaFull').value)">
                                             <span id="noImgSalida" class="text-gray-400 text-xs">Sin foto</span>
                                         </div>
-                                        <p id="horaSalidaModal" class="text-xs text-gray-600 mt-1 font-mono font-bold">
-                                            --:--</p>
+                                        <div class="flex items-center justify-center gap-1.5 mt-1 mb-1">
+                                            <p id="horaSalidaModal" class="text-xs text-gray-600 font-mono font-bold">--:--</p>
+                                            <span id="badgeSalidaOlvido" class="hidden text-[9px] bg-red-100 text-red-600 font-black px-1.5 py-0.5 rounded shadow-sm">OLVIDO</span>
+                                        </div>
 
                                         {{-- Contenedor dinámico de permisos para SALIDA --}}
                                         <div id="contenedorPermisosSalida" class="w-full flex flex-col gap-1 mt-1">
@@ -434,7 +434,18 @@
 
                 document.getElementById('modalExpediente').classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
+                // Toggle Badges de Observaciones
+                if (data.esEntradaTarde) {
+                    document.getElementById('badgeEntradaTarde').classList.remove('hidden');
+                } else {
+                    document.getElementById('badgeEntradaTarde').classList.add('hidden');
+                }
 
+                if (data.esOlvidoSalida) {
+                    document.getElementById('badgeSalidaOlvido').classList.remove('hidden');
+                } else {
+                    document.getElementById('badgeSalidaOlvido').classList.add('hidden');
+                }
                 if (!map) initMap();
                 setTimeout(() => { cambiarMapa('entrada'); }, 200);
             }

@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Reportes;
 
 use App\Http\Controllers\Controller;
-use App\Models\Empleado\Empleado; // Ajusta tus namespaces
+use App\Models\Empleado\Empleado;
 use App\Models\Empresa\Empresa;
+use App\Models\HorarioEmpleado\HorarioEmpleado;
 use App\Models\Marcacion\MarcacionEmpleado;
 use App\Models\Sucursales\Sucursal;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -16,228 +17,297 @@ use Illuminate\Support\Str;
 
 class ReporteMarcacionesController extends Controller
 {
-    private function generarDataReporte(Request $request)
-{
-    $user = Auth::user();
+    // =========================================================================
+    // 1. VISTA WEB
+    // =========================================================================
+    public function index(Request $request)
+    {
+        $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
+        $empleadosList = Empleado::where('estado', 1)->orderBy('nombres')->get();
 
-    // 1. Rango de Fechas
-    $desde = $request->input('desde') ? Carbon::parse($request->input('desde'))->startOfDay() : Carbon::now()->startOfMonth()->startOfDay();
-    $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : Carbon::now()->endOfMonth()->endOfDay();
-
-    // ... (Tu lógica de tope de fechas se mantiene igual) ...
-    $hoy = Carbon::now()->endOfDay();
-    $ultimaMarca = MarcacionEmpleado::max('created_at');
-    $fechaUltimaMarca = $ultimaMarca ? Carbon::parse($ultimaMarca)->endOfDay() : Carbon::now();
-    $tope = $fechaUltimaMarca->greaterThan(Carbon::now()) ? $fechaUltimaMarca : Carbon::now()->endOfDay();
-    $hastaReal = $hasta->greaterThan($tope) ? $tope : $hasta;
-
-    // 2. Obtener Empleados CON SUS PERMISOS
-    // <--- CORRECCIÓN 1: Cargamos 'permisos.tipoPermiso' aquí para saber si tiene permiso aunque falte
-    $queryEmpleados = Empleado::where('estado', 1)
-        ->with(['sucursal', 'horarios', 'permisos.tipoPermiso']); 
-
-    if ($request->filled('sucursal')) {
-        $queryEmpleados->where('id_sucursal', $request->sucursal);
-    }
-    if ($request->filled('empleado')) {
-        $queryEmpleados->where('id', $request->empleado);
-    }
-    $empleados = $queryEmpleados->orderBy('apellidos')->get();
-
-    // 3. Obtener Marcaciones
-    $queryMarcaciones = MarcacionEmpleado::whereBetween('created_at', [$desde, $hastaReal])
-        ->with(['horarioHistorico', 'sucursal', 'permiso.tipoPermiso']); // También lo dejamos aquí por si el permiso está vinculado solo a la marca
-
-    if ($request->filled('empleado')) {
-        $queryMarcaciones->where('id_empleado', $request->empleado);
-    }
-    if ($request->filled('sucursal')) {
-        $queryMarcaciones->where('id_sucursal', $request->sucursal);
-    }
-
-    $todasMarcaciones = $queryMarcaciones->get();
-
-    $mapaDias = [0 => 'domingo', 1 => 'lunes', 2 => 'martes', 3 => 'miercoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sabado'];
-    $reporte = collect();
-    $periodo = CarbonPeriod::create($desde, $hastaReal);
-
-    foreach ($periodo as $dia) {
-        $diaIndice = $dia->dayOfWeek;
-        $nombreDiaHoy = $mapaDias[$diaIndice];
-        $fechaStr = $dia->format('Y-m-d');
-
-        foreach ($empleados as $emp) {
-
-            // A. Filtro de Horarios
-            $horariosDia = $emp->horarios->filter(function ($h) use ($nombreDiaHoy) {
-                $diasDb = array_map(function ($d) { return Str::slug($d); }, $h->dias ?? []);
-                return in_array($nombreDiaHoy, $diasDb);
-            });
-
-            if ($horariosDia->isEmpty()) continue;
-
-            // <--- CORRECCIÓN 2: Buscamos si el empleado tiene un permiso general activo para ESTE DÍA
-            // (Ej: Vacaciones, Incapacidad) que cubra la fecha actual
-            $permisoDelDia = $emp->permisos->first(function($p) use ($dia) {
-                return $dia->between(Carbon::parse($p->fecha_inicio), Carbon::parse($p->fecha_fin));
-            });
-
-            foreach ($horariosDia as $horarioTeorico) {
-                $horaEntradaTeorica = Carbon::parse($fechaStr.' '.$horarioTeorico->hora_ini);
-
-                $marca = $todasMarcaciones->filter(function ($m) use ($emp, $fechaStr, $horaEntradaTeorica) {
-                    return $m->id_empleado == $emp->id
-                        && $m->tipo_marcacion == 1
-                        && $m->created_at->format('Y-m-d') == $fechaStr
-                        && abs($m->created_at->diffInMinutes($horaEntradaTeorica)) < (4 * 60);
-                })->first();
-
-                // C. Definir Datos Base
-                $row = [
-                    'fecha' => $dia->copy(),
-                    'empleado' => $emp,
-                    'sucursal' => $emp->sucursal,
-                    'horario_programado' => Carbon::parse($horarioTeorico->hora_ini)->format('H:i').' - '.Carbon::parse($horarioTeorico->hora_fin)->format('H:i'),
-                    'entrada_real' => null,
-                    'salida_real' => null,
-                    'minutos_tarde' => 0,
-                    'estado_key' => 'ausente',
-                    'foto_entrada' => null,
-                    'foto_salida' => null,
-                    'permiso_info' => null,
-                ];
-
-                // <--- CORRECCIÓN 3: Pre-cargamos la info del permiso si existe permiso del día
-                if ($permisoDelDia) {
-                    $row['permiso_info'] = [
-                        'tipo' => $permisoDelDia->tipoPermiso->nombre ?? 'Permiso',
-                        'motivo' => $permisoDelDia->motivo,
-                        'desde' => $permisoDelDia->fecha_inicio,
-                        'hasta' => $permisoDelDia->fecha_fin,
-                    ];
-                    // Si hay permiso global del día, el estado base es 'permiso', no 'ausente'
-                    $row['estado_key'] = 'permiso';
-                }
-
-                if ($marca) {
-                    $estado = 'presente';
-
-                    if ($marca->horarioHistorico) {
-                        $hHist = $marca->horarioHistorico;
-                        $row['horario_programado'] = Carbon::parse($hHist->hora_entrada)->format('H:i').' - '.Carbon::parse($hHist->hora_salida)->format('H:i');
-                        $horaEntradaTeorica = Carbon::parse($fechaStr.' '.$hHist->hora_entrada);
-                    }
-
-                    $row['entrada_real'] = $marca->created_at;
-                    $row['foto_entrada'] = $marca->ubi_foto;
-
-                    // <--- CORRECCIÓN 4: Si la marcación tiene un permiso específico (ej: Llegada tardía), este SOBRESCRIBE al general
-                    if ($marca->permiso) {
-                        $row['permiso_info'] = [
-                            'tipo' => $marca->permiso->tipoPermiso->nombre ?? 'Permiso',
-                            'motivo' => $marca->permiso->motivo,
-                            'desde' => $marca->permiso->fecha_inicio,
-                            'hasta' => $marca->permiso->fecha_fin,
-                        ];
-                    }
-
-                    // Buscar salida
-                    $salida = $todasMarcaciones->where('id_empleado', $emp->id)
-                        ->where('tipo_marcacion', 2)
-                        ->where('created_at', '>', $marca->created_at)
-                        ->where('created_at', '<', $dia->copy()->endOfDay()->addHours(6))
-                        ->sortBy('created_at')
-                        ->first();
-
-                    if ($salida) {
-                        $row['salida_real'] = $salida->created_at;
-                        $row['foto_salida'] = $salida->ubi_foto;
-                    } elseif (! $dia->isToday()) {
-                        $estado = 'sin_cierre';
-                    }
-
-                    // Calcular incidencias (Estado Final)
-                    $esTarde = $marca->created_at->greaterThan($horaEntradaTeorica->copy()->addMinutes($horarioTeorico->tolerancia));
-
-                    if ($esTarde) {
-                        $row['minutos_tarde'] = $marca->created_at->diffInMinutes($horaEntradaTeorica);
-                        
-                        // Si es tarde Y tiene permiso (ya sea en la marca o general del día)
-                        if (!empty($row['permiso_info'])) {
-                            $estado = 'tarde_con_permiso';
-                        } else {
-                            $estado = 'tarde';
-                        }
-                    } else {
-                        // Llegó bien. Verificamos si tiene permiso (ej: salida anticipada o permiso de entrada activo)
-                        if (!empty($row['permiso_info'])) {
-                            $estado = 'permiso'; 
-                        } else {
-                            $estado = 'presente';
-                        }
-                    }
-                    
-                    // Prioridad de estado: Si no cerró turno, gana 'sin_cierre' a menos que sea un permiso justificado
-                    if ($estado == 'sin_cierre' && !empty($row['permiso_info'])) {
-                         // Opcional: Si quieres que 'sin_cierre' se muestre aunque tenga permiso, deja esto.
-                         // Si prefieres que el permiso oculte el olvido de salida, cambia la lógica aquí.
-                    }
-
-                    $row['estado_key'] = $estado;
-                }
-
-                $reporte->push($row);
-            }
+        $marcaciones = collect();
+        if ($request->has('desde')) {
+            $marcaciones = $this->generarDataReporte($request);
         }
+
+        return view('reportes.marcaciones.marcaciones_rep', compact('marcaciones', 'sucursales', 'empleadosList'));
     }
 
-    // 5. Filtrado Final (Igual que antes)
-    if ($request->filled('incidencia')) {
-        $filtro = $request->incidencia;
-        $reporte = $reporte->filter(function ($row) use ($filtro) {
-            if ($filtro == 'asistencia_ok') return $row['estado_key'] == 'presente';
-            return $row['estado_key'] == $filtro;
-        });
-    }
-
-    return $reporte;
-}
-
+    // =========================================================================
+    // 2. GENERACIÓN DE PDF
+    // =========================================================================
     public function generarPdf(Request $request)
     {
-        $registros = $this->generarDataReporte($request); // Devuelve Collection
-        $empresa = Empresa::first(); // Asegúrate de tener este modelo o pasa null
+        $registros = $this->generarDataReporte($request); 
+        $empresa = Empresa::first(); 
+
+        // Diccionario para traducir el filtro seleccionado a texto legible en el PDF
+        $nombresFiltros = [
+            'presente' => 'Asistencia Perfecta (Puntuales)',
+            'extra' => 'Turnos Extras',
+            'tarde_total' => 'Todas las Llegadas Tarde',
+            'tarde_sin_permiso' => 'Llegadas Tarde Injustificadas',
+            'ausente' => 'Ausencias Injustificadas',
+            'con_permiso' => 'Registros Justificados (Con Permiso)',
+            'sin_cierre' => 'Olvidos de Salida / Sin Cierre'
+        ];
 
         $filtros = [
             'desde' => $request->input('desde') ?? date('Y-m-01'),
             'hasta' => $request->input('hasta') ?? date('Y-m-d'),
             'sucursal' => $request->filled('sucursal') ? Sucursal::find($request->sucursal)->nombre : 'Todas',
+            'incidencia' => $request->filled('incidencia') ? ($nombresFiltros[$request->incidencia] ?? 'Todos') : 'Todos los registros',
         ];
 
-        // IMPORTANTE: Asegúrate de que la vista 'reportes.marcaciones.pdf' espere $registros
         $pdf = Pdf::loadView('reportes.marcaciones.pdf', compact('registros', 'empresa', 'filtros'));
         $pdf->setPaper('letter', 'landscape');
 
         return $pdf->stream('reporte_asistencia.pdf');
     }
 
-    // ... tu método index ...
-    public function index(Request $request)
+    // =========================================================================
+    // 3. EL MOTOR CORE ADAPTADO A REPORTES
+    // =========================================================================
+    private function generarDataReporte(Request $request)
     {
-        // Listas para los selects
-        $sucursales = Sucursal::visiblePara(Auth::user())
-            ->where('estado', 1)->get();
-        $empleadosList = Empleado::where('estado', 1)->orderBy('nombres')->get();
+        $hoy = Carbon::now();
+        $desde = $request->input('desde') ? Carbon::parse($request->input('desde'))->startOfDay() : Carbon::now()->startOfMonth()->startOfDay();
+        
+        $hastaPorDefecto = $hoy->copy()->endOfDay();
+        $ultimaMarcacion = MarcacionEmpleado::max('created_at');
+        if ($ultimaMarcacion && Carbon::parse($ultimaMarcacion)->endOfDay()->greaterThan($hastaPorDefecto)) {
+            $hastaPorDefecto = Carbon::parse($ultimaMarcacion)->endOfDay();
+        }
+        $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : $hastaPorDefecto;
 
-        // Inicializamos la colección vacía para que no de error al cargar la página
-        $marcaciones = collect();
+        // 1. Obtener Empleados y sus permisos
+        $queryEmpleados = Empleado::with(['sucursal', 'puesto', 'permisos' => function($q) use ($desde, $hasta) {
+            $q->where('estado', 1)
+              ->where(function($q2) use ($desde, $hasta) {
+                  $q2->where('fecha_inicio', '<=', $hasta)->where('fecha_fin', '>=', $desde);
+              })->with('tipoPermiso');
+        }])->where('estado', 1);
 
-        // Solo procesamos si el usuario envió filtros (ej: botón buscar)
-        // O si quieres que cargue por defecto al entrar, quita el 'if'
+        if ($request->filled('sucursal')) $queryEmpleados->where('id_sucursal', $request->sucursal);
+        if ($request->filled('empleado')) $queryEmpleados->where('id', $request->empleado);
+        
+        $empleados = $queryEmpleados->orderBy('apellidos')->get();
+        $empleadosIds = $empleados->pluck('id');
 
-        $marcaciones = $this->generarDataReporte($request);
+        // 2. Pre-cargar Horarios y Marcaciones
+        $historialHorariosTodos = HorarioEmpleado::with('horario')->whereIn('id_empleado', $empleadosIds)->get()->groupBy('id_empleado');
+        
+        $marcacionesReales = MarcacionEmpleado::whereIn('id_empleado', $empleadosIds)
+            ->with(['sucursal', 'salida', 'permisos.tipoPermiso', 'salida.permisos.tipoPermiso'])
+            ->where('tipo_marcacion', 1)
+            ->whereBetween('created_at', [$desde, $hasta])
+            ->get()
+            ->groupBy('id_empleado');
 
-        // Pasamos la variable con el nombre correcto: 'marcaciones'
-        return view('reportes.marcaciones.marcaciones_rep', compact('marcaciones', 'sucursales', 'empleadosList'));
+        $reporte = collect();
+        $periodo = CarbonPeriod::create($desde, $hasta);
+
+        // 3. Procesamiento Día a Día
+        foreach ($empleados as $emp) {
+            $horariosDelEmpleado = $historialHorariosTodos->get($emp->id, collect());
+            $marcacionesDelEmpleado = $marcacionesReales->get($emp->id, collect())->groupBy(fn($m) => $m->created_at->format('Y-m-d'));
+
+            foreach ($periodo as $fechaObj) {
+                //if ($fechaObj->isFuture() && !$fechaObj->isSameDay($hoy)) continue;
+
+                $fechaStr = $fechaObj->format('Y-m-d');
+                $diaSemana = Str::slug($fechaObj->locale('es')->isoFormat('dddd'));
+
+                $turnosEsperados = $horariosDelEmpleado->filter(function($asig) use ($fechaStr, $diaSemana) {
+                    $inicioValido = empty($asig->fecha_inicio) || $asig->fecha_inicio <= $fechaStr;
+                    $finValido = empty($asig->fecha_fin) || $asig->fecha_fin >= $fechaStr;
+                    if (!$inicioValido || !$finValido || !$asig->horario || empty($asig->horario->dias)) return false;
+                    return in_array($diaSemana, array_map(fn($d) => Str::slug($d), $asig->horario->dias));
+                })->sortBy(fn($asig) => $asig->horario->hora_ini);
+
+                $marcacionesDelDia = $marcacionesDelEmpleado->get($fechaStr, collect());
+                $marcacionesLibres = collect($marcacionesDelDia->all());
+                $turnosProcesados = [];
+
+                // RONDA 1: Match Exacto
+                foreach ($turnosEsperados as $asig) {
+                    $marcacion = $marcacionesLibres->first(function($m) use ($asig) {
+                        if ($m->id_horario_historico_empleado && $asig->id_horario_historico) return $m->id_horario_historico_empleado == $asig->id_horario_historico;
+                        if ($m->id_horario && $asig->id_horario) return $m->id_horario == $asig->id_horario;
+                        return false;
+                    });
+                    if ($marcacion) {
+                        $turnosProcesados[$asig->id] = $marcacion;
+                        $marcacionesLibres = $marcacionesLibres->reject(fn($m) => $m->id == $marcacion->id);
+                    } else {
+                        $turnosProcesados[$asig->id] = null;
+                    }
+                }
+
+                // RONDA 2: Match Proximidad
+                foreach ($turnosEsperados as $asig) {
+                    if (is_null($turnosProcesados[$asig->id]) && $marcacionesLibres->isNotEmpty()) {
+                        $horaInicioTurno = Carbon::parse($fechaStr . ' ' . $asig->horario->hora_ini);
+                        $marcacionCercana = $marcacionesLibres->sortBy(fn($m) => abs($m->created_at->diffInMinutes($horaInicioTurno)))->first();
+                        if (abs($marcacionCercana->created_at->diffInMinutes($horaInicioTurno)) <= 300) {
+                            $turnosProcesados[$asig->id] = $marcacionCercana;
+                            $marcacionesLibres = $marcacionesLibres->reject(fn($m) => $m->id == $marcacionCercana->id);
+                        }
+                    }
+                }
+
+                // Generar Filas del Reporte
+                foreach ($turnosEsperados as $asig) {
+                    $marcacion = $turnosProcesados[$asig->id];
+                    $datosEstado = $this->determinarEstadoReporte($marcacion, $fechaObj, $hoy, $asig->horario, $emp);
+
+                    if ($datosEstado['key'] == 'programado') continue; 
+
+                    $reporte->push([
+                        'fecha' => $fechaObj->copy(),
+                        'empleado' => $emp,
+                        'sucursal' => $emp->sucursal,
+                        'horario_programado' => Carbon::parse($asig->horario->hora_ini)->format('H:i').' - '.Carbon::parse($asig->horario->hora_fin)->format('H:i'),
+                        'entrada_real' => $marcacion ? $marcacion->created_at : null,
+                        'salida_real' => ($marcacion && $marcacion->salida) ? $marcacion->salida->created_at : null,
+                        'estado_key' => $datosEstado['key'],
+                        'minutos_tarde' => $datosEstado['minutos_tarde'],
+                        'permiso_info' => $datosEstado['permiso_info'],
+                        'es_olvido_salida' => $datosEstado['es_olvido_salida']
+                    ]);
+                }
+
+                // Generar Filas para Turnos Extras
+                foreach ($marcacionesLibres as $mExtra) {
+                    $datosEstado = $this->determinarEstadoReporte($mExtra, $fechaObj, $hoy, null, $emp);
+                    $estadoKeyExtra = 'extra';
+                    
+                    if (!$mExtra->salida && !$mExtra->created_at->isToday()) $estadoKeyExtra = 'sin_cierre';
+
+                    $reporte->push([
+                        'fecha' => $fechaObj->copy(),
+                        'empleado' => $emp,
+                        'sucursal' => $emp->sucursal,
+                        'horario_programado' => 'Turno Extra',
+                        'entrada_real' => $mExtra->created_at,
+                        'salida_real' => $mExtra->salida ? $mExtra->salida->created_at : null,
+                        'estado_key' => $estadoKeyExtra,
+                        'minutos_tarde' => 0,
+                        'permiso_info' => $datosEstado['permiso_info'],
+                        'es_olvido_salida' => false
+                    ]);
+                }
+            }
+        }
+
+        // =========================================================================
+        // 4. APLICAR FILTRO DE INCIDENCIA AVANZADO
+        // =========================================================================
+        if ($request->filled('incidencia')) {
+            $filtro = $request->incidencia;
+            
+            $reporte = $reporte->filter(function ($row) use ($filtro) {
+                switch ($filtro) {
+                    case 'presente':
+                        // Solo los que llegaron puntuales y sin problemas
+                        return $row['estado_key'] === 'presente';
+                    case 'tarde_total':
+                        // Todas las llegadas tarde (con o sin permiso)
+                        return in_array($row['estado_key'], ['tarde', 'tarde_con_permiso']);
+                    case 'tarde_sin_permiso':
+                        // Llegadas tarde que NO tienen justificación
+                        return $row['estado_key'] === 'tarde';
+                    case 'ausente':
+                        // Faltas completas injustificadas
+                        return $row['estado_key'] === 'ausente';
+                    case 'con_permiso':
+                        // Cualquier registro que tenga un permiso aplicado (ausencias eximidas, llegadas tarde justificadas, etc.)
+                        return !empty($row['permiso_info']);
+                    case 'sin_cierre':
+                        // Olvidos de salida (ya sea porque no marcó nunca o porque marcó otro día)
+                        return $row['estado_key'] === 'sin_cierre' || $row['es_olvido_salida'] === true;
+                    case 'extra':
+                        // Turnos no programados
+                        return $row['estado_key'] === 'extra';
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        return $reporte->sortBy([
+            fn($a, $b) => strcmp($a['empleado']->apellidos, $b['empleado']->apellidos),
+            fn($a, $b) => $a['fecha']->timestamp <=> $b['fecha']->timestamp,
+        ])->values();
+    }
+
+    private function determinarEstadoReporte($marcacion, $fechaObj, $hoy, $horario, $emp)
+    {
+        $key = 'ausente';
+        $minutosTarde = 0;
+        $permisoInfo = null;
+        $esOlvidoSalida = false;
+
+        $permisosDelDia = $emp && $emp->relationLoaded('permisos') ? $emp->permisos->filter(fn($p) => $fechaObj->between(Carbon::parse($p->fecha_inicio), Carbon::parse($p->fecha_fin))) : collect();
+        $permisosExoneracion = $permisosDelDia->whereIn('id_tipo_permiso', [5, 6]);
+        $tieneExoneracion = $permisosExoneracion->isNotEmpty();
+
+        if ($tieneExoneracion) {
+            $p = $permisosExoneracion->first();
+            $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio, 'hasta' => $p->fecha_fin];
+            $key = 'permiso';
+        }
+
+        if ($marcacion) {
+            $key = 'presente';
+
+            if ($marcacion->permisos->isNotEmpty()) {
+                $p = $marcacion->permisos->first();
+                $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
+            } elseif ($marcacion->salida && $marcacion->salida->permisos->isNotEmpty()) {
+                $p = $marcacion->salida->permisos->first();
+                $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
+            }
+
+            if ($marcacion->salida) {
+                $salidaReal = $marcacion->salida->created_at;
+                $esDiaDiferente = $marcacion->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
+                $esOlvidoSalida = $marcacion->salida->es_olvido || $esDiaDiferente;
+                
+                if ($horario && !$esOlvidoSalida) {
+                    $finTurno = Carbon::parse($fechaObj->format('Y-m-d') . ' ' . $horario->hora_fin);
+                    if ($horario->hora_fin < $horario->hora_ini) $finTurno->addDay();
+                    if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) $esOlvidoSalida = true;
+                }
+            } else {
+                if (!$marcacion->created_at->isToday()) $esOlvidoSalida = true;
+            }
+
+            $esTarde = $horario && $marcacion->fuera_horario;
+            if ($esTarde) {
+                $horaTeorica = Carbon::parse($fechaObj->format('Y-m-d') . ' ' . $horario->hora_ini);
+                $minutosTarde = $marcacion->created_at->diffInMinutes($horaTeorica->copy()->addMinutes($horario->tolerancia));
+            }
+
+            if ($esOlvidoSalida) {
+                $key = 'sin_cierre';
+            } elseif ($esTarde) {
+                $key = $permisoInfo ? 'tarde_con_permiso' : 'tarde';
+            } elseif ($permisoInfo || $tieneExoneracion) {
+                $key = 'permiso';
+            }
+
+            if (!$horario && !$esOlvidoSalida) $key = 'extra';
+
+        } elseif (!$tieneExoneracion) {
+            $horaInicioTurno = Carbon::parse($fechaObj->format('Y-m-d') . ' ' . ($horario ? $horario->hora_ini : '00:00'));
+            if ($fechaObj->isFuture() || ($fechaObj->isToday() && $hoy->lt($horaInicioTurno))) {
+                $key = 'programado'; 
+            } else {
+                $key = 'ausente';
+            }
+        }
+
+        return ['key' => $key, 'minutos_tarde' => $minutosTarde, 'permiso_info' => $permisoInfo, 'es_olvido_salida' => $esOlvidoSalida];
     }
 }

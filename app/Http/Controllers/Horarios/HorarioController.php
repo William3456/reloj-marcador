@@ -155,13 +155,9 @@ public function update(Request $request, string $id)
             $nuevoHistorico = HorarioHistorico::create([
                 'id_horario'      => $horario->id,
                 'tipo_horario'    => $horario->permitido_marcacion,
-                'hora_entrada'    => $horaEntradaFormat, // <--- USAR LA VARIABLE FORMATEADA
-                'hora_salida'     => $horaSalidaFormat,  // <--- USAR LA VARIABLE FORMATEADA
+                'hora_entrada'    => $horaEntradaFormat, 
+                'hora_salida'     => $horaSalidaFormat,  
                 'tolerancia'      => $horario->tolerancia,
-                // OJO: Si en tu modelo Horario tienes 'casts' => ['dias' => 'array'],
-                // entonces $horario->dias ya es array. json_encode lo convierte a string.
-                // Verifica si HorarioHistorico espera string o array (cast).
-                // Asumimos que la BD espera un TEXT/JSON string:
                 'dias'            => $horario->dias, 
                 'vigente_desde'   => now(),
                 'vigente_hasta'   => null,

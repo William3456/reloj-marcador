@@ -53,14 +53,12 @@
                     <div class="sticky top-0 z-10 bg-gray-50 py-2 mb-2 flex items-center justify-between">
                         <div>
                             <span class="text-xs font-black text-blue-800 bg-blue-100 px-3 py-1 rounded-full uppercase shadow-sm">
-                                {{ $dia['fecha']->locale('es')->isoFormat('dddd D') }}
+                                {{ $dia['fecha_obj']->locale('es')->isoFormat('dddd D') }}
                             </span>
                             <span class="ml-2 text-[10px] font-bold text-gray-500 uppercase">
-                                {{ $dia['fecha']->locale('es')->isoFormat('MMMM') }}
+                                {{ $dia['fecha_obj']->locale('es')->isoFormat('MMMM YYYY') }}
                             </span>
                         </div>
-
-                        {{-- Badge de Conteo --}}
                         <div class="px-2 py-0.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-500 shadow-sm">
                             {{ $dia['completados'] }}/{{ $dia['total_turnos'] }} Turnos
                         </div>
@@ -68,91 +66,133 @@
 
                     {{-- 2. TARJETA CONTENEDORA --}}
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        @if($dia['total_turnos'] == 0)
+                        @if($dia['total_turnos'] == 0 && count($dia['turnos']) == 0)
                             <div class="p-8 text-center">
                                 <div class="w-12 h-12 bg-blue-50 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
                                     <i class="fa-regular fa-calendar-check text-xl"></i>
                                 </div>
-                                <h3 class="text-sm font-bold text-gray-800">No hay turnos asignados</h3>
-                                <p class="text-xs text-gray-500 mt-1">Este día no tienes horarios laborales programados.</p>
+                                <h3 class="text-sm font-bold text-gray-800">Día Libre</h3>
+                                <p class="text-xs text-gray-500 mt-1">No hay registros ni turnos programados.</p>
                             </div>
-
                         @else
-                            @foreach($dia['detalles'] as $index => $turno)
+                            @foreach($dia['turnos'] as $index => $t)
+                                @php
+                                    $m = $t->marcacion;
+                                    $h = $t->horario;
+                                @endphp
 
-                                {{-- SEPARADOR DE TURNO --}}
-                                <div class="bg-gray-50/50 px-4 py-1.5 border-b border-gray-100 border-t {{ $index == 0 ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                        Turno {{ $index + 1 }} • {{ substr($turno['horario_info']->hora_ini, 0, 5) }} -
-                                        {{ substr($turno['horario_info']->hora_fin, 0, 5) }}
+                                {{-- SEPARADOR DE TURNO (Con color inteligente) --}}
+                                <div class="px-4 py-2 border-b border-t border-gray-100 flex justify-between items-center {{ str_contains($t->estado->clase, 'blue') ? 'bg-blue-50/50' : 'bg-gray-50/50' }}">
+                                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                        @if($h)
+                                            <i class="fa-regular fa-clock mr-1"></i> Turno {{ $index + 1 }} • {{ substr($h->hora_ini, 0, 5) }} - {{ substr($h->hora_fin, 0, 5) }}
+                                        @else
+                                            <i class="fa-solid fa-plus mr-1"></i> Turno Extra
+                                        @endif
                                     </span>
-                                    @if($turno['estado'] == 'perdido')
-                                        <span class="text-[9px] font-bold text-red-500 bg-red-50 px-2 rounded-full">AUSENTE</span>
-                                    @endif
+                                    <span class="text-[9px] font-bold px-2 py-0.5 rounded border {{ $t->estado->clase }}">
+                                        {{ $t->estado->texto }}
+                                    </span>
                                 </div>
 
-                                {{-- CASO A: TURNO COMPLETADO --}}
-                                @if($turno['estado'] == 'completado')
-
-                                    {{-- 1. SALIDA --}}
-                                    @if($turno['salida'])
-                                        @php
-                                            // Recolector dinámico de Badges para Salida
-                                            $badgesSalida = [];
-                                            if($turno['salida']->fuera_horario) { 
-                                                $badgesSalida[] = ['texto' => 'Olvido/Extra', 'color' => 'bg-red-100 text-red-700 border-red-200']; 
+                                {{-- SI HAY MARCACIÓN (Dibujar Entrada y Salida) --}}
+                                @if($m)
+                                    
+                                    {{-- FILA ENTRADA --}}
+                                    @php
+                                        $esEntradaTarde = $m->fuera_horario;
+                                        $badgesEntrada = [];
+                                        if($esEntradaTarde) $badgesEntrada[] = ['texto' => 'Tarde', 'color' => 'bg-orange-100 text-orange-700 border-orange-200']; 
+                                        
+                                        $textosPermisosEntrada = '';
+                                        if(isset($m->permisos)) {
+                                            foreach($m->permisos as $permiso) {
+                                                $badgesEntrada[] = ['texto' => $permiso->tipoPermiso->nombre, 'color' => 'bg-blue-100 text-blue-700 border-blue-200'];
                                             }
-                                            if(isset($turno['permisos_salida'])) {
-                                                foreach($turno['permisos_salida'] as $permiso) {
+                                            $textosPermisosEntrada = $m->permisos->map(fn($p) => $p->tipoPermiso->nombre . ($p->motivo ? ' - ' . $p->motivo : ''))->implode(' | ');
+                                        }
+
+                                        $badgesEntradaHtml = implode('', array_map(fn($b) => '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>', $badgesEntrada));
+                                    @endphp
+
+                                    <div onclick="abrirDetalle(this)"
+                                        class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
+                                        data-tipo="Entrada" 
+                                        data-hora="{{ $m->created_at->format('h:i A') }}"
+                                        data-fecha="{{ $m->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
+                                        data-sucursal="{{ $m->sucursal->nombre ?? 'Ubicación GPS' }}"
+                                        data-foto="{{ Storage::url($m->ubi_foto) }}"
+                                        data-lat="{{ $m->latitud }}" 
+                                        data-lng="{{ $m->longitud }}"
+                                        data-badges="{{ $badgesEntradaHtml }}"
+                                        data-permiso-txt="{{ $textosPermisosEntrada }}">
+
+                                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $esEntradaTarde ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600' }}">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                        </div>
+
+                                        <div class="ml-4 flex-grow">
+                                            <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
+                                                <p class="text-sm font-bold text-gray-800 mr-1">Entrada</p>
+                                                {!! $badgesEntradaHtml !!}
+                                            </div>
+                                            <p class="text-xs text-gray-500">{{ $m->created_at->format('h:i A') }} • {{ $m->sucursal->nombre ?? 'GPS' }}</p>
+                                        </div>
+                                        <div class="text-gray-300"><i class="fa-solid fa-chevron-right"></i></div>
+                                    </div>
+
+                                    {{-- FILA SALIDA --}}
+                                    @if($m->salida)
+                                        @php
+                                            $salidaReal = $m->salida->created_at;
+                                            $esDiaDiferente = $m->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
+                                            $esOlvidoSalida = $m->salida->es_olvido || $esDiaDiferente;
+                                            
+                                            if ($h && !$esOlvidoSalida) {
+                                                $finTurno = \Carbon\Carbon::parse($dia['fecha_obj']->format('Y-m-d') . ' ' . $h->hora_fin);
+                                                if ($h->hora_fin < $h->hora_ini) $finTurno->addDay();
+                                                if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) $esOlvidoSalida = true;
+                                            }
+
+                                            $badgesSalida = [];
+                                            if($esOlvidoSalida) $badgesSalida[] = ['texto' => 'Olvido', 'color' => 'bg-red-100 text-red-700 border-red-200']; 
+                                            if($esDiaDiferente) $badgesSalida[] = ['texto' => $salidaReal->format('d M'), 'color' => 'bg-red-600 text-white shadow-sm border-red-700']; 
+
+                                            $textosPermisosSalida = '';
+                                            if(isset($m->salida->permisos)) {
+                                                foreach($m->salida->permisos as $permiso) {
                                                     $badgesSalida[] = ['texto' => $permiso->tipoPermiso->nombre, 'color' => 'bg-blue-100 text-blue-700 border-blue-200'];
                                                 }
-                                            }
-                                            $badgesSalidaHtml = '';
-                                            foreach($badgesSalida as $b) {
-                                                $badgesSalidaHtml .= '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>';
+                                                $textosPermisosSalida = $m->salida->permisos->map(fn($p) => $p->tipoPermiso->nombre . ($p->motivo ? ' - ' . $p->motivo : ''))->implode(' | ');
                                             }
 
-                                            // Texto para el modal
-                                            $textosPermisosSalida = $turno['permisos_salida']->map(function($p) {
-                                                return $p->tipoPermiso->nombre . ($p->motivo ? ' - ' . $p->motivo : '');
-                                            })->implode(' | ');
+                                            $badgesSalidaHtml = implode('', array_map(fn($b) => '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>', $badgesSalida));
                                         @endphp
 
                                         <div onclick="abrirDetalle(this)"
-                                            class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
+                                            class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50 {{ $esDiaDiferente ? 'bg-red-50/20' : '' }}"
                                             data-tipo="Salida" 
-                                            data-hora="{{ $turno['salida']->created_at->format('h:i A') }}"
-                                            data-fecha="{{ $turno['salida']->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
-                                            data-sucursal="{{ $turno['salida']->sucursal->nombre ?? 'Ubicación GPS' }}"
-                                            data-foto="{{ Storage::url($turno['salida']->ubi_foto) }}"
-                                            data-lat="{{ $turno['salida']->latitud }}" 
-                                            data-lng="{{ $turno['salida']->longitud }}"
+                                            data-hora="{{ $salidaReal->format('h:i A') . ($esDiaDiferente ? ' ('.$salidaReal->format('d/m').')' : '') }}"
+                                            data-fecha="{{ $salidaReal->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
+                                            data-sucursal="{{ $m->salida->sucursal->nombre ?? 'Ubicación GPS' }}"
+                                            data-foto="{{ Storage::url($m->salida->ubi_foto) }}"
+                                            data-lat="{{ $m->salida->latitud }}" 
+                                            data-lng="{{ $m->salida->longitud }}"
                                             data-badges="{{ $badgesSalidaHtml }}"
                                             data-permiso-txt="{{ $textosPermisosSalida }}">
 
-                                            <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-red-100 text-red-600">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                                </svg>
+                                            <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $esOlvidoSalida ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600' }}">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                                             </div>
 
                                             <div class="ml-4 flex-grow">
                                                 <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
                                                     <p class="text-sm font-bold text-gray-800 mr-1">Salida</p>
-                                                    @foreach($badgesSalida as $badge)
-                                                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $badge['color'] }}">
-                                                            {{ $badge['texto'] }}
-                                                        </span>
-                                                    @endforeach
+                                                    {!! $badgesSalidaHtml !!}
                                                 </div>
-                                                <p class="text-xs text-gray-500">
-                                                    {{ $turno['salida']->created_at->format('h:i A') }} •
-                                                    {{ $turno['salida']->sucursal->nombre ?? 'GPS' }}
-                                                </p>
+                                                <p class="text-xs text-gray-500">{{ $salidaReal->format('h:i A') }} • {{ $m->salida->sucursal->nombre ?? 'GPS' }}</p>
                                             </div>
-                                            <div class="text-gray-300">
-                                                <i class="fa-solid fa-chevron-right"></i>
-                                            </div>
+                                            <div class="text-gray-300"><i class="fa-solid fa-chevron-right"></i></div>
                                         </div>
                                     @else
                                         {{-- SALIDA PENDIENTE --}}
@@ -162,97 +202,30 @@
                                             </div>
                                             <div class="ml-4 flex-grow">
                                                 <p class="text-sm font-bold text-gray-400">Salida pendiente</p>
-                                                <p class="text-[10px] text-gray-400 italic">No se registró salida</p>
+                                                <p class="text-[10px] text-gray-400 italic">En turno o sin registrar</p>
                                             </div>
                                         </div>
                                     @endif
 
-                                    {{-- 2. ENTRADA --}}
-                                    @php
-                                        // Recolector dinámico de Badges para Entrada
-                                        $badgesEntrada = [];
-                                        if($turno['entrada']->fuera_horario) { 
-                                            $badgesEntrada[] = ['texto' => 'Tarde', 'color' => 'bg-orange-100 text-orange-700 border-orange-200']; 
-                                        }
-                                        if(isset($turno['permisos_entrada'])) {
-                                            foreach($turno['permisos_entrada'] as $permiso) {
-                                                $badgesEntrada[] = ['texto' => $permiso->tipoPermiso->nombre, 'color' => 'bg-blue-100 text-blue-700 border-blue-200'];
-                                            }
-                                        }
-                                        $badgesEntradaHtml = '';
-                                        foreach($badgesEntrada as $b) {
-                                            $badgesEntradaHtml .= '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>';
-                                        }
-
-                                        // Texto para el modal
-                                        $textosPermisosEntrada = $turno['permisos_entrada']->map(function($p) {
-                                            return $p->tipoPermiso->nombre . ($p->motivo ? ' - ' . $p->motivo : '');
-                                        })->implode(' | ');
-                                    @endphp
-
-                                    <div onclick="abrirDetalle(this)"
-                                        class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
-                                        data-tipo="Entrada" 
-                                        data-hora="{{ $turno['entrada']->created_at->format('h:i A') }}"
-                                        data-fecha="{{ $turno['entrada']->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
-                                        data-sucursal="{{ $turno['entrada']->sucursal->nombre ?? 'Ubicación GPS' }}"
-                                        data-foto="{{ Storage::url($turno['entrada']->ubi_foto) }}"
-                                        data-lat="{{ $turno['entrada']->latitud }}" 
-                                        data-lng="{{ $turno['entrada']->longitud }}"
-                                        data-badges="{{ $badgesEntradaHtml }}"
-                                        data-permiso-txt="{{ $textosPermisosEntrada }}">
-
-                                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                                            </svg>
+                                @else
+                                    {{-- NO HAY MARCACIÓN (Perdido, Futuro o Permiso Total) --}}
+                                    <div class="flex items-center p-4 {{ str_contains($t->estado->clase, 'red') ? 'bg-red-50' : (str_contains($t->estado->clase, 'blue') ? 'bg-blue-50/30' : 'opacity-50') }}">
+                                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ str_contains($t->estado->clase, 'red') ? 'bg-white text-red-400 shadow-sm' : 'bg-gray-100 text-gray-400' }}">
+                                            @if(str_contains($t->estado->clase, 'blue'))
+                                                <i class="fa-solid fa-file-shield text-blue-500"></i>
+                                            @elseif(str_contains($t->estado->clase, 'red'))
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                            @else
+                                                <i class="fa-regular fa-calendar"></i>
+                                            @endif
                                         </div>
-
                                         <div class="ml-4 flex-grow">
-                                            <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
-                                                <p class="text-sm font-bold text-gray-800 mr-1">Entrada</p>
-                                                @foreach($badgesEntrada as $badge)
-                                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $badge['color'] }}">
-                                                        {{ $badge['texto'] }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-
-                                            <p class="text-xs text-gray-500">
-                                                {{ $turno['entrada']->created_at->format('h:i A') }} •
-                                                {{ $turno['entrada']->sucursal->nombre ?? 'GPS' }}
+                                            <p class="text-sm font-bold {{ str_contains($t->estado->clase, 'red') ? 'text-red-700' : (str_contains($t->estado->clase, 'blue') ? 'text-blue-700' : 'text-gray-500') }}">
+                                                {{ str_contains($t->estado->clase, 'red') ? 'Turno Perdido' : (str_contains($t->estado->clase, 'blue') ? 'Día Exonerado' : 'Programado') }}
                                             </p>
-                                        </div>
-                                        <div class="text-gray-300">
-                                            <i class="fa-solid fa-chevron-right"></i>
-                                        </div>
-                                    </div>
-
-                                {{-- CASO B: TURNO PERDIDO --}}
-                                @elseif($turno['estado'] == 'perdido')
-                                    <div class="flex items-center p-4 bg-red-50 border-b border-red-100">
-                                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-white text-red-400 shadow-sm">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                            </svg>
-                                        </div>
-                                        <div class="ml-4 flex-grow">
-                                            <p class="text-sm font-bold text-red-700">Turno Perdido</p>
-                                            <p class="text-[10px] text-red-500">
-                                                No asististe al turno de {{ substr($turno['horario_info']->hora_ini, 0, 5) }}
+                                            <p class="text-[10px] {{ str_contains($t->estado->clase, 'red') ? 'text-red-500' : 'text-gray-400' }}">
+                                                {{ str_contains($t->estado->clase, 'red') ? 'No asististe' : 'Sin registros de GPS/Foto' }}
                                             </p>
-                                        </div>
-                                    </div>
-
-                                {{-- CASO C: FUTURO --}}
-                                @elseif($turno['estado'] == 'pendiente')
-                                    <div class="flex items-center p-4 opacity-50">
-                                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-gray-100 text-gray-400">
-                                            <i class="fa-regular fa-calendar"></i>
-                                        </div>
-                                        <div class="ml-4 flex-grow">
-                                            <p class="text-sm font-bold text-gray-500">Programado</p>
-                                            <p class="text-xs text-gray-400">Turno futuro</p>
                                         </div>
                                     </div>
                                 @endif
@@ -265,8 +238,7 @@
                 <div class="text-center py-20">
                     <div class="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
                     <p class="text-gray-500 font-medium">No hay registros en este rango.</p>

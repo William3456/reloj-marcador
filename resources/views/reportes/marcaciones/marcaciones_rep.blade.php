@@ -10,69 +10,71 @@
 
             <div class="bg-white shadow rounded-lg p-6">
 
-                {{-- SECCIÓN 1: FILTROS --}}
+                
+                {{-- SECCIÓN 1: FILTROS AVANZADOS --}}
                 <form method="GET" class="mb-6 border-b border-gray-100 pb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        {{-- Rango Fechas --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        
+                        {{-- Fechas --}}
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Desde</label>
-                            <input type="date" name="desde" value="{{ request('desde') ?? date('Y-m-01') }}"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <input type="date" name="desde" value="{{ request('desde') ?? date('Y-m-01') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hasta</label>
-                            <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                         </div>
 
-                        {{-- Sucursal --}}
+                        {{-- Empleado y Sucursal --}}
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sucursal</label>
-                            <select name="sucursal"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-                                <option value="">Todas</option>
+                            <select name="sucursal" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                <option value="">Todas las sucursales</option>
                                 @foreach($sucursales as $suc)
-                                    <option value="{{ $suc->id }}" {{ request('sucursal') == $suc->id ? 'selected' : '' }}>
-                                        {{ $suc->nombre }}</option>
+                                    <option value="{{ $suc->id }}" {{ request('sucursal') == $suc->id ? 'selected' : '' }}>{{ $suc->nombre }}</option>
                                 @endforeach
                             </select>
                         </div>
-
-                        {{-- Empleado --}}
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Empleado</label>
-                            <select name="empleado"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-                                <option value="">Todos</option>
+                            <select name="empleado" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                <option value="">Todos los empleados</option>
                                 @foreach($empleadosList as $emp)
-                                    <option value="{{ $emp->id }}" {{ request('empleado') == $emp->id ? 'selected' : '' }}>
-                                        {{ $emp->nombres }} {{ $emp->apellidos }}</option>
+                                    <option value="{{ $emp->id }}" {{ request('empleado') == $emp->id ? 'selected' : '' }}>{{ $emp->nombres }} {{ $emp->apellidos }}</option>
                                 @endforeach
                             </select>
                         </div>
-                    </div>
 
-                    <div class="mt-4 flex justify-between items-center">
-                        <div class="w-1/3">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Estado</label>
-                            <select name="incidencia" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                                <option value="">Todos (Presentes y Ausentes)</option>
-                                <option value="asistencia_ok" {{ request('incidencia') == 'asistencia_ok' ? 'selected' : '' }}>Puntuales</option>
-                                <option value="tarde" {{ request('incidencia') == 'tarde' ? 'selected' : '' }}>Tardanzas
-                                </option>
-                                <option value="ausente" {{ request('incidencia') == 'ausente' ? 'selected' : '' }}>
-                                    Ausencias</option>
-                                <option value="sin_cierre" {{ request('incidencia') == 'sin_cierre' ? 'selected' : '' }}>
-                                    Sin Salida</option>
+                        {{-- NUEVO: FILTRO AVANZADO DE INCIDENCIAS --}}
+                        <div class="md:col-span-2 lg:col-span-3">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Filtrar por Estado / Incidencia</label>
+                            <select name="incidencia" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-gray-50">
+                                <option value="">📋 Mostrar Todos los Registros</option>
+                                
+                                <optgroup label="✅ Asistencias">
+                                    <option value="presente" {{ request('incidencia') == 'presente' ? 'selected' : '' }}>Asistencia Perfecta (Puntual)</option>
+                                    <option value="extra" {{ request('incidencia') == 'extra' ? 'selected' : '' }}>Turnos Extras</option>
+                                </optgroup>
+                                
+                                <optgroup label="⚠️ Impuntualidad y Faltas">
+                                    <option value="tarde_total" {{ request('incidencia') == 'tarde_total' ? 'selected' : '' }}>Llegadas Tarde (Todas)</option>
+                                    <option value="tarde_sin_permiso" {{ request('incidencia') == 'tarde_sin_permiso' ? 'selected' : '' }}>Llegadas Tarde Injustificadas</option>
+                                    <option value="ausente" {{ request('incidencia') == 'ausente' ? 'selected' : '' }}>Ausencias Injustificadas</option>
+                                </optgroup>
+
+                                <optgroup label="📝 Observaciones y Permisos">
+                                    <option value="con_permiso" {{ request('incidencia') == 'con_permiso' ? 'selected' : '' }}>Justificados (Con Permisos Aplicados)</option>
+                                    <option value="sin_cierre" {{ request('incidencia') == 'sin_cierre' ? 'selected' : '' }}>Olvidos de Salida / Cierres Atrasados</option>
+                                </optgroup>
                             </select>
                         </div>
-                        <div class="flex gap-2">
-                            <button type="submit"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow text-sm flex items-center">
+
+                        {{-- Botones --}}
+                        <div class="flex items-end justify-end gap-2 md:col-span-2 lg:col-span-1">
+                            <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded shadow text-sm flex items-center justify-center transition-colors">
                                 <i class="fa-solid fa-filter mr-2"></i> Filtrar
                             </button>
-                            <button type="button" onclick="openPdfModal()"
-                                class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow text-sm flex items-center">
+                            <button type="button" onclick="openPdfModal()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded shadow text-sm flex items-center justify-center transition-colors">
                                 <i class="fa-solid fa-file-pdf mr-2"></i> PDF
                             </button>
                         </div>
@@ -138,13 +140,11 @@
                                                     $bgRow = 'hover:bg-gray-50';
                                                     $estadoHtml = '<span class="text-green-600 font-bold text-xs">OK</span>';
 
-                                                    // --- Lógica de Estados Actualizada ---
                                                     switch ($turno['estado_key']) {
                                                         case 'ausente':
                                                             $bgRow = 'bg-red-50 hover:bg-red-100';
                                                             $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">AUSENTE</span>';
                                                             break;
-
                                                         case 'tarde':
                                                             $bgRow = 'bg-orange-50 hover:bg-orange-100';
                                                             $minTotal = abs(round($turno['minutos_tarde']));
@@ -153,22 +153,31 @@
                                                             $textoTiempo = $horas > 0 ? "+{$horas}h {$minutos}m" : "+{$minTotal} min";
                                                             $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">TARDE (' . $textoTiempo . ')</span>';
                                                             break;
-
                                                         case 'tarde_con_permiso':
                                                             $bgRow = 'bg-orange-50/50 hover:bg-orange-100';
                                                             $minTotal = abs(round($turno['minutos_tarde']));
-                                                            $textoTiempo = $minTotal . "m"; // Simplificado para que quepa
+                                                            $textoTiempo = $minTotal . "m"; 
                                                             $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">RETARDO (' . $textoTiempo . ')</span>';
                                                             break;
-
                                                         case 'permiso':
                                                             $bgRow = 'bg-blue-50 hover:bg-blue-100';
                                                             $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">PERMISO</span>';
                                                             break;
-
                                                         case 'sin_cierre':
-                                                            $bgRow = 'bg-yellow-50 hover:bg-yellow-100';
-                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">SIN SALIDA</span>';
+                                                            if ($turno['salida_real']) {
+                                                                $bgRow = 'bg-red-50 hover:bg-red-100';
+                                                                $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200" title="Cerró fuera de tiempo permitido">CIERRE ATRASADO</span>';
+                                                            } else {
+                                                                $bgRow = 'bg-yellow-50 hover:bg-yellow-100';
+                                                                $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">SIN SALIDA</span>';
+                                                            }
+                                                            break;
+                                                        case 'extra':
+                                                            $bgRow = 'bg-purple-50 hover:bg-purple-100';
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">TURNO EXTRA</span>';
+                                                            break;
+                                                        case 'presente':
+                                                            $estadoHtml = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">ASISTENCIA</span>';
                                                             break;
                                                     }
                                                 @endphp
@@ -176,17 +185,13 @@
                                                 <tr class="{{ $bgRow }}">
                                                     {{-- Fecha --}}
                                                     <td class="px-4 py-2 whitespace-nowrap">
-                                                        <div class="text-sm font-medium text-gray-900">
-                                                            {{ $turno['fecha']->format('d/m') }}</div>
-                                                        <div class="text-xs text-gray-500 capitalize">
-                                                            {{ $turno['fecha']->locale('es')->isoFormat('dddd') }}</div>
+                                                        <div class="text-sm font-medium text-gray-900">{{ $turno['fecha']->format('d/m/Y') }}</div>
+                                                        <div class="text-xs text-gray-500 capitalize">{{ $turno['fecha']->locale('es')->isoFormat('dddd') }}</div>
                                                     </td>
 
                                                     {{-- Turno --}}
                                                     <td class="px-4 py-2 text-center">
-                                                        <span class="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-600 border border-gray-200">
-                                                            {{ $turno['horario_programado'] }}
-                                                        </span>
+                                                        <span class="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-600 border border-gray-200">{{ $turno['horario_programado'] }}</span>
                                                     </td>
 
                                                     {{-- Entrada --}}
@@ -198,10 +203,13 @@
                                                         @endif
                                                     </td>
 
-                                                    {{-- Salida --}}
+                                                    {{-- Salida (Aquí está la magia del OLVIDO visual) --}}
                                                     <td class="px-4 py-2 text-center text-sm">
                                                         @if($turno['salida_real'])
                                                             <span class="font-bold text-gray-700">{{ $turno['salida_real']->format('H:i') }}</span>
+                                                            @if($turno['es_olvido_salida'])
+                                                                <br><span class="inline-block mt-0.5 text-[9px] text-red-500 font-bold bg-red-50 border border-red-100 px-1 rounded shadow-sm">OLVIDO</span>
+                                                            @endif
                                                         @else
                                                             <span class="text-gray-300">--:--</span>
                                                         @endif
@@ -212,25 +220,18 @@
                                                         {!! $estadoHtml !!}
                                                     </td>
 
-                                                    {{-- Incidencia / Notas (NUEVA COLUMNA) --}}
+                                                    {{-- Incidencia / Notas --}}
                                                     <td class="px-4 py-2 text-left">
                                                         @if(!empty($turno['permiso_info']))
                                                             <div class="bg-white/60 border border-blue-200 rounded p-1.5 shadow-sm inline-block max-w-xs">
                                                                 <div class="text-[10px] font-bold text-blue-700 leading-tight flex items-center gap-1">
-                                                                    <i class="fa-solid fa-file-contract"></i> 
-                                                                    {{ $turno['permiso_info']['tipo'] }}
+                                                                    <i class="fa-solid fa-file-contract"></i> {{ $turno['permiso_info']['tipo'] }}
                                                                 </div>
-                                                                
                                                                 @if($turno['permiso_info']['motivo'])
-                                                                    <div class="text-[9px] text-gray-600 italic mt-0.5 truncate max-w-[150px]" title="{{ $turno['permiso_info']['motivo'] }}">
-                                                                        "{{ $turno['permiso_info']['motivo'] }}"
-                                                                    </div>
+                                                                    <div class="text-[9px] text-gray-600 italic mt-0.5 truncate max-w-[150px]" title="{{ $turno['permiso_info']['motivo'] }}">"{{ $turno['permiso_info']['motivo'] }}"</div>
                                                                 @endif
-
                                                                 <div class="text-[8px] text-gray-400 mt-0.5">
-                                                                    Vigencia: 
-                                                                    {{ \Carbon\Carbon::parse($turno['permiso_info']['desde'])->format('d/m') }} - 
-                                                                    {{ \Carbon\Carbon::parse($turno['permiso_info']['hasta'])->format('d/m') }}
+                                                                    Vigencia: {{ \Carbon\Carbon::parse($turno['permiso_info']['desde'])->format('d/m') }} - {{ \Carbon\Carbon::parse($turno['permiso_info']['hasta'])->format('d/m') }}
                                                                 </div>
                                                             </div>
                                                         @endif

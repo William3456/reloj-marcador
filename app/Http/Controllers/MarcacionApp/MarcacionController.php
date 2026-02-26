@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Empleado\Empleado;
 use App\Models\Horario\horario;
 use App\Models\Horario\HorarioHistorico;
+use App\Models\HorarioEmpleado\HorarioEmpleado;
 use App\Models\Marcacion\MarcacionEmpleado;
 use App\Models\Permiso\Permiso;
 use App\Models\Sucursales\Sucursal;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -21,436 +23,353 @@ use Intervention\Image\ImageManager;
 
 class MarcacionController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function __construct()
     {
         // =========================================================================
         // 🧪 ZONA DE PRUEBAS - NIVEL DE CLASE
-        // Descomenta una línea para que TODAS las funciones del controlador
-        // crean que es esa hora.
         // =========================================================================
-
-        // 🕒 ESCENARIO 1: Salida Correcta (5:15 PM hoy)
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
-
-        // 🕒 ESCENARIO 2: Salida OLVIDADA (8:30 PM hoy)
-        // Carbon::setTestNow(now()->setTime( 8, 0, 0));
-
-        // 🕒 ESCENARIO 3: Salida Temprana (3:00 PM hoy)
-        // \Carbon\Carbon::setTestNow(now()->setTime(15, 0, 0));
-
-        // 🕒 ESCENARIO 4: Mañana a las 8:00 AM //martes = 10
-        // Carbon::setTestNow(now()->addDay(3)->setTime( 13,0, 0));
-
+        //Carbon::setTestNow(now()->addDay(2)->setTime(17, 00, 0));
     }
+
+    // =========================================================================
+    // 1. PANEL ADMINISTRATIVO (Recursos Humanos)
+    // =========================================================================
 
     public function indexPanel(Request $request)
     {
-        // 1. Obtener datos auxiliares para los filtros (Selects)
-        $sucursales = Sucursal::visiblePara(Auth::user())
-            ->where('estado', 1)
-            ->get();
+        $hoy = Carbon::now();
+        $desde = $request->input('desde') ? Carbon::parse($request->input('desde'))->startOfDay() : $hoy->copy()->startOfDay();
+        $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : $hoy->copy()->endOfDay();
+        $estadoFiltro = $request->get('estado');
 
-        $empleadosList = Empleado::where('estado', 1)
-            ->orderBy('nombres')
-            ->get();
+        $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
+        $empleadosList = Empleado::where('estado', 1)->orderBy('nombres')->get();
 
-// 2. Construir la consulta principal
-        $query = MarcacionEmpleado::visiblePara(Auth::user())
-            ->with([
-                'empleado',
-                'sucursal',
-                'salida',
-                'permisos.tipoPermiso',        // <-- CORREGIDO AL PLURAL
-                'salida.permisos.tipoPermiso', // <-- CORREGIDO AL PLURAL
-            ])
-            ->where('tipo_marcacion', 1);
+        $empleadosEvaluar = $this->obtenerEmpleadosFiltrados($request, $desde, $hasta);
+        $empleadosIds = $empleadosEvaluar->pluck('id');
 
-        // ... (Tus filtros existentes: Empleado, Estado, Fechas) ...
-        if ($request->has('empleado') && $request->empleado != '') {
-            $query->whereHas('empleado', function ($q) use ($request) {
-                $q->where('nombres', 'like', '%'.$request->empleado.'%')
-                    ->orWhere('apellidos', 'like', '%'.$request->empleado.'%');
-            });
+        // Pre-cargas para optimizar consultas a la base de datos
+        $historialHorariosTodos = HorarioEmpleado::with('horario')->whereIn('id_empleado', $empleadosIds)->get()->groupBy('id_empleado');
+        $marcacionesReales = $this->obtenerMarcacionesEnRango($empleadosIds, $desde, $hasta);
+        $periodo = CarbonPeriod::create($desde, $hasta);
+
+        $datosAgrupados = [];
+
+        foreach ($empleadosEvaluar as $emp) {
+            $horariosDelEmpleado = $historialHorariosTodos->get($emp->id, collect());
+            $marcacionesDelEmpleado = $marcacionesReales->get($emp->id, collect())->groupBy(fn ($m) => $m->created_at->format('Y-m-d'));
+
+            // Llamada al MOTOR CORE UNIFICADO
+            $fechasProcesadas = $this->procesarDiasHistorial($emp, $horariosDelEmpleado, $marcacionesDelEmpleado, $periodo, $hoy, $estadoFiltro, false);
+
+            if (! empty($fechasProcesadas)) {
+                $datosAgrupados[] = [
+                    'empleado' => $emp,
+                    'fechas' => $fechasProcesadas,
+                ];
+            }
         }
 
-        // Filtro por Sucursal (¡Faltaba agregarlo a la query!)
-        if ($request->filled('sucursal')) {
-            $query->where('id_sucursal', $request->sucursal);
-        }
-
-        if ($request->get('estado') == 'sin_cierre') {
-            $query->doesntHave('salida');
-        }
-
-        $desde = $request->input('desde', date('Y-m-d')); // Cambiado a date('Y-m-d') para que por defecto sea hoy, no inicio de mes
-        $hasta = $request->input('hasta', date('Y-m-d'));
-
-        $query->whereBetween('created_at', [
-            Carbon::parse($desde)->startOfDay(),
-            Carbon::parse($hasta)->endOfDay(),
-        ]);
-
-        $marcaciones = $query->latest()->get();
-
-        // 3. Retornar vista con TODAS las variables
-        return view('marcaciones.index', compact('marcaciones', 'sucursales', 'empleadosList'));
+        return view('marcaciones.index', compact('datosAgrupados', 'sucursales', 'empleadosList'));
     }
+
+    // =========================================================================
+    // 3. APP EMPLEADO - INICIO (MARCAR)
+    // =========================================================================
 
     public function index()
     {
         $hoy = Carbon::today();
-        $user = Auth::user();
-        $empleado = $user->empleado;
+        $ahora = now();
+        $empleado = Auth::user()->empleado;
         $sucursal = $empleado->sucursal;
-        $diaSemanaHoy = Carbon::now()->locale('es')->isoFormat('dddd');
-        // ---------------------------------------------------------
-        // 0. VERIFICAR PERMISOS (NUEVO)
-        // ---------------------------------------------------------
-        $permisos = $this->validaPermisos(); // Reutilizamos tu función
-        $permisoActivo = null;
+        $diaSemanaHoy = $ahora->locale('es')->isoFormat('dddd');
 
-        // Buscamos si hay algún permiso que EXIMA de marcar
-        // (Ajusta las claves según lo que devuelve tu función validaPermisos)
-        if ($permisos['sin_marcacion']) {
-            $permisoActivo = $permisos['sin_marcacion']; // Objeto Permiso
-        } elseif ($permisos['incapacidad']) {
-            $permisoActivo = $permisos['incapacidad'];
-        }
+        // 1. Validar Permisos que Eximen
+        $permisos = $this->validaPermisos();
+        $permisoActivo = collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first();
         $historialHoy = collect();
-        // Si hay permiso activo, no necesitamos calcular nada más complejo
-        // dd();
+
         if ($permisoActivo) {
             return view('app_marcacion.inicio', compact('permisoActivo', 'historialHoy'));
         }
 
-        // =========================================================
-        // 1. OBTENER HISTORIAL DE HOY
-        // =========================================================
-            $historialHoy = MarcacionEmpleado::where('id_empleado', $empleado->id)
+        // 2. Obtener Actividad de Hoy
+        $historialHoy = MarcacionEmpleado::where('id_empleado', $empleado->id)
             ->whereDate('created_at', $hoy)
-            ->with(['sucursal', 'permisos.tipoPermiso']) // <-- EL BLINDAJE DE RENDIMIENTO
-            ->orderBy('created_at', 'desc')
+            ->with(['sucursal', 'permisos.tipoPermiso'])
+            ->orderByDesc('created_at')->orderByDesc('id')
             ->get();
 
-        $ultimoRegistro = MarcacionEmpleado::where('id_empleado', $empleado->id)
-            ->latest()->first();
+        $entradasHoyIds = $historialHoy->where('tipo_marcacion', 1)->pluck('id')->toArray();
 
-        // =========================================================
-        // 2. DETERMINAR ESTADO ACTUAL
-        // =========================================================
-        $entradaActiva = null;
-        if ($ultimoRegistro && $ultimoRegistro->tipo_marcacion == 1) {
-            $entradaActiva = $ultimoRegistro;
-        }
+        // 3. Determinar Estado Actual (Entrada Abierta)
+        $entradaActiva = MarcacionEmpleado::where('id_empleado', $empleado->id)
+            ->where('tipo_marcacion', 1)->whereDoesntHave('salida')->orderByDesc('id')->first();
 
-        // =========================================================
-        // 3. BUSCAR Y FILTRAR HORARIOS
-        // =========================================================
-        $normalizarDia = function ($dia) {
-            // 1. Convertir a limpio (miércoles -> miercoles)
-            $limpio = Str::slug($dia); // Str::slug es excelente para esto
+        // 4. Buscar Horarios Candidatos
+        $candidatos = $this->obtenerCandidatosVigentesHoy($empleado, $sucursal, $diaSemanaHoy);
 
-            // 2. Obtener las primeras 3 letras (mie)
-            return substr($limpio, 0, 3);
-        };
-
-        $hoyNorm = $normalizarDia($diaSemanaHoy);
-
-        // A. Horarios del empleado
-        $candidatosRaw = $empleado->horarios->filter(function ($h) use ($hoyNorm, $normalizarDia) {
-            $diasHorario = array_map($normalizarDia, $h->dias ?? []);
-
-            return in_array($hoyNorm, $diasHorario);
-        });
-
-        // B. Backup Sucursal
-        if ($candidatosRaw->isEmpty() && $empleado->horarios->isEmpty()) {
-            $candidatosRaw = $sucursal->horarios->filter(function ($h) use ($hoyNorm, $normalizarDia) {
-                $diasHorario = array_map($normalizarDia, $h->dias ?? []);
-
-                return in_array($hoyNorm, $diasHorario);
-            });
-        }
-
-        // C. Filtro Maestro (Cruce con Horario Sucursal)
-        $horariosSucursalHoy = $sucursal->horarios->filter(function ($h) use ($hoyNorm, $normalizarDia) {
-            $dias = array_map($normalizarDia, $h->dias ?? []);
-
-            return in_array($hoyNorm, $dias);
-        });
-
-        $candidatos = $candidatosRaw->filter(function ($horarioEmpleado) use ($horariosSucursalHoy, $hoy) {
-            if ($horariosSucursalHoy->isEmpty()) {
-                return false;
-            }
-
-            $iniEmp = Carbon::parse($hoy->format('Y-m-d').' '.$horarioEmpleado->hora_ini);
-            $finEmp = Carbon::parse($hoy->format('Y-m-d').' '.$horarioEmpleado->hora_fin);
-            if ($finEmp->lessThan($iniEmp)) {
-                $finEmp->addDay();
-            }
-
-            foreach ($horariosSucursalHoy as $hs) {
-                $iniSuc = Carbon::parse($hoy->format('Y-m-d').' '.$hs->hora_ini);
-                $finSuc = Carbon::parse($hoy->format('Y-m-d').' '.$hs->hora_fin);
-                if ($finSuc->lessThan($iniSuc)) {
-                    $finSuc->addDay();
-                }
-
-                if ($iniEmp->greaterThanOrEqualTo($iniSuc->copy()->subMinutes(30)) &&
-                    $finEmp->lessThanOrEqualTo($finSuc->copy()->addMinutes(15))) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
+        // 5. Bloqueos y Decisiones Visuales
+        $estadoJornada = $this->calcularEstadoJornadaApp($candidatos, $historialHoy, $entradasHoyIds, $entradaActiva, $hoy, $ahora);
 
         $horarioActivo = ($entradaActiva && $entradaActiva->id_horario) ? $entradaActiva->horario : null;
-
-        // =========================================================
-        // 4. VALIDACIÓN DE BLOQUEO
-        // =========================================================
         $horarioRequiereSalida = $sucursal->horarios()->where('requiere_salida', 1)->exists() ? 1 : 0;
-        $marcacionPendiente = null;
-        $mostrarModalBloqueo = false;
 
-        if ($horarioRequiereSalida == 1 && $entradaActiva && $horarioActivo) {
-            $fechaEntrada = $entradaActiva->created_at->format('Y-m-d');
-            $salidaTeorica = Carbon::parse($fechaEntrada.' '.$horarioActivo->hora_fin);
-            if (Carbon::parse($horarioActivo->hora_fin)->lessThan(Carbon::parse($horarioActivo->hora_ini))) {
-                $salidaTeorica->addDay();
-            }
-            if (now()->greaterThan($salidaTeorica->copy()->addHour())) {
-                $marcacionPendiente = $entradaActiva;
-                $mostrarModalBloqueo = true;
-            }
-        }
+        [$mostrarModalBloqueo, $marcacionPendiente] = $this->validarBloqueoSalida($horarioRequiereSalida, $entradaActiva, $horarioActivo);
 
-        // =========================================================
-        // 5. CÁLCULO DE PRÓXIMO TURNO Y ESTADO DE ENTRADA
-        // =========================================================
-        $tiempoRestante = null;
-        $proximoHorario = null;
-        $habilitarEntrada = false;
-        $jornadaTerminada = false;
-
-        if (! $entradaActiva) {
-            $ahora = now();
-            $turnoVigente = null;
-            $siguienteTurno = null;
-            $minutosParaSiguiente = PHP_INT_MAX;
-
-            // Ordenar para evaluar cronológicamente
-            $candidatos = $candidatos->sortBy('hora_ini');
-
-            foreach ($candidatos as $h) {
-                $inicio = Carbon::parse($hoy->format('Y-m-d').' '.$h->hora_ini);
-                $fin = Carbon::parse($hoy->format('Y-m-d').' '.$h->hora_fin);
-
-                if ($fin->lessThan($inicio)) {
-                    $fin->addDay();
-                }
-
-                $inicioHabilitado = $inicio->copy()->subMinutes(60); // Permitir marcar hasta 60 minutos antes del inicio
-
-                // 1. ¿Turno VIGENTE? (Dentro del rango)
-                if ($ahora->between($inicioHabilitado, $fin)) {
-                    $yaCompletado =
-                        // Debe existir una entrada hoy...
-                    $historialHoy->contains(function ($m) use ($h) {
-                        return $m->tipo_marcacion == 1 && $m->id_horario == $h->id;
-                    })
-                    &&
-                    // ...Y una salida hoy
-                    $historialHoy->contains(function ($m) use ($h) {
-                        return $m->tipo_marcacion == 2 && $m->id_horario == $h->id;
-                    });
-
-                    if (! $yaCompletado) {
-                        $turnoVigente = $h;
-                        break;
-                    }
-                }
-
-                // 2. ¿Turno FUTURO?
-                if (! $turnoVigente && $inicioHabilitado->greaterThan($ahora)) {
-                    $yaCompletado = $historialHoy->contains(function ($m) use ($h) {
-                        return $m->tipo_marcacion == 2 && $m->id_horario == $h->id;
-                    });
-
-                    if (! $yaCompletado) {
-                        $diff = $ahora->diffInMinutes($inicio);
-                        if ($diff < $minutosParaSiguiente) {
-                            $minutosParaSiguiente = $diff;
-                            $siguienteTurno = $inicio;
-                        }
-                    }
-                }
-            }
-
-            // --- TOMA DE DECISIONES VISUALES ---
-
-            if ($turnoVigente) {
-                $habilitarEntrada = true;
-                $tiempoRestante = null;
-            } elseif ($siguienteTurno) {
-                $habilitarEntrada = false;
-                $proximoHorario = $siguienteTurno;
-                $tiempoRestante = $proximoHorario->locale('es')->diffForHumans($ahora, [
-                    'parts' => 2, 'join' => true, 'syntax' => Carbon::DIFF_ABSOLUTE,
-                ]);
-            } else {
-                // CASO: NO HAY MÁS TURNOS (Ni vigentes ni futuros)
-
-                // Si hay candidatos (hubo turnos hoy) O hay historial -> Jornada Terminada
-                if ($candidatos->isNotEmpty() || $historialHoy->isNotEmpty()) {
-                    $jornadaTerminada = true;
-                    $habilitarEntrada = false;
-                } else {
-                    // Día libre
-                    $habilitarEntrada = false;
-                }
-            }
-        }
-
-        return view('app_marcacion.inicio', compact(
-            'entradaActiva', 'horarioRequiereSalida', 'mostrarModalBloqueo',
-            'marcacionPendiente', 'tiempoRestante', 'proximoHorario',
-            'habilitarEntrada', 'historialHoy', 'jornadaTerminada', 'candidatos', 'permisoActivo'
-        ));
+        return view('app_marcacion.inicio', array_merge([
+            'entradaActiva' => $entradaActiva,
+            'horarioRequiereSalida' => $horarioRequiereSalida,
+            'mostrarModalBloqueo' => $mostrarModalBloqueo,
+            'marcacionPendiente' => $marcacionPendiente,
+            'historialHoy' => $historialHoy,
+            'candidatos' => $candidatos,
+            'permisoActivo' => $permisoActivo,
+        ], $estadoJornada));
     }
+
+    // =========================================================================
+    // 4. MOTOR CORE DE HISTORIAL (Compartido por Admin y Empleado)
+    // =========================================================================
+
+    private function procesarDiasHistorial($empleado, $turnosAsignados, $marcacionesDelEmpleado, $periodo, $hoy, $estadoFiltro = null, $incluirHoyVacio = false)
+    {
+        $diasProcesados = [];
+
+        foreach ($periodo as $fechaObj) {
+            $fechaStr = $fechaObj->format('Y-m-d');
+            $diaSemana = Str::slug($fechaObj->locale('es')->isoFormat('dddd'));
+
+            // A) Turnos programados
+            $turnosEsperados = $turnosAsignados->filter(function ($asig) use ($fechaStr, $diaSemana) {
+                $inicioValido = empty($asig->fecha_inicio) || $asig->fecha_inicio <= $fechaStr;
+                $finValido = empty($asig->fecha_fin) || $asig->fecha_fin >= $fechaStr;
+                if (! $inicioValido || ! $finValido || ! $asig->horario || empty($asig->horario->dias)) {
+                    return false;
+                }
+
+                return in_array($diaSemana, array_map(fn ($d) => Str::slug($d), $asig->horario->dias));
+            })->sortBy(fn ($asig) => $asig->horario->hora_ini);
+
+            $marcacionesDelDia = $marcacionesDelEmpleado->get($fechaStr, collect());
+            $marcacionesLibres = collect($marcacionesDelDia->all());
+            $turnosProcesados = [];
+            $turnosDelDia = collect();
+
+            // RONDA 1: Match Exacto (Histórico o Normal)
+            foreach ($turnosEsperados as $asig) {
+                $marcacion = $marcacionesLibres->first(function ($m) use ($asig) {
+                    if ($m->id_horario_historico_empleado && $asig->id_horario_historico) {
+                        return $m->id_horario_historico_empleado == $asig->id_horario_historico;
+                    }
+                    if ($m->id_horario && $asig->id_horario) {
+                        return $m->id_horario == $asig->id_horario;
+                    }
+
+                    return false;
+                });
+                if ($marcacion) {
+                    $turnosProcesados[$asig->id] = $marcacion;
+                    $marcacionesLibres = $marcacionesLibres->reject(fn ($m) => $m->id == $marcacion->id);
+                } else {
+                    $turnosProcesados[$asig->id] = null;
+                }
+            }
+
+            // RONDA 2: Match Proximidad (Fallback 5 horas)
+            foreach ($turnosEsperados as $asig) {
+                if (is_null($turnosProcesados[$asig->id]) && $marcacionesLibres->isNotEmpty()) {
+                    $horaInicioTurno = Carbon::parse($fechaStr.' '.$asig->horario->hora_ini);
+                    $marcacionCercana = $marcacionesLibres->sortBy(fn ($m) => abs($m->created_at->diffInMinutes($horaInicioTurno)))->first();
+                    if (abs($marcacionCercana->created_at->diffInMinutes($horaInicioTurno)) <= 300) {
+                        $turnosProcesados[$asig->id] = $marcacionCercana;
+                        $marcacionesLibres = $marcacionesLibres->reject(fn ($m) => $m->id == $marcacionCercana->id);
+                    }
+                }
+            }
+
+            $completados = 0;
+
+            // Construir Tarjetas Programadas
+            foreach ($turnosEsperados as $asig) {
+                $marcacion = $turnosProcesados[$asig->id];
+                $estado = $this->determinarEstadoVisual($marcacion, $fechaObj, $hoy, $asig->horario, $empleado);
+
+                if ($estadoFiltro == 'sin_cierre' && ! in_array($estado->texto, ['Sin Salida', 'En Turno'])) {
+                    continue;
+                }
+                if (str_contains($estado->texto, 'Completado') || $estado->texto === 'Permiso Aprobado') {
+                    $completados++;
+                }
+
+                $turnosDelDia->push((object) ['horario' => $asig->horario, 'marcacion' => $marcacion, 'estado' => $estado]);
+            }
+
+            // Construir Tarjetas Extra
+            foreach ($marcacionesLibres as $mExtra) {
+                $estadoExtra = (object) [
+                    'texto' => $mExtra->salida ? 'Turno Extra' : 'Extra En Curso',
+                    'clase' => 'bg-purple-100 text-purple-800 border-purple-200',
+                    'borde' => 'bg-purple-500',
+                ];
+                if ($estadoFiltro == 'sin_cierre' && $estadoExtra->texto != 'Extra En Curso') {
+                    continue;
+                }
+                $turnosDelDia->push((object) ['horario' => null, 'marcacion' => $mExtra, 'estado' => $estadoExtra]);
+            }
+
+            // Agregar al arreglo si tiene datos o si es el día actual (si se requiere)
+            $esHoy = $fechaObj->isSameDay($hoy);
+            if ($turnosDelDia->isNotEmpty() || $turnosEsperados->isNotEmpty() || ($incluirHoyVacio && $esHoy)) {
+                $diasProcesados[$fechaStr] = [
+                    'fecha_obj' => $fechaObj->copy(),
+                    'total_turnos' => $turnosEsperados->count(),
+                    'completados' => $completados,
+                    'turnos' => $turnosDelDia->sortBy(fn ($t) => $t->horario ? $t->horario->hora_ini : '24:00')->values(),
+                ];
+            }
+        }
+
+        return $diasProcesados;
+    }
+
+    private function determinarEstadoVisual($marcacion, $fechaObj, $hoy, $horario, $emp)
+    {
+        $estado = (object) ['texto' => '', 'clase' => '', 'borde' => ''];
+
+        $permisosDelDia = $emp && $emp->relationLoaded('permisos') ? $emp->permisos->filter(fn ($p) => $fechaObj->between(Carbon::parse($p->fecha_inicio), Carbon::parse($p->fecha_fin))) : collect();
+        $permisosExoneracion = $permisosDelDia->whereIn('id_tipo_permiso', [5, 6]);
+        $tieneExoneracion = $permisosExoneracion->isNotEmpty();
+
+        if ($marcacion) {
+            if ($marcacion->salida) {
+                $salidaReal = $marcacion->salida->created_at;
+                $esDiaDiferente = $marcacion->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
+                $esOlvidoSalida = $marcacion->salida->es_olvido || $esDiaDiferente;
+
+                if ($horario && ! $esOlvidoSalida) {
+                    $finTurno = Carbon::parse($fechaObj->format('Y-m-d').' '.$horario->hora_fin);
+                    if ($horario->hora_fin < $horario->hora_ini) {
+                        $finTurno->addDay();
+                    }
+                    if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) {
+                        $esOlvidoSalida = true;
+                    }
+                }
+
+                $tieneObservacion = $marcacion->fuera_horario || $esOlvidoSalida;
+                $tienePermisosMarcacion = $marcacion->permisos->isNotEmpty() || $marcacion->salida->permisos->isNotEmpty();
+
+                if ($tieneObservacion) {
+                    $estado->texto = 'Completado c/ Obs.';
+                    $estado->clase = 'bg-orange-100 text-orange-800 border-orange-200';
+                    $estado->borde = 'bg-orange-400';
+                } elseif ($tienePermisosMarcacion || $tieneExoneracion) {
+                    $estado->texto = 'Completado c/ Permiso';
+                    $estado->clase = 'bg-blue-100 text-blue-800 font-bold border-blue-200';
+                    $estado->borde = 'bg-blue-500';
+                } else {
+                    $estado->texto = 'Jornada Completada';
+                    $estado->clase = 'bg-green-100 text-green-800 border-green-200';
+                    $estado->borde = 'bg-green-500';
+                }
+            } else {
+                if (! $marcacion->created_at->isToday()) {
+                    $estado->texto = 'Sin Salida';
+                    $estado->clase = 'bg-red-100 text-red-800 border-red-200';
+                    $estado->borde = 'bg-red-500';
+                } else {
+                    $estado->texto = 'En Turno';
+                    $estado->clase = 'bg-yellow-100 text-yellow-800 animate-pulse border-yellow-200';
+                    $estado->borde = 'bg-yellow-400';
+                }
+            }
+        } else {
+            if ($tieneExoneracion) {
+                $nombresPermisos = $permisosExoneracion->map(fn ($p) => $p->tipoPermiso->nombre)->implode(' / ');
+                $estado->texto = $nombresPermisos ?: 'Permiso Aprobado';
+                $estado->clase = 'bg-blue-100 text-blue-800 font-bold shadow-sm border-blue-200';
+                $estado->borde = 'bg-blue-500';
+            } else {
+                $horaInicioTurno = Carbon::parse($fechaObj->format('Y-m-d').' '.($horario ? $horario->hora_ini : '00:00'));
+                if ($fechaObj->isFuture() || ($fechaObj->isToday() && $hoy->lt($horaInicioTurno))) {
+                    $estado->texto = 'Próximo';
+                    $estado->clase = 'bg-gray-100 text-gray-600 border-gray-200';
+                    $estado->borde = 'bg-gray-300';
+                } else {
+                    $estado->texto = 'Sin Asistencia';
+                    $estado->clase = 'bg-red-100 text-red-800 font-bold shadow-sm border-red-200';
+                    $estado->borde = 'bg-red-600';
+                }
+            }
+        }
+
+        return $estado;
+    }
+
+    // =========================================================================
+    // 5. PROCESO DE MARCACIÓN (STORE)
+    // =========================================================================
 
     public function store(Request $request)
     {
-        // 1. Validar Request
         $validated = $this->validateRequest($request);
-
         $empleado = Auth::user()->empleado;
         $sucursal = $empleado->sucursal;
         $fechaReferencia = now();
         $entradaAbierta = null;
-        if ($request->tipo_marcacion == 1) {
-            if (! $this->isSucursalAbierta($sucursal, now())) {
-                return back()->withErrors(['error' => 'La sucursal se encuentra cerrada en este horario.']);
-            }
+
+        // Validar sucursal abierta si es Entrada
+        if ($request->tipo_marcacion == 1 && ! $this->isSucursalAbierta($sucursal, now())) {
+            return back()->withErrors(['error' => 'La sucursal se encuentra cerrada en este horario.']);
         }
-        // 2. Buscar Entrada Previa (si es Salida)
+
+        // Buscar entrada si es Salida
         if ($validated['tipo_marcacion'] == 2) {
             $entradaAbierta = MarcacionEmpleado::where('id_empleado', $empleado->id)
-                ->where('tipo_marcacion', 1)
-                ->whereDoesntHave('salida')
-                ->latest()
-                ->first();
-
+                ->where('tipo_marcacion', 1)->whereDoesntHave('salida')->latest()->first();
             if ($entradaAbierta) {
                 $fechaReferencia = $entradaAbierta->created_at;
             }
         }
 
-        // 3. Validar si la Sucursal trabaja hoy
-
         $diaSemana = $this->getDiaSemanaEspanol($fechaReferencia);
 
+        // Validaciones de Negocio
         if (! $this->isDiaLaboralSucursal($sucursal, $diaSemana)) {
             return back()->withErrors(['error' => "La sucursal no labora los días $diaSemana."]);
         }
 
-        // 4. Obtener el Horario Correcto (Aquí usamos el ID nuevo)
         $horarioHoy = $this->determinarHorario($empleado, $sucursal, $diaSemana, $validated['tipo_marcacion'], $entradaAbierta);
-
         if (! $horarioHoy) {
             return back()->withErrors(['error' => "No se encontró un horario asignado para el $diaSemana."]);
         }
 
-        // 5. Validar Tiempos (Entrada/Salida, Nocturnos, Tolerancias)
         $validacionTiempo = $this->validarTiemposTurno($horarioHoy, $fechaReferencia, $validated['tipo_marcacion'], $entradaAbierta);
-
         if (isset($validacionTiempo['error'])) {
             return back()->withErrors(['error' => $validacionTiempo['error']]);
         }
 
-        // 6. Validar GPS
         $validacionGPS = $this->validarGPS($validated, $sucursal, $validacionTiempo['es_olvido']);
         if (isset($validacionGPS['error'])) {
             return back()->withErrors(['error' => $validacionGPS['error']]);
         }
-        // --- NUEVO: FUSIONAR TODOS LOS PERMISOS UTILIZADOS ---
-        $permisosTotales = array_unique(array_merge(
-            $validacionTiempo['permisos_aplicados'] ?? [],
-            $validacionGPS['permisos_aplicados'] ?? []
-        ));
-        // 7. Guardar en BD
+
+        // Combinar Permisos Aplicados
+        $permisosTotales = array_unique(array_merge($validacionTiempo['permisos_aplicados'] ?? [], $validacionGPS['permisos_aplicados'] ?? []));
+
+        // Transacción Base de Datos
         $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana, $permisosTotales);
 
-        // 8. Procesar Foto
+        // Foto
         $this->procesarImagen($request->file('ubi_foto'), $marcacion, $empleado, $validated['tipo_marcacion']);
 
         $msj = $validacionTiempo['es_olvido'] ? 'Salida registrada (Regularización).' : ($validated['tipo_marcacion'] == 1 ? 'Entrada registrada.' : 'Salida registrada.');
 
         return back()->with('success', $msj);
     }
-
-    /**
-     * Verifica si la hora dada cae dentro del horario operativo de la sucursal
-     * con un margen de tolerancia (ej: permitir marcar 30 min antes de abrir y 60 después de cerrar).
-     */
-    private function isSucursalAbierta($sucursal, Carbon $fechaHora)
-    {
-        $diaSemana = $this->getDiaSemanaEspanol($fechaHora);
-
-        // CORRECCIÓN: Usar Str::slug para estandarizar (quita tildes y mayúsculas)
-        $normalizar = function ($s) {
-            return Str::slug($s);
-        };
-        $diaNormalizado = $normalizar($diaSemana);
-
-        // 2. Obtener horarios de la sucursal para HOY
-        $horariosSucursal = $sucursal->horarios->filter(function ($h) use ($diaNormalizado, $normalizar) {
-            // Aplicamos slug a los días que vienen de la BD para comparar peras con peras
-            $dias = array_map($normalizar, $h->dias ?? []);
-
-            return in_array($diaNormalizado, $dias);
-        });
-
-        if ($horariosSucursal->isEmpty()) {
-            return false;
-        }
-
-        // 3. Verificar si la hora encaja en algún rango
-        foreach ($horariosSucursal as $hs) {
-            $inicio = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_ini);
-            $fin = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_fin);
-
-            if ($fin->lessThan($inicio)) {
-                $fin->addDay();
-            }
-
-            if ($fechaHora->between($inicio->copy()->subMinutes(30), $fin->copy()->addHour())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function getDiaSemanaEspanol($fecha)
-    {
-        // Esto garantiza que siempre salga 'miércoles' en UTF-8 válido,
-        // sin importar si el servidor es Linux, Windows o si el archivo está en ANSI.
-        return $fecha->locale('es')->isoFormat('dddd');
-    }
-
-    /**
-     * MÉTODO PRINCIPAL: ORQUESTADOR
-     */
-
-    // -------------------------------------------------------------------------
-    // FUNCIONES PRIVADAS (LOGICA SECCIONADA)
-    // -------------------------------------------------------------------------
 
     private function validateRequest($request)
     {
@@ -466,32 +385,41 @@ class MarcacionController extends Controller
         ]);
     }
 
-    private function isDiaLaboralSucursal($sucursal, $diaSemana)
+    private function isSucursalAbierta($sucursal, Carbon $fechaHora)
     {
-        $diasLaboralesSucursal = $sucursal->dias_laborales ?? [];
+        $diaNormalizado = Str::slug($this->getDiaSemanaEspanol($fechaHora));
+        $horariosSucursal = $sucursal->horarios->filter(fn ($h) => in_array($diaNormalizado, array_map(fn ($d) => Str::slug($d), $h->dias ?? [])));
 
-        // Normalizamos la lista de la BD
-        $diasLaboralesNorm = array_map(function ($d) {
-            return Str::slug($d);
-        }, $diasLaboralesSucursal);
+        if ($horariosSucursal->isEmpty()) {
+            return false;
+        }
 
-        // Comparamos usando slug en ambos lados
-        return in_array(Str::slug($diaSemana), $diasLaboralesNorm);
+        foreach ($horariosSucursal as $hs) {
+            $inicio = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_ini);
+            $fin = Carbon::parse($fechaHora->format('Y-m-d').' '.$hs->hora_fin);
+            if ($fin->lessThan($inicio)) {
+                $fin->addDay();
+            }
+            if ($fechaHora->between($inicio->copy()->subMinutes(30), $fin->copy()->addHour())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function determinarHorario($empleado, $sucursal, $diaSemana, $tipoMarcacion, $entradaAbierta)
     {
+        $ahora = now();
+
         // ---------------------------------------------------------
         // ESCENARIO 1: SALIDA (USAR ID GUARDADO) - ¡INFALIBLE!
         // ---------------------------------------------------------
         if ($tipoMarcacion == 2 && $entradaAbierta) {
-            // Si la entrada ya tiene el ID guardado, lo usamos directo.
             if ($entradaAbierta->id_horario) {
                 return horario::find($entradaAbierta->id_horario);
             }
 
-            // FALLBACK PARA REGISTROS VIEJOS (SIN ID)
-            // Buscamos el horario cuyo inicio coincida mejor con la hora de entrada registrada
             $candidatos = $empleado->horarios()->whereJsonContains('dias', $diaSemana)->get();
             if ($candidatos->isEmpty()) {
                 $candidatos = $sucursal->horarios()->whereJsonContains('dias', $diaSemana)->get();
@@ -499,9 +427,7 @@ class MarcacionController extends Controller
 
             $horaEntrada = Carbon::parse($entradaAbierta->created_at->format('H:i:s'));
             foreach ($candidatos as $h) {
-                $inicio = Carbon::parse($h->hora_ini);
-                // Si la diferencia es menor a 4 horas, asumimos que es este
-                if ($horaEntrada->diffInMinutes($inicio) < 240) {
+                if ($horaEntrada->diffInMinutes(Carbon::parse($h->hora_ini)) < 240) {
                     return $h;
                 }
             }
@@ -510,104 +436,107 @@ class MarcacionController extends Controller
         }
 
         // ---------------------------------------------------------
-        // ESCENARIO 2: ENTRADA (SELECCIÓN INTELIGENTE)
+        // ESCENARIO 2: ENTRADA (SELECCIÓN INTELIGENTE + NOCTURNOS)
         // ---------------------------------------------------------
 
-        // 1. Obtener candidatos (Prioridad Empleado -> Sucursal)
-        $candidatos = $empleado->horarios()->whereJsonContains('dias', $diaSemana)->get();
-        if ($candidatos->isEmpty()) {
-            $candidatos = $sucursal->horarios()->whereJsonContains('dias', $diaSemana)->get();
+        // PASO 1: Obtener horarios del día actual
+        $candidatosHoy = $empleado->horarios()->whereJsonContains('dias', $diaSemana)->get();
+        if ($candidatosHoy->isEmpty()) {
+            $candidatosHoy = $sucursal->horarios()->whereJsonContains('dias', $diaSemana)->get();
         }
 
-        if ($candidatos->isEmpty()) {
-            return null;
+        // PASO 2: Obtener horarios del DÍA ANTERIOR (Magia Nocturna)
+        // Si son las 2 AM del Martes, debemos buscar si el Lunes había un turno nocturno
+        $ayer = $ahora->copy()->subDay();
+        $diaAyerEspanol = $this->getDiaSemanaEspanol($ayer);
+        $diaAyerSlug = Str::slug(substr($diaAyerEspanol, 0, 3)); // 'lun', 'mar', etc.
+
+        $candidatosAyer = $empleado->horarios()->whereJsonContains('dias', $diaAyerEspanol)->get(); // Ajusta según cómo guardes en BD (ej: si guardas "Lunes" o "lun")
+        if ($candidatosAyer->isEmpty()) {
+            $candidatosAyer = $sucursal->horarios()->whereJsonContains('dias', $diaAyerEspanol)->get();
         }
 
-        $ahora = now();
+        // Filtramos SOLO los turnos de ayer que cruzan la medianoche
+        $turnosNocturnosDeAyer = collect();
+        foreach ($candidatosAyer as $hAyer) {
+            if ($hAyer->hora_fin < $hAyer->hora_ini) {
+                $turnosNocturnosDeAyer->push($hAyer);
+            }
+        }
+
         $mejorCandidato = null;
         $minutosDiferencia = PHP_INT_MAX;
 
-        // PASO A: Buscar si "CAIGO DENTRO" de algún turno activo (Prioridad Alta)
-        // Esto arregla el bug: Si son las 15:50 (Turno 14:00-16:40), caerá aquí en vez de irse al de las 17:00
-        foreach ($candidatos as $h) {
+        // EVALUACIÓN A: Buscar si la hora actual "CAE DENTRO" de un turno nocturno de AYER
+        // (Ej: Son las 01:00 AM del martes, y el lunes tenía turno de 20:00 a 08:00)
+        foreach ($turnosNocturnosDeAyer as $hNoche) {
+            $inicioAyer = Carbon::parse($ayer->format('Y-m-d').' '.$hNoche->hora_ini);
+            $finHoy = Carbon::parse($ahora->format('Y-m-d').' '.$hNoche->hora_fin); // Como es la hora fin, ya es "hoy"
+
+            if ($ahora->between($inicioAyer->copy()->subMinutes(60), $finHoy)) {
+                return $hNoche; // ¡Cayó exactamente dentro del turno de la madrugada!
+            }
+        }
+
+        // EVALUACIÓN B: Buscar si "CAIGO DENTRO" de algún turno de HOY
+        foreach ($candidatosHoy as $h) {
             $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
             $fin = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_fin);
-
             if ($fin->lessThan($inicio)) {
                 $fin->addDay();
-            } // Ajuste nocturno
+            } // Si este mismo turno hoy es nocturno
 
-            // Si la hora actual está DENTRO del intervalo (con 1 hora de margen post-cierre)
-            if ($ahora->greaterThanOrEqualTo($inicio->copy()->subMinutes(60)) && $ahora->lessThanOrEqualTo($fin)) {
-                return $h; // ¡Encontrado! Retorno inmediato.
+            if ($ahora->between($inicio->copy()->subMinutes(60), $fin)) {
+                return $h;
             }
         }
 
-        // PASO B: Si no estoy dentro de ninguno (Llegada Temprano), buscar el MÁS CERCANO en el futuro
-        foreach ($candidatos as $h) {
-            $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
-
-            // Calculamos distancia absoluta
-            $diff = abs($ahora->diffInMinutes($inicio, false));
-
-            // Solo consideramos turnos que no hayan pasado hace mucho (> 8 horas)
-            if ($ahora->diffInHours($inicio, false) < -8) {
-                continue;
-            }
-
-            if ($diff < $minutosDiferencia) {
-                $minutosDiferencia = $diff;
-                $mejorCandidato = $h;
+        // EVALUACIÓN C: Si no caigo en ninguno, buscar el MÁS CERCANO en el futuro HOY
+        if ($candidatosHoy->isNotEmpty()) {
+            foreach ($candidatosHoy as $h) {
+                $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
+                $diff = abs($ahora->diffInMinutes($inicio, false));
+                if ($ahora->diffInHours($inicio, false) >= -8 && $diff < $minutosDiferencia) {
+                    $minutosDiferencia = $diff;
+                    $mejorCandidato = $h;
+                }
             }
         }
 
-        return $mejorCandidato ?? $candidatos->last();
+        return $mejorCandidato ?? $candidatosHoy->last();
     }
 
     private function validarTiemposTurno($horario, $fechaReferencia, $tipoMarcacion, $entradaAbierta)
     {
-        $permisos = $this->validaPermisos(); // Tu función existente
+        $permisos = $this->validaPermisos();
         $permisosUsados = [];
-        // Verificar permiso eximente
-        $permisoExime = collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first();
-        if ($permisoExime) {
+        if (collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first()) {
             return ['error' => 'Permiso activo exime marcación.'];
         }
 
-        // Construir tiempos
         $fechaBase = $fechaReferencia->format('Y-m-d');
         $inicioTurno = Carbon::parse($fechaBase.' '.$horario->hora_ini);
         $finTurno = Carbon::parse($fechaBase.' '.$horario->hora_fin);
-
-        // Ajuste Nocturno
         if ($finTurno->lessThanOrEqualTo($inicioTurno)) {
             $finTurno->addDay();
         }
 
-        $resultado = [
-            'fuera_horario' => null,
-            'es_olvido' => false,
-            'permisos_aplicados' => [],
-        ];
+        $resultado = ['fuera_horario' => null, 'es_olvido' => false, 'permisos_aplicados' => []];
 
         if ($tipoMarcacion == 1) {
-            // --- LÓGICA ENTRADA ---
             if (now()->lessThanOrEqualTo($finTurno)) {
                 $tolerancia = $horario->tolerancia;
                 if ($permisos['llegada_tarde']) {
                     $tolerancia += $permisos['llegada_tarde']->valor;
                     $permisosUsados[] = $permisos['llegada_tarde']->id;
                 }
-
-                $horaMaxima = $inicioTurno->copy()->addMinutes($tolerancia);
-                if (now()->greaterThan($horaMaxima)) {
+                if (now()->greaterThan($inicioTurno->copy()->addMinutes($tolerancia))) {
                     $resultado['fuera_horario'] = 1;
                 }
             } else {
                 return ['error' => 'Tu jornada para este turno ya finalizó.'];
             }
         } else {
-            // --- LÓGICA SALIDA ---
             if ($entradaAbierta) {
                 $limiteOlvido = $finTurno->copy()->addHour();
                 $momentoMinimo = $finTurno->copy();
@@ -619,138 +548,77 @@ class MarcacionController extends Controller
                 if (now()->greaterThan($limiteOlvido)) {
                     $resultado['es_olvido'] = true;
                     $resultado['fuera_horario'] = 1;
-                } else {
-                    if (now()->lessThan($momentoMinimo)) {
-                        return ['error' => 'Salida no permitida antes de las '.$momentoMinimo->format('d/m H:i')];
-                    }
+                } elseif (now()->lessThan($momentoMinimo)) {
+                    return ['error' => 'Salida no permitida antes de las '.$momentoMinimo->format('d/m H:i')];
                 }
             }
         }
         $resultado['permisos_aplicados'] = $permisosUsados;
+
         return $resultado;
     }
 
     private function validarGPS($validated, $sucursal, $esOlvido)
     {
-        // Regla: Si es salida por olvido, NO validamos
         if ($validated['tipo_marcacion'] == 2 && $esOlvido) {
             return ['distancia' => 0, 'permisos_aplicados' => []];
         }
 
-        // Regla de Sucursal
-        $sucursalExigeSalida = $sucursal->horarios()->where('requiere_salida', 1)->exists();
-
-        // Opcional: Si quieres ser estricto y la sucursal NO exige salida, podrías saltar validación en salida.
-        // Pero generalmente el GPS siempre se valida si estás marcando.
-
         $permisos = $this->validaPermisos();
         $permisosUsados = [];
         $rango = $sucursal->rango_marcacion_mts;
+
         if ($permisos['fuera_rango']) {
-            if ($permisos['fuera_rango']->cantidad_mts == null) {
-                $rango = PHP_INT_MAX;
-            } else {
-                $rango += $permisos['fuera_rango']->cantidad_mts;
-            }
+            $rango = $permisos['fuera_rango']->cantidad_mts === null ? PHP_INT_MAX : $rango + $permisos['fuera_rango']->cantidad_mts;
             $permisosUsados[] = $permisos['fuera_rango']->id;
         }
 
-        $distancia = $this->distanciaEnMetros(
-            $validated['latitud'],
-            $validated['longitud'],
-            $sucursal->latitud,
-            $sucursal->longitud
-        );
+        $distancia = $this->distanciaEnMetros($validated['latitud'], $validated['longitud'], $sucursal->latitud, $sucursal->longitud);
 
         if ($distancia > ($rango + $sucursal->margen_error_gps_mts)) {
             return ['error' => "Estás fuera del rango permitido ($distancia mts)."];
         }
 
-       return ['distancia' => $distancia, 'permisos_aplicados' => $permisosUsados];
+        return ['distancia' => $distancia, 'permisos_aplicados' => $permisosUsados];
     }
 
     private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana, $permisosTotales)
     {
-        return DB::transaction(function () use (
-            $diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $permisosTotales) {
-            $horarioEmpleado = $horario;
-            $horarioSucursal = null;
+        return DB::transaction(function () use ($diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $permisosTotales) {
 
-            foreach ($sucursal->horarios as $h) {
-                if ($h->permitido_marcacion == 1 && in_array($diaSemana, $h->dias)) {
-                    $horarioSucursal = $h;
-                    break;
-                }
-            }
+            $horarioSucursal = $sucursal->horarios->first(fn ($h) => $h->permitido_marcacion == 1 && in_array($diaSemana, $h->dias));
 
-            $historicoEmpleado = HorarioHistorico::mismoHorario($horarioEmpleado)
-                ->vigente()->first();
-
-            if ($historicoEmpleado == null) {
-                HorarioHistorico::where('id_horario', $horarioEmpleado->id)
-                    ->where('tipo_horario', $horarioEmpleado->permitido_marcacion)
-                    ->vigente()
-                    ->update(['vigente_hasta' => now()]);
-
+            $historicoEmpleado = HorarioHistorico::mismoHorario($horario)->vigente()->first();
+            if (! $historicoEmpleado) {
+                HorarioHistorico::where('id_horario', $horario->id)->where('tipo_horario', $horario->permitido_marcacion)->vigente()->update(['vigente_hasta' => now()]);
                 $historicoEmpleado = HorarioHistorico::create([
-                    'id_horario' => $horarioEmpleado->id,
-                    'tipo_horario' => $horarioEmpleado->permitido_marcacion,
-                    'hora_entrada' => $horarioEmpleado->hora_ini,
-                    'hora_salida' => $horarioEmpleado->hora_fin,
-                    'tolerancia' => $horarioEmpleado->tolerancia,
-                    'dias' => $horarioEmpleado->dias,
-                    'vigente_desde' => now(),
+                    'id_horario' => $horario->id, 'tipo_horario' => $horario->permitido_marcacion, 'hora_entrada' => $horario->hora_ini,
+                    'hora_salida' => $horario->hora_fin, 'tolerancia' => $horario->tolerancia, 'dias' => $horario->dias, 'vigente_desde' => now(),
                 ]);
             }
+
             $historicoSucursal = null;
-
             if ($horarioSucursal) {
-                $historicoSucursal = HorarioHistorico::mismoHorario($horarioSucursal)
-                    ->vigente()->first();
-
-                if ($historicoSucursal == null) {
-
-                    HorarioHistorico::where('id_horario', $horarioSucursal->id)
-                        ->where('tipo_horario', $horarioSucursal->permitido_marcacion)
-                        ->vigente()
-                        ->update(['vigente_hasta' => now()]);
-
+                $historicoSucursal = HorarioHistorico::mismoHorario($horarioSucursal)->vigente()->first();
+                if (! $historicoSucursal) {
+                    HorarioHistorico::where('id_horario', $horarioSucursal->id)->where('tipo_horario', $horarioSucursal->permitido_marcacion)->vigente()->update(['vigente_hasta' => now()]);
                     $historicoSucursal = HorarioHistorico::create([
-                        'id_horario' => $horarioSucursal->id,
-                        'tipo_horario' => $horarioSucursal->permitido_marcacion,
-                        'hora_entrada' => $horarioSucursal->hora_ini,
-                        'hora_salida' => $horarioSucursal->hora_fin,
-                        'tolerancia' => $horarioSucursal->tolerancia,
-                        'dias' => $horarioSucursal->dias,
-                        'vigente_desde' => now(),
+                        'id_horario' => $horarioSucursal->id, 'tipo_horario' => $horarioSucursal->permitido_marcacion, 'hora_entrada' => $horarioSucursal->hora_ini,
+                        'hora_salida' => $horarioSucursal->hora_fin, 'tolerancia' => $horarioSucursal->tolerancia, 'dias' => $horarioSucursal->dias, 'vigente_desde' => now(),
                     ]);
                 }
             }
 
-            // 1. Crear marcación (eliminamos 'id_permiso_aplicado' del array)
             $marcacion = MarcacionEmpleado::create([
-                'id_empleado' => $empleado->id,
-                'id_sucursal' => $sucursal->id,
-                'id_horario' => $horario->id,
-                'id_horario_historico_empleado' => $historicoEmpleado->id ?? null,
-                'id_horario_historico_sucursal' => $historicoSucursal->id ?? null,
-                'latitud' => $validated['latitud'],
-                'longitud' => $validated['longitud'],
-                'distancia_real_mts' => $distancia,
-                'tipo_marcacion' => $validated['tipo_marcacion'],
-                'fuera_horario' => $validacionTiempo['fuera_horario'],
+                'id_empleado' => $empleado->id, 'id_sucursal' => $sucursal->id, 'id_horario' => $horario->id,
+                'id_horario_historico_empleado' => $historicoEmpleado->id ?? null, 'id_horario_historico_sucursal' => $historicoSucursal->id ?? null,
+                'latitud' => $validated['latitud'], 'longitud' => $validated['longitud'], 'distancia_real_mts' => $distancia,
+                'tipo_marcacion' => $validated['tipo_marcacion'], 'fuera_horario' => $validacionTiempo['fuera_horario'],
                 'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
             ]);
 
-            // 2. NUEVO: Insertar en la tabla pivote de permisos
-            if (!empty($permisosTotales)) {
-                $insertData = [];
-                foreach ($permisosTotales as $idPermiso) {
-                    $insertData[] = [
-                        'id_marcacion' => $marcacion->id,
-                        'id_permiso' => $idPermiso,
-                    ];
-                }
+            if (! empty($permisosTotales)) {
+                $insertData = array_map(fn ($idP) => ['id_marcacion' => $marcacion->id, 'id_permiso' => $idP], $permisosTotales);
                 DB::table('permisos_marcaciones')->insert($insertData);
             }
 
@@ -764,79 +632,233 @@ class MarcacionController extends Controller
             $tipoTexto = $tipo == 1 ? 'entrada' : 'salida';
             $nombre = "{$empleado->cod_trabajador}_{$marcacion->id}_{$tipoTexto}_".now()->format('YmdHis').'.jpg';
 
-            $manager = new ImageManager(new Driver);
-
-            // Miniatura
-            $imgMini = $manager->read($file)->scaleDown(width: 400)->toJpeg(60);
-            // Full
-            $imgFull = $manager->read($file)->scaleDown(width: 1280)->toJpeg(85);
-
             $rutaMini = "marcaciones_empleados/$nombre";
             $rutaFull = "marcaciones_empleados/full/$nombre";
 
-            Storage::disk('public')->put($rutaMini, (string) $imgMini);
-            Storage::disk('public')->put($rutaFull, (string) $imgFull);
+            // 1. GUARDADO ULTRA RÁPIDO: Guardamos el archivo que ya viene comprimido por JS directamente.
+            // Esto evita la "doble compresión" y no gasta memoria RAM del servidor.
+            Storage::disk('public')->put($rutaFull, file_get_contents($file));
 
+            // 2. CREAR MINIATURA: Usamos Intervention Image SOLO para la fotito pequeña de las tablas.
+            $manager = new ImageManager(new Driver);
+            $encodedMini = $manager->read($file)->scaleDown(width: 400)->toJpeg(70);
+            Storage::disk('public')->put($rutaMini, (string) $encodedMini);
+
+            // 3. Actualizamos BD
             $marcacion->update([
                 'ubi_foto' => $rutaMini,
                 'ubi_foto_full' => $rutaFull,
             ]);
+
         } catch (\Exception $e) {
             Log::error("Error procesando foto marcación ID {$marcacion->id}: ".$e->getMessage());
         }
     }
 
-    private function guardaHistoricoHorarioEmpleado($empleado, $sucursal, $horario, $diaSemana) {}
+    // =========================================================================
+    // 6. UTILIDADES COMPARTIDAS
+    // =========================================================================
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    private function obtenerEmpleadosFiltrados(Request $request, $desde, $hasta)
     {
-        //
+        $query = Empleado::with(['sucursal', 'puesto', 'permisos' => function ($q) use ($desde, $hasta) {
+            $q->where('estado', 1)->where(function ($q2) use ($desde, $hasta) {
+                $q2->where('fecha_inicio', '<=', $hasta)->where('fecha_fin', '>=', $desde);
+            })->with('tipoPermiso');
+        }])->where('estado', 1);
+
+        if ($request->filled('empleado')) {
+            $query->where('id', $request->empleado);
+        }
+        if ($request->filled('sucursal')) {
+            $query->where('id', $request->sucursal);
+        } // Fix: Era id_sucursal, debe ser sobre relación o campo sucursal
+
+        return $query->orderBy('nombres')->get();
+    }
+
+    private function obtenerMarcacionesEnRango($empleadosIds, $desde, $hasta)
+    {
+        return MarcacionEmpleado::visiblePara(Auth::user())
+            ->with(['sucursal', 'salida', 'permisos.tipoPermiso', 'salida.permisos.tipoPermiso'])
+            ->whereIn('id_empleado', $empleadosIds)
+            ->where('tipo_marcacion', 1)
+            ->whereBetween('created_at', [$desde, $hasta])
+            ->get()
+            ->groupBy('id_empleado');
+    }
+
+    private function determinarRangoFechasHistorialApp(Request $request, $empleadoId, $hoy)
+    {
+        $desde = $request->input('desde') ? Carbon::parse($request->input('desde'))->startOfDay() : Carbon::now()->startOfMonth()->startOfDay();
+        $hastaPorDefecto = $hoy->copy()->endOfDay();
+
+        $ultimaMarcacion = MarcacionEmpleado::where('id_empleado', $empleadoId)->max('created_at');
+        if ($ultimaMarcacion && Carbon::parse($ultimaMarcacion)->endOfDay()->greaterThan($hastaPorDefecto)) {
+            $hastaPorDefecto = Carbon::parse($ultimaMarcacion)->endOfDay();
+        }
+
+        $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : $hastaPorDefecto;
+
+        return [$desde, $hasta];
+    }
+
+    private function obtenerEmpleadoConPermisos($empleadoId, $desde, $hasta)
+    {
+        return Empleado::with(['sucursal', 'puesto', 'permisos' => function ($q) use ($desde, $hasta) {
+            $q->where('estado', 1)->where(function ($q2) use ($desde, $hasta) {
+                $q2->where('fecha_inicio', '<=', $hasta)->where('fecha_fin', '>=', $desde);
+            })->with('tipoPermiso');
+        }])->find($empleadoId);
+    }
+
+    private function obtenerCandidatosVigentesHoy($empleado, $sucursal, $diaSemana)
+    {
+        $normalizarDia = fn ($dia) => substr(Str::slug($dia), 0, 3);
+        $hoyNorm = $normalizarDia($diaSemana);
+
+        $candidatosRaw = $empleado->horarios()->wherePivot('es_actual', 1)->get()->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
+        if ($candidatosRaw->isEmpty()) {
+            $candidatosRaw = $sucursal->horarios->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
+        }
+
+        $horariosSucursalHoy = $sucursal->horarios->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
+
+        return $candidatosRaw->filter(function ($hEmp) use ($horariosSucursalHoy) {
+            if ($horariosSucursalHoy->isEmpty()) {
+                return false;
+            }
+
+            $iniEmp = Carbon::parse($hEmp->hora_ini);
+            $finEmp = Carbon::parse($hEmp->hora_fin);
+            if ($finEmp->lessThan($iniEmp)) {
+                $finEmp->addDay();
+            }
+
+            foreach ($horariosSucursalHoy as $hs) {
+                $iniSuc = Carbon::parse($hs->hora_ini);
+                $finSuc = Carbon::parse($hs->hora_fin);
+                if ($finSuc->lessThan($iniSuc)) {
+                    $finSuc->addDay();
+                }
+
+                if ($iniEmp->greaterThanOrEqualTo($iniSuc->copy()->subMinutes(30)) && $finEmp->lessThanOrEqualTo($finSuc->copy()->addMinutes(15))) {
+                    return true;
+                }
+            }
+
+            return false;
+        })->sortBy('hora_ini');
+    }
+
+    private function calcularEstadoJornadaApp($candidatos, $historialHoy, $entradasHoyIds, $entradaActiva, $hoy, $ahora)
+    {
+        if ($entradaActiva) {
+            return ['habilitarEntrada' => false, 'proximoHorario' => null, 'tiempoRestante' => null, 'jornadaTerminada' => false, 'ausenteTotal' => false];
+        }
+
+        $turnoVigente = null;
+        $siguienteTurno = null;
+        $minutosParaSiguiente = PHP_INT_MAX;
+
+        foreach ($candidatos as $h) {
+            $inicio = Carbon::parse($hoy->format('Y-m-d').' '.$h->hora_ini);
+            $fin = Carbon::parse($hoy->format('Y-m-d').' '.$h->hora_fin);
+            if ($fin->lessThan($inicio)) {
+                $fin->addDay();
+            }
+
+            $inicioHabilitado = $inicio->copy()->subMinutes(60);
+
+            $yaCompletado = $historialHoy->contains(fn ($m) => $m->tipo_marcacion == 1 && $m->id_horario == $h->id) &&
+                            $historialHoy->contains(fn ($m) => $m->tipo_marcacion == 2 && $m->id_horario == $h->id && in_array($m->id_marcacion_entrada, $entradasHoyIds));
+
+            if ($ahora->between($inicioHabilitado, $fin)) {
+                if (! $yaCompletado) {
+                    $turnoVigente = $h;
+                    break;
+                }
+            } elseif ($inicioHabilitado->greaterThan($ahora) && ! $yaCompletado) {
+                $diff = $ahora->diffInMinutes($inicio);
+                if ($diff < $minutosParaSiguiente) {
+                    $minutosParaSiguiente = $diff;
+                    $siguienteTurno = $inicio;
+                }
+            }
+        }
+
+        if ($turnoVigente) {
+            return ['habilitarEntrada' => true, 'proximoHorario' => null, 'tiempoRestante' => null, 'jornadaTerminada' => false, 'ausenteTotal' => false];
+        }
+        if ($siguienteTurno) {
+            return ['habilitarEntrada' => false, 'proximoHorario' => $siguienteTurno, 'tiempoRestante' => $siguienteTurno->locale('es')->diffForHumans($ahora, ['parts' => 2, 'join' => true, 'syntax' => Carbon::DIFF_ABSOLUTE]), 'jornadaTerminada' => false, 'ausenteTotal' => false];
+        }
+
+        // --- NUEVA LÓGICA DE FIN DE DÍA ---
+        // Si hay turnos asignados pero NO hay marcaciones, es ausencia total.
+        $ausenteTotal = $candidatos->isNotEmpty() && $historialHoy->isEmpty();
+
+        // Si hay turnos y SÍ hay marcaciones (completó su día, o al menos vino a 1 turno)
+        $jornadaTerminada = $candidatos->isNotEmpty() && $historialHoy->isNotEmpty();
+
+        return [
+            'habilitarEntrada' => false,
+            'proximoHorario' => null,
+            'tiempoRestante' => null,
+            'jornadaTerminada' => $jornadaTerminada,
+            'ausenteTotal' => $ausenteTotal,
+        ];
+    }
+
+    private function validarBloqueoSalida($horarioRequiereSalida, $entradaActiva, $horarioActivo)
+    {
+        if ($horarioRequiereSalida == 1 && $entradaActiva && $horarioActivo) {
+            $salidaTeorica = Carbon::parse($entradaActiva->created_at->format('Y-m-d').' '.$horarioActivo->hora_fin);
+            if (Carbon::parse($horarioActivo->hora_fin)->lessThan(Carbon::parse($horarioActivo->hora_ini))) {
+                $salidaTeorica->addDay();
+            }
+            if (now()->greaterThan($salidaTeorica->copy()->addHour())) {
+                return [true, $entradaActiva];
+            }
+        }
+
+        return [false, null];
+    }
+
+    private function isDiaLaboralSucursal($sucursal, $diaSemana)
+    {
+        $diasLaboralesNorm = array_map(fn ($d) => Str::slug($d), $sucursal->dias_laborales ?? []);
+
+        return in_array(Str::slug($diaSemana), $diasLaboralesNorm);
+    }
+
+    private function getDiaSemanaEspanol($fecha)
+    {
+        return $fecha->locale('es')->isoFormat('dddd');
     }
 
     public function distanciaEnMetros($lat1, $lon1, $lat2, $lon2)
     {
-        $radioTierra = 6371000; // metros
+        $radioTierra = 6371000;
+        $a = sin(deg2rad($lat2 - $lat1) / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin(deg2rad($lon2 - $lon1) / 2) ** 2;
 
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
-
-        $a = sin($dLat / 2) * sin($dLat / 2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon / 2) * sin($dLon / 2);
-
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
-        return $radioTierra * $c;
+        return $radioTierra * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     public function validaPermisos()
     {
         $hoy = now()->toDateString();
-
         $permisos = Permiso::where('id_empleado', Auth::user()->empleado->id)
             ->where('estado', 1)
             ->where(function ($q) use ($hoy) {
-
                 $q->where(function ($q2) use ($hoy) {
-                    $q2->whereNotNull('fecha_inicio')
-                        ->whereNotNull('fecha_fin')
-                        ->whereDate('fecha_inicio', '<=', $hoy)
-                        ->whereDate('fecha_fin', '>=', $hoy);
-                })
-                    ->orWhere(function ($q2) use ($hoy) {
-                        $q2->whereNotNull('dias_activa')
-                            ->where(function ($q3) use ($hoy) {
-                                $q3->whereNull('fecha_inicio')
-                                    ->orWhereDate('fecha_inicio', '<=', $hoy);
-                            });
+                    $q2->whereNotNull('fecha_inicio')->whereNotNull('fecha_fin')->whereDate('fecha_inicio', '<=', $hoy)->whereDate('fecha_fin', '>=', $hoy);
+                })->orWhere(function ($q2) use ($hoy) {
+                    $q2->whereNotNull('dias_activa')->where(function ($q3) use ($hoy) {
+                        $q3->whereNull('fecha_inicio')->orWhereDate('fecha_inicio', '<=', $hoy);
                     });
-
-            })
-            ->with('tipoPermiso')
-            ->get();
+                });
+            })->with('tipoPermiso')->get();
 
         $porCodigo = $permisos->keyBy(fn ($p) => $p->tipoPermiso->codigo);
 
@@ -849,37 +871,5 @@ class MarcacionController extends Controller
             'sin_marcacion' => $porCodigo->get('SIN_MARCACION'),
             'incapacidad' => $porCodigo->get('INCAPACIDAD'),
         ];
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }

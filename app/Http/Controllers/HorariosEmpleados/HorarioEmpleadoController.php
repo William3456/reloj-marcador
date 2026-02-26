@@ -54,7 +54,11 @@ class HorarioEmpleadoController extends Controller
         try {
             $empleados = Empleado::where('id_sucursal', $id)
                 ->where('estado', 1)
-                ->with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios'])
+                ->with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios' => function($query) {
+                    // FILTRO CRÍTICO: Solo cargar los horarios vigentes
+                    $query->where('es_actual', true)
+                          ->whereNull('fecha_fin'); 
+                }])
                 ->get();
 
             $empleados->each(function ($emp) {
@@ -91,62 +95,65 @@ class HorarioEmpleadoController extends Controller
     public function store(Request $request)
     {
         DB::transaction(function () use ($request) {
+            
+            // Definimos las fechas de vigencia
+            $fechaHoy = now()->toDateString();
+            $fechaAyer = now()->subDay()->toDateString();
 
-            // ELIMINAR
+       
             if ($request->filled('eliminados')) {
+                
                 foreach ($request->eliminados as $empleadoID => $horarios) {
+                    //dd($horarios);
+                    // En lugar de hacer delete(), cerramos la vigencia del horario
                     HorarioEmpleado::where('id_empleado', $empleadoID)
                         ->whereIn('id_horario', $horarios)
-                        ->delete();
+                        ->where('es_actual', true) // Solo tocamos los que están vigentes
+                        ->update([
+                            'fecha_fin' => DB::raw("
+                                CASE 
+                                    WHEN fecha_inicio = '{$fechaHoy}' THEN '{$fechaHoy}'
+                                    ELSE '{$fechaAyer}'
+                                END
+                            "),
+                            'es_actual' => false
+                        ]);
                 }
             }
 
-            // INSERTAR
+            // 2. PROCESAR "NUEVOS" (Abrir nuevo ciclo)
             if ($request->filled('nuevos')) {
                 foreach ($request->nuevos as $empleadoID => $horarios) {
                     foreach ($horarios as $horarioID) {
 
-                        HorarioEmpleado::firstOrCreate([
-                            'id_empleado' => $empleadoID,
-                            'id_horario' => $horarioID,
-                        ]);
+                        // Obtenemos los detalles del horario original para guardar el id_horario_historico
+                        $horarioOriginal = Horario::find($horarioID);
+                        $id_historico = $horarioOriginal ? $horarioOriginal->id_horario_historico : null;
+
+                        // Verificamos si ya existe uno igual activo para no duplicar
+                        $existeActivo = HorarioEmpleado::where('id_empleado', $empleadoID)
+                            ->where('id_horario', $horarioID)
+                            ->where('es_actual', true)
+                            ->exists();
+
+                        // Si no existe uno activo, creamos el nuevo registro con la fecha de inicio
+                        if (!$existeActivo) {
+                            HorarioEmpleado::create([
+                                'id_empleado' => $empleadoID,
+                                'id_horario' => $horarioID,
+                                'id_horario_historico' => $id_historico, // Si lo usas
+                                'fecha_inicio' => $fechaHoy,
+                                'fecha_fin' => null,
+                                'es_actual' => true
+                            ]);
+                        }
                     }
                 }
             }
         });
 
-        return back()->with('success', 'Horarios actualizados correctamente');
+        return back()->with('success', 'Horarios actualizados y guardados en el historial correctamente');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
 }

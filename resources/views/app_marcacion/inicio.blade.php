@@ -75,7 +75,17 @@
                         <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 30 minutos antes.</p>
                     </div>
                 </div>
-
+            @elseif(isset($ausenteTotal) && $ausenteTotal)
+                <div class="bg-red-600 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
+                    <div class="p-8 text-center relative z-10">
+                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2">Jornada Finalizada</h3>
+                        <p class="text-red-100 text-sm">Tus turnos de hoy han concluido.</p>
+                        <p class="text-xs text-red-200 mt-4 font-bold bg-red-800/30 inline-block px-3 py-1 rounded-lg">No registraste asistencia el día de hoy.</p>
+                    </div>
+                </div>
             {{-- CASO 2: JORNADA FINALIZADA (No hay turno futuro y ya se trabajó hoy) --}}
             @elseif($jornadaTerminada)
                 <div class="bg-green-600 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
@@ -172,9 +182,6 @@
             @endif
 
             {{-- =========================================================== --}}
-            {{-- SECCIÓN RESUMEN (AHORA SIEMPRE VISIBLE SI HAY DATOS) --}}
-            {{-- =========================================================== --}}
-            {{-- =========================================================== --}}
             {{-- SECCIÓN RESUMEN (DISEÑO HISTORIAL) --}}
             {{-- =========================================================== --}}
             @if($historialHoy->isNotEmpty())
@@ -185,9 +192,16 @@
 
                 {{-- Agrupamos por Horario para simular la vista de Turnos --}}
                 @php
-                    // Agrupamos por ID de horario para mantener juntos entrada y salida del mismo turno
-                    $registrosPorTurno = $historialHoy->groupBy(function($item) {
-                        return $item->horario_id ?? 'extra'; 
+                    // 1. Extraemos los IDs de las ENTRADAS que sí se hicieron hoy
+                    $entradasHoyIds = $historialHoy->where('tipo_marcacion', 1)->pluck('id')->toArray();
+
+                    // 2. Agrupamos por ID de horario, aislando los "Olvidos" de días anteriores
+                    $registrosPorTurno = $historialHoy->groupBy(function($item) use ($entradasHoyIds) {
+                        // Si es Salida (2), tiene un ID de Entrada, y esa entrada NO está en las de hoy...
+                        if ($item->tipo_marcacion == 2 && $item->id_marcacion_entrada && !in_array($item->id_marcacion_entrada, $entradasHoyIds)) {
+                            return 'olvido_pasado_' . $item->id; // Lo metemos en un grupo único aislado
+                        }
+                        return $item->id_horario ? 'turno_' . $item->id_horario : 'extra';
                     });
                 @endphp
 
@@ -195,37 +209,57 @@
                     
                     @foreach($registrosPorTurno as $horarioId => $registros)
                         @php
-                            // Intentamos obtener info del horario del primer registro del grupo
-                            $horarioRef = $registros->first()->horario;
-                            $tituloTurno = $horarioRef 
-                                ? 'Turno • ' . \Carbon\Carbon::parse($horarioRef->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($horarioRef->hora_fin)->format('H:i')
-                                : 'Marcaciones Adicionales';
+                            // Identificamos si este grupo es un Olvido del Pasado
+                            $esOlvidoPasado = str_starts_with($horarioId, 'olvido_pasado_');
+                            
+                            if ($esOlvidoPasado) {
+                                $tituloTurno = 'Registro Atrasado (Cierre de Turno)';
+                            } else {
+                                $horarioRef = $registros->first()->horario;
+                                $tituloTurno = $horarioRef 
+                                    ? 'Turno • ' . \Carbon\Carbon::parse($horarioRef->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($horarioRef->hora_fin)->format('H:i')
+                                    : 'Marcaciones Adicionales';
+                            }
                         @endphp
 
                         {{-- CABECERA DEL TURNO --}}
-                        <div class="bg-gray-50/50 px-4 py-1.5 border-b border-gray-100 border-t {{ $loop->first ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        <div class="px-4 py-1.5 border-b border-gray-100 border-t {{ $loop->first ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center {{ $esOlvidoPasado ? 'bg-red-50' : 'bg-gray-50/50' }}">
+                            <span class="text-[10px] font-bold uppercase tracking-wider {{ $esOlvidoPasado ? 'text-red-500' : 'text-gray-400' }}">
+                                @if($esOlvidoPasado) <i class="fa-solid fa-triangle-exclamation mr-1 animate-pulse"></i> @endif
                                 {{ $tituloTurno }}
                             </span>
                         </div>
 
                         {{-- LISTA DE MARCACIONES DEL TURNO --}}
-                        @foreach($registros as $reg)
+                        @foreach($registros->sortBy('created_at') as $reg)
                             @php
                                 $tipoTexto = $reg->tipo_marcacion == 1 ? 'Entrada' : 'Salida';
-                                $iconoBg = $reg->tipo_marcacion == 1 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600';
                                 
-                                // 1. Recolector dinámico de Badges
+                                // Si es el olvido pasado, el icono será rojo intenso para destacar
+                                $iconoBg = $reg->tipo_marcacion == 1 ? 'bg-green-100 text-green-600' : ($esOlvidoPasado ? 'bg-red-600 text-white shadow-md' : 'bg-red-100 text-red-600');
+                                
+                                // Recolector dinámico de Badges
                                 $badges = [];
                                 
-                                // Estado Nativo (Tarde / Olvido)
+                                // Estado Nativo (Tarde / Olvido normal de hoy)
                                 if($reg->tipo_marcacion == 1 && $reg->fuera_horario) { 
                                     $badges[] = ['texto' => 'Tarde', 'color' => 'bg-orange-100 text-orange-700 border-orange-200']; 
-                                } elseif($reg->tipo_marcacion == 2 && $reg->fuera_horario) { 
+                                } elseif($reg->tipo_marcacion == 2 && $reg->fuera_horario && !$esOlvidoPasado) { 
                                     $badges[] = ['texto' => 'Olvido/Extra', 'color' => 'bg-red-100 text-red-700 border-red-200']; 
                                 }
 
-                                // Permisos Múltiples (Relación a tabla pivote)
+                                // BADGE ESPECIAL PARA OLVIDOS DE OTROS DÍAS
+                                if ($esOlvidoPasado) {
+                                    // Consultamos directo a DB la fecha de la entrada original sin romper relaciones
+                                    $fechaEntradaAntigua = \Illuminate\Support\Facades\DB::table('marcaciones_empleados')
+                                                            ->where('id', $reg->id_marcacion_entrada)
+                                                            ->value('created_at');
+                                    
+                                    $textoFecha = $fechaEntradaAntigua ? \Carbon\Carbon::parse($fechaEntradaAntigua)->format('d/m/Y') : 'Día Anterior';
+                                    $badges[] = ['texto' => 'Turno del: ' . $textoFecha, 'color' => 'bg-red-600 text-white border-red-700 shadow-sm'];
+                                }
+
+                                // Permisos Múltiples
                                 if(isset($reg->permisos)) {
                                     foreach($reg->permisos as $permiso) {
                                         $nombrePermiso = $permiso->tipoPermiso->nombre ?? 'Permiso';
@@ -240,8 +274,8 @@
                                 }
                             @endphp
 
-<div onclick="abrirDetalleHistorial(this)"
-                                 class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
+                            <div onclick="abrirDetalleHistorial(this)"
+                                 class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50 {{ $esOlvidoPasado ? 'bg-red-50/30' : '' }}"
                                  data-tipo="{{ $tipoTexto }}"
                                  data-hora="{{ $reg->created_at->format('h:i A') }}"
                                  data-fecha="{{ $reg->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
@@ -249,7 +283,7 @@
                                  data-foto="{{ Storage::url($reg->ubi_foto) }}"
                                  data-lat="{{ $reg->latitud }}"
                                  data-lng="{{ $reg->longitud }}"
-                                 data-badges="{{ $badgesHtml }}"> {{-- Pasamos todos los badges en HTML --}}
+                                 data-badges="{{ $badgesHtml }}">
                                 
                                 {{-- Icono --}}
                                 <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $iconoBg }}">
@@ -645,300 +679,6 @@
 </div>
 @endif
 @push('scripts')
-<script>
-    const MODO_PRUEBAS = true; // Cambiar a true solo para desarrollo
-    const PRECISION_REQUERIDA = 100; // Metros aceptables
-
-    // Ubicación fija de prueba
-    const UBICACION_FAKE = {
-        latitude: 13.69696,
-        longitude: -89.24584,
-        accuracy: 5
-    };
-
-    const btnMarcar = document.getElementById('btn-marcar');
-    const statusGps = document.getElementById('gps-status');
-    const inputLat = document.getElementById('latitud');
-    const inputLng = document.getElementById('longitud');
-    const gpsAccuracyText = document.getElementById('gps-accuracy');
-    const inputFoto = document.getElementById('input-foto');
-
-    // Variables de estado
-    let gpsValido = false;
-    let fotoValida = false;
-
-    function toggleModal(modalID) {
-        document.getElementById(modalID).classList.toggle("hidden");
-    }
-
-    // --- RELOJ EN TIEMPO REAL ---
-    function actualizarReloj() {
-        const ahora = new Date();
-        const horas = String(ahora.getHours()).padStart(2, '0');
-        const minutos = String(ahora.getMinutes()).padStart(2, '0');
-        const segundos = String(ahora.getSeconds()).padStart(2, '0');
-        const el = document.getElementById('reloj-tiempo-real');
-        if(el) el.textContent = `${horas}:${minutos}:${segundos}`;
-    }
-    setInterval(actualizarReloj, 1000);
-    actualizarReloj();
-
-    // --- GEOLOCALIZACIÓN ---
-    const options = { 
-        enableHighAccuracy: true, 
-        timeout: 15000, 
-        maximumAge: 0 
-    };
-
-    if (MODO_PRUEBAS) {
-        setTimeout(aplicarUbicacionFake, 1000);
-    } else if ("geolocation" in navigator) {
-        // watchPosition se queda escuchando cambios en la ubicación
-        navigator.geolocation.watchPosition(success, error, options);
-    } else {
-        statusGps.textContent = "GPS no soportado en este navegador";
-        statusGps.className = "text-sm text-red-600 font-bold";
-    }
-
-    function aplicarUbicacionFake() {
-        success({
-            coords: {
-                latitude: UBICACION_FAKE.latitude,
-                longitude: UBICACION_FAKE.longitude,
-                accuracy: UBICACION_FAKE.accuracy
-            }
-        });
-    }
-
-    function success(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const acc = Math.round(position.coords.accuracy);
-
-        // 1. Mostrar Precisión al Usuario visualmente
-        let colorPrecision = 'text-red-500';
-        if(acc <= PRECISION_REQUERIDA) colorPrecision = 'text-green-600';
-        else if(acc <= PRECISION_REQUERIDA * 2) colorPrecision = 'text-orange-500';
-
-        gpsAccuracyText.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
-
-        // 2. Evaluar si la precisión es aceptable
-        if (acc <= PRECISION_REQUERIDA) {
-            // -- SEÑAL BUENA --
-            gpsValido = true;
-            
-            // Llenar inputs ocultos
-            inputLat.value = lat;
-            inputLng.value = lng;
-            
-            // Actualizar UI
-            statusGps.textContent = "Ubicación Precisa Confirmada";
-            statusGps.className = "text-sm font-bold text-green-700";
-            
-            // Icono estático (ya encontró)
-            const iconContainer = document.getElementById('gps-icon');
-            if(iconContainer) iconContainer.classList.remove('animate-bounce');
-
-            // Actualizar inputs del modal de bloqueo si existe
-            const modalLat = document.querySelector('.lat-bloqueo');
-            const modalLng = document.querySelector('.lng-bloqueo');
-            if(modalLat) modalLat.value = lat;
-            if(modalLng) modalLng.value = lng;
-
-        } else {
-            // -- SEÑAL MALA / INESTABLE --
-            gpsValido = false;
-            
-            statusGps.innerHTML = `Mejorando señal... <span class="text-xs text-orange-600">(Acércate a una ventana)</span>`;
-            statusGps.className = "text-sm font-bold text-orange-500 animate-pulse";
-            
-            // Icono animado (buscando)
-            const iconContainer = document.getElementById('gps-icon');
-            if(iconContainer) iconContainer.classList.add('animate-bounce');
-        }
-
-        actualizarEstadoBoton();
-    }
-
-    function error(err) {
-        console.warn('GPS Error: ' + err.message);
-        gpsValido = false;
-        statusGps.textContent = "Sin señal GPS. Activa la ubicación.";
-        statusGps.className = "text-sm font-bold text-red-600";
-        gpsAccuracyText.textContent = "";
-        actualizarEstadoBoton();
-    }
-
-    // --- FOTOGRAFÍA ---
-    function previewImage(event) {
-        const input = event.target;
-        const preview = document.getElementById('preview-foto');
-        const placeholder = document.getElementById('placeholder-foto');
-        
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.src = e.target.result;
-                preview.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-                
-                fotoValida = true; // Foto capturada
-                actualizarEstadoBoton();
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    function previewImageModal(event) {
-        // Lógica separada para el modal de bloqueo (no afecta al botón principal)
-        const input = event.target;
-        const preview = document.getElementById('preview-foto-modal');
-        const placeholder = document.getElementById('placeholder-modal');
-        
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.src = e.target.result;
-                preview.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    // --- VALIDACIÓN FINAL ---
-    function actualizarEstadoBoton() {
-        if (!btnMarcar) return;
-
-        if (enviandoFormulario) return;
-        // El botón se habilita SOLO si hay GPS preciso Y Foto tomada
-        if (gpsValido && fotoValida) {
-            btnMarcar.disabled = false;
-            btnMarcar.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-            // Restaurar gradiente original si se quiere, o dejar clases CSS base
-        } else {
-            btnMarcar.disabled = true;
-            btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-    }
-
-    let mapHistorial;
-        let markerHistorial;
-
-        function abrirDetalleHistorial(elemento) {
-            const tipo = elemento.getAttribute('data-tipo');
-            const hora = elemento.getAttribute('data-hora');
-            const fecha = elemento.getAttribute('data-fecha');
-            const sucursal = elemento.getAttribute('data-sucursal');
-            const fotoUrl = elemento.getAttribute('data-foto');
-            const lat = parseFloat(elemento.getAttribute('data-lat'));
-            const lng = parseFloat(elemento.getAttribute('data-lng'));
-            
-            // Recibimos el HTML generado desde Blade
-            const badgesHtml = elemento.getAttribute('data-badges');
-
-            // Llenar datos
-            document.getElementById('md-titulo').innerText = tipo;
-            document.getElementById('md-fecha').innerText = fecha + ' • ' + hora;
-            document.getElementById('md-img').src = fotoUrl;
-            document.getElementById('md-sucursal').innerText = sucursal;
-
-            // Inyectar los badges
-            document.getElementById('md-badges-container').innerHTML = badgesHtml;
-
-            // Mostrar Modal
-            const modal = document.getElementById('modal-detalle-historial');
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-
-            // Iniciar Mapa
-            initMapHistorial(lat, lng);
-        }
-
-        function cerrarDetalleHistorial() {
-            document.getElementById('modal-detalle-historial').classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-
-        function initMapHistorial(lat, lng) {
-            const position = { lat: lat, lng: lng };
-            if (!mapHistorial) {
-                setTimeout(() => {
-                    // Verificamos si Google Maps está cargado (ya que lo usas en la vista principal)
-                    if(typeof google !== 'undefined') {
-                        mapHistorial = new google.maps.Map(document.getElementById("md-mapa"), {
-                            center: position,
-                            zoom: 16,
-                            disableDefaultUI: true,
-                            zoomControl: true,
-                        });
-                        markerHistorial = new google.maps.Marker({
-                            position: position,
-                            map: mapHistorial,
-                        });
-                    }
-                }, 100);
-            } else {
-                setTimeout(() => {
-                    mapHistorial.setCenter(position);
-                    markerHistorial.setPosition(position);
-                    google.maps.event.trigger(mapHistorial, 'resize');
-                }, 100);
-            }
-        }
-
-    // --- LÓGICA DE LOADER Y BLOQUEO DE DOBLE CLICK ---
-    let enviandoFormulario = false;
-
-    function activarLoader(btnId) {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-
-        // 1. Bandera para evitar que la validación GPS lo reactive
-        enviandoFormulario = true;
-
-        // 2. Bloquear botón y cambiar estilos
-        btn.disabled = true;
-        btn.classList.add('opacity-75', 'cursor-wait');
-        
-        // 3. Guardar texto original y reemplazar por Loader
-        const textoOriginal = btn.innerText;
-        btn.innerHTML = `
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Procesando...
-        `;
-    }
-
-    // Listener para el formulario PRINCIPAL
-    const formPrincipal = document.getElementById('form-marcacion');
-    if (formPrincipal) {
-        formPrincipal.addEventListener('submit', function(e) {
-            if (enviandoFormulario) {
-                e.preventDefault(); // Prevenir doble envío si ya está procesando
-                return;
-            }
-            activarLoader('btn-marcar');
-        });
-    }
-
-    // Listener para el formulario del MODAL DE BLOQUEO (si existe)
-    const btnModal = document.getElementById('btn-marcar-modal');
-    if (btnModal) {
-        // Buscamos el formulario padre del botón del modal
-        const formModal = btnModal.closest('form');
-        if (formModal) {
-            formModal.addEventListener('submit', function(e) {
-                if (enviandoFormulario) {
-                    e.preventDefault();
-                    return;
-                }
-                activarLoader('btn-marcar-modal');
-            });
-        }
-    }
-</script>
+    <script src="{{ asset('js/marcacion_app.js') }}"></script>
 @endpush
 </x-app-layout>
