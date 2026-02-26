@@ -72,7 +72,7 @@
                             <span class="text-xs uppercase tracking-widest text-indigo-300">Faltan</span>
                             <div class="text-xl font-bold text-white">{{ $tiempoRestante }}</div>
                         </div>
-                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 30 minutos antes.</p>
+                        <p class="text-xs text-indigo-200 mt-6">Podrás marcar entrada 1 hora antes.</p>
                     </div>
                 </div>
             @elseif(isset($ausenteTotal) && $ausenteTotal)

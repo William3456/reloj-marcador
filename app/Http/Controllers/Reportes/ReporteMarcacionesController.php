@@ -23,7 +23,10 @@ class ReporteMarcacionesController extends Controller
     public function index(Request $request)
     {
         $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
-        $empleadosList = Empleado::where('estado', 1)->orderBy('nombres')->get();
+        $empleadosList = Empleado::visiblePara(Auth::user())->where('estado', 1)
+        ->whereHas('user', function ($q) {
+                $q->whereNotIn('id_rol', [1, 2]);
+            })->orderBy('nombres')->get();
 
         $marcaciones = collect();
         if ($request->has('desde')) {
@@ -80,13 +83,18 @@ class ReporteMarcacionesController extends Controller
         }
         $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : $hastaPorDefecto;
 
+        $user = Auth::user();
         // 1. Obtener Empleados y sus permisos
         $queryEmpleados = Empleado::with(['sucursal', 'puesto', 'permisos' => function($q) use ($desde, $hasta) {
             $q->where('estado', 1)
-              ->where(function($q2) use ($desde, $hasta) {
+            ->where(function($q2) use ($desde, $hasta) {
                   $q2->where('fecha_inicio', '<=', $hasta)->where('fecha_fin', '>=', $desde);
               })->with('tipoPermiso');
-        }])->where('estado', 1);
+            }])->where('estado', 1)->whereHas('user', function ($q) {
+                $q->whereNotIn('id_rol', [1, 2]);
+            })->when($user->id_rol == 2, function ($q) use ($user) {
+                return $q->where('id_sucursal', $user->empleado->id_sucursal);
+            });
 
         if ($request->filled('sucursal')) $queryEmpleados->where('id_sucursal', $request->sucursal);
         if ($request->filled('empleado')) $queryEmpleados->where('id', $request->empleado);

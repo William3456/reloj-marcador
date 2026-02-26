@@ -81,7 +81,7 @@
                                     <div>
                                         <h2 class="text-lg font-black text-gray-900 leading-tight">{{ $emp->nombres }} {{ $emp->apellidos }}</h2>
                                         <div class="flex items-center text-xs text-gray-500 mt-1">
-                                            <i class="fa-solid fa-briefcase mr-1.5"></i> {{ $emp->puesto->nombre ?? 'Sin Puesto' }}
+                                            <i class="fa-solid fa-briefcase mr-1.5"></i> {{ $emp->puesto->desc_puesto ?? 'Sin Puesto' }}
                                             <span class="mx-2">•</span>
                                             <i class="fa-solid fa-store mr-1.5"></i> {{ $emp->sucursal->nombre ?? 'Sin Sucursal' }}
                                         </div>

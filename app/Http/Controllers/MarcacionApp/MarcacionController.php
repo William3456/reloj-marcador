@@ -29,7 +29,7 @@ class MarcacionController extends Controller
         // 🧪 ZONA DE PRUEBAS - NIVEL DE CLASE
         // =========================================================================
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
-        //Carbon::setTestNow(now()->addDay(2)->setTime(17, 00, 0));
+        // Carbon::setTestNow(now()->addDay(2)->setTime(17, 00, 0));
     }
 
     // =========================================================================
@@ -44,7 +44,10 @@ class MarcacionController extends Controller
         $estadoFiltro = $request->get('estado');
 
         $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
-        $empleadosList = Empleado::where('estado', 1)->orderBy('nombres')->get();
+        $empleadosList = Empleado::visiblePara(Auth::user())->where('estado', 1)
+            ->whereHas('user', function ($q) {
+                $q->whereNotIn('id_rol', [1, 2]);
+            })->orderBy('nombres')->get();
 
         $empleadosEvaluar = $this->obtenerEmpleadosFiltrados($request, $desde, $hasta);
         $empleadosIds = $empleadosEvaluar->pluck('id');
@@ -400,7 +403,7 @@ class MarcacionController extends Controller
             if ($fin->lessThan($inicio)) {
                 $fin->addDay();
             }
-            if ($fechaHora->between($inicio->copy()->subMinutes(30), $fin->copy()->addHour())) {
+            if ($fechaHora->between($inicio->copy()->subMinutes(60), $fin->copy()->addHour())) {
                 return true;
             }
         }
@@ -661,18 +664,27 @@ class MarcacionController extends Controller
 
     private function obtenerEmpleadosFiltrados(Request $request, $desde, $hasta)
     {
+        $user = Auth::user();
+
         $query = Empleado::with(['sucursal', 'puesto', 'permisos' => function ($q) use ($desde, $hasta) {
             $q->where('estado', 1)->where(function ($q2) use ($desde, $hasta) {
                 $q2->where('fecha_inicio', '<=', $hasta)->where('fecha_fin', '>=', $desde);
             })->with('tipoPermiso');
-        }])->where('estado', 1);
+        }])
+            ->where('estado', 1)
+            ->whereHas('user', function ($q) {
+                $q->whereNotIn('id_rol', [1, 2]);
+            })
+            ->when($user->id_rol == 2, function ($q) use ($user) {
+                return $q->where('id_sucursal', $user->empleado->id_sucursal);
+            });
 
         if ($request->filled('empleado')) {
             $query->where('id', $request->empleado);
         }
         if ($request->filled('sucursal')) {
-            $query->where('id', $request->sucursal);
-        } // Fix: Era id_sucursal, debe ser sobre relación o campo sucursal
+            $query->where('id_sucursal', $request->sucursal);
+        }
 
         return $query->orderBy('nombres')->get();
     }
