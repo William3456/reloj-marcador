@@ -17,6 +17,7 @@ use App\Http\Controllers\Reportes\ReporteEmpleadoController;
 use App\Http\Controllers\Reportes\ReporteMarcacionesController;
 use App\Http\Controllers\Sucursales\SucursalController; // Para la API interna
 use App\Models\Turnos\Turnos;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -212,11 +213,16 @@ Route::get('/test-mail', function () {
         $m->to('tu_correo@gmail.com')->subject('Prueba');
     });
 });
-Route::get('/donde-esta-el-ini', function () {
-    return [
-        'Archivo cargado' => php_ini_loaded_file(),
-        'Limite actual subida' => ini_get('upload_max_filesize'),
-        'Limite actual post' => ini_get('post_max_size'),
-    ];
+Route::get('/limpiar-todo', function() {
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    return 'Limpio';
+});
+Route::get('/limpiar-cache', function() {
+    Artisan::call('optimize:clear');
+    Artisan::call('view:clear');
+    Artisan::call('route:clear');
+    Artisan::call('config:clear');
+    return 'Caché de Laravel limpia y optimizada al 100%';
 });
 require __DIR__.'/auth.php';
