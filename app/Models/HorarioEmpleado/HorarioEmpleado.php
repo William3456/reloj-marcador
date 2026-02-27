@@ -4,6 +4,7 @@ namespace App\Models\HorarioEmpleado;
 
 use App\Models\Empleado\Empleado;
 use App\Models\Horario\horario;
+use App\Models\Horario\HorarioHistorico;
 use Illuminate\Database\Eloquent\Model;
 
 class HorarioEmpleado extends Model
@@ -27,5 +28,9 @@ class HorarioEmpleado extends Model
     public function horario()
     {
         return $this->belongsTo(horario::class, 'id_horario');
+    }
+    public function historico()
+    {
+        return $this->belongsTo(HorarioHistorico::class, 'id_horario_historico');
     }
 }

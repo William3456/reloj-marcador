@@ -3,6 +3,7 @@
 namespace App\Models\HorarioSucursal;
 
 use App\Models\Horario\horario;
+use App\Models\Horario\HorarioHistorico;
 use App\Models\Sucursales\Sucursal;
 use Illuminate\Database\Eloquent\Model;
 
@@ -26,5 +27,9 @@ class HorarioSucursal extends Model
     public function horario()
     {
         return $this->belongsTo(horario::class, 'id_horario');
+    }
+     public function historico()
+    {
+        return $this->belongsTo(HorarioHistorico::class, 'id_horario_historico');
     }
 }

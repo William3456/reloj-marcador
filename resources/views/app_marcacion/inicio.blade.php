@@ -509,7 +509,7 @@
             
             {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                @forelse(Auth::user()->empleado->horarios->sortBy('hora_ini') as $miHorario)
+                @forelse($horariosActivos->sortBy('hora_ini') as $miHorario)
                     {{-- ... (Tu código de horarios existente se mantiene IGUAL AQUÍ) ... --}}
                     @php
                         // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---

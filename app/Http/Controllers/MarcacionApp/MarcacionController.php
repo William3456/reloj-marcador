@@ -29,7 +29,8 @@ class MarcacionController extends Controller
         // 🧪 ZONA DE PRUEBAS - NIVEL DE CLASE
         // =========================================================================
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
-        // Carbon::setTestNow(now()->addDay(2)->setTime(17, 00, 0));
+         Carbon::setTestNow(now()->setTime(19, 11, 00));
+        // dd(Auth::user()->empleado->sucursal->horarios);
     }
 
     // =========================================================================
@@ -53,7 +54,10 @@ class MarcacionController extends Controller
         $empleadosIds = $empleadosEvaluar->pluck('id');
 
         // Pre-cargas para optimizar consultas a la base de datos
-        $historialHorariosTodos = HorarioEmpleado::with('horario')->whereIn('id_empleado', $empleadosIds)->get()->groupBy('id_empleado');
+        $historialHorariosTodos = HorarioEmpleado::with(['horario', 'historico'])->
+        whereIn('id_empleado', $empleadosIds)->get()->
+        groupBy('id_empleado');
+
         $marcacionesReales = $this->obtenerMarcacionesEnRango($empleadosIds, $desde, $hasta);
         $periodo = CarbonPeriod::create($desde, $hasta);
 
@@ -122,7 +126,9 @@ class MarcacionController extends Controller
 
         [$mostrarModalBloqueo, $marcacionPendiente] = $this->validarBloqueoSalida($horarioRequiereSalida, $entradaActiva, $horarioActivo);
 
+        $horariosActivos = $empleado->horarios()->wherePivot('es_actual', 1)->get();
         return view('app_marcacion.inicio', array_merge([
+            'horariosActivos' => $horariosActivos,
             'entradaActiva' => $entradaActiva,
             'horarioRequiereSalida' => $horarioRequiereSalida,
             'mostrarModalBloqueo' => $mostrarModalBloqueo,
@@ -149,11 +155,36 @@ class MarcacionController extends Controller
             $turnosEsperados = $turnosAsignados->filter(function ($asig) use ($fechaStr, $diaSemana) {
                 $inicioValido = empty($asig->fecha_inicio) || $asig->fecha_inicio <= $fechaStr;
                 $finValido = empty($asig->fecha_fin) || $asig->fecha_fin >= $fechaStr;
-                if (! $inicioValido || ! $finValido || ! $asig->horario || empty($asig->horario->dias)) {
+
+                if (! $inicioValido || ! $finValido || ! $asig->horario) {
                     return false;
                 }
 
-                return in_array($diaSemana, array_map(fn ($d) => Str::slug($d), $asig->horario->dias));
+                // Leemos los días del histórico (si hay) o del maestro
+                $diasTurno = ($asig->historico && ! empty($asig->historico->dias)) ? $asig->historico->dias : $asig->horario->dias;
+
+                if (empty($diasTurno)) {
+                    return false;
+                }
+
+                return in_array($diaSemana, array_map(fn ($d) => Str::slug($d), $diasTurno));
+
+            })->map(function ($asig) {
+                // Clonamos para no alterar los datos de otros días en el bucle
+                $newAsig = clone $asig;
+                $newHorario = clone $asig->horario;
+
+                // MAGIA: Si la asignación tiene un histórico, usamos esas horas
+                if ($newAsig->historico) {
+                    $newHorario->hora_ini = $newAsig->historico->hora_entrada; // Ojo: verifica si es hora_entrada o hora_ini
+                    $newHorario->hora_fin = $newAsig->historico->hora_salida;
+                    $newHorario->tolerancia = $newAsig->historico->tolerancia;
+                }
+
+                $newAsig->horario = $newHorario;
+
+                return $newAsig;
+
             })->sortBy(fn ($asig) => $asig->horario->hora_ini);
 
             $marcacionesDelDia = $marcacionesDelEmpleado->get($fechaStr, collect());
@@ -247,6 +278,9 @@ class MarcacionController extends Controller
         $tieneExoneracion = $permisosExoneracion->isNotEmpty();
 
         if ($marcacion) {
+
+            $esTardeReal = ($marcacion->fuera_horario == 1);
+
             if ($marcacion->salida) {
                 $salidaReal = $marcacion->salida->created_at;
                 $esDiaDiferente = $marcacion->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
@@ -262,7 +296,7 @@ class MarcacionController extends Controller
                     }
                 }
 
-                $tieneObservacion = $marcacion->fuera_horario || $esOlvidoSalida;
+                $tieneObservacion = $esTardeReal || $esOlvidoSalida;
                 $tienePermisosMarcacion = $marcacion->permisos->isNotEmpty() || $marcacion->salida->permisos->isNotEmpty();
 
                 if ($tieneObservacion) {
@@ -528,14 +562,46 @@ class MarcacionController extends Controller
 
         if ($tipoMarcacion == 1) {
             if (now()->lessThanOrEqualTo($finTurno)) {
-                $tolerancia = $horario->tolerancia;
-                if ($permisos['llegada_tarde']) {
-                    $tolerancia += $permisos['llegada_tarde']->valor;
+
+                $empleado = Auth::user()->empleado;
+                $sucursal = $empleado->sucursal;
+
+                // 1. Fallback base: Tolerancia del turno del empleado
+                $toleranciaAplicar = $horario->tolerancia;
+
+                // 2. REGLA PRIORITARIA: Buscar tolerancia de la sucursal (Turno más cercano)
+                if ($sucursal && $sucursal->horarios && $sucursal->horarios->isNotEmpty()) {
+
+                    $horarioSucursal = $sucursal->horarios->sortBy(function ($hs) use ($inicioTurno) {
+                        // Armamos la hora de la sucursal para compararla con el inicioTurno actual
+                        $horaInicioSucursal = Carbon::parse(now()->format('Y-m-d').' '.$hs->hora_ini);
+
+                        return abs($inicioTurno->diffInMinutes($horaInicioSucursal));
+                    })->first();
+
+                    if ($horarioSucursal) {
+                        $toleranciaAplicar = $horarioSucursal->tolerancia;
+                    }
+                }
+
+                // 3. EXCEPCIÓN SUPREMA: Permiso de Llegada Tarde
+                // (Si existe, REEMPLAZA la tolerancia de la sucursal por los minutos otorgados)
+                if (isset($permisos['llegada_tarde']) && $permisos['llegada_tarde']) {
+                    $toleranciaAplicar += (int) $permisos['llegada_tarde']->valor;
                     $permisosUsados[] = $permisos['llegada_tarde']->id;
                 }
-                if (now()->greaterThan($inicioTurno->copy()->addMinutes($tolerancia))) {
+
+                // 4. LA TRAMPA DE LOS SEGUNDOS: Ignorar segundos para ser justos
+                $horaMarcaje = now()->startOfMinute();
+                $horaLimite = $inicioTurno->copy()->addMinutes($toleranciaAplicar)->startOfMinute();
+
+                // 5. Evaluar la verdad absoluta
+                if ($horaMarcaje->greaterThan($horaLimite)) {
                     $resultado['fuera_horario'] = 1;
+                } else {
+                    $resultado['fuera_horario'] = 0; // Guardamos 0 explícito para evitar NULLs
                 }
+
             } else {
                 return ['error' => 'Tu jornada para este turno ya finalizó.'];
             }

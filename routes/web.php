@@ -16,11 +16,15 @@ use App\Http\Controllers\Puestos\PuestosController;
 use App\Http\Controllers\Reportes\ReporteEmpleadoController;
 use App\Http\Controllers\Reportes\ReporteMarcacionesController;
 use App\Http\Controllers\Sucursales\SucursalController; // Para la API interna
+use App\Models\Horario\horario;
+use App\Models\Horario\HorarioHistorico;
 use App\Models\Turnos\Turnos;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /*
 |--------------------------------------------------------------------------
@@ -224,5 +228,98 @@ Route::get('/limpiar-cache', function() {
     Artisan::call('route:clear');
     Artisan::call('config:clear');
     return 'Caché de Laravel limpia y optimizada al 100%';
+});
+
+Route::get('/limpiar-historiales', function () {
+    // ¡IMPORTANTE! HAZ UN RESPALDO DE TU BASE DE DATOS ANTES DE EJECUTAR ESTO
+    DB::beginTransaction();
+
+    try {
+        // 1. Borrar asignaciones viejas/cerradas
+        DB::table('horarios_trabajadores')->where('es_actual', 0)->delete();
+        DB::table('horarios_sucursales')->where('es_actual', 0)->delete();
+
+        // 2. Vaciar históricos viejos
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        HorarioHistorico::query()->delete(); 
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        $horarios = horario::all();
+
+        foreach ($horarios as $horario) {
+            // 3. Crear el histórico fundacional perfecto (desde el 2020)
+            $historico = HorarioHistorico::create([
+                'id_horario'    => $horario->id,
+                'tipo_horario'  => $horario->permitido_marcacion,
+                'hora_entrada'  => $horario->hora_ini,
+                'hora_salida'   => $horario->hora_fin,
+                'tolerancia'    => $horario->tolerancia,
+                'dias'          => $horario->dias,
+                'vigente_desde' => '2020-01-01 00:00:00', 
+                'vigente_hasta' => null,
+            ]);
+
+            // 4. Conectar a los empleados/sucursales activos con este nuevo histórico
+            if ($horario->permitido_marcacion == 1) { 
+                DB::table('horarios_sucursales')
+                    ->where('id_horario', $horario->id)
+                    ->update([
+                        'id_horario_historico' => $historico->id,
+                        'es_actual' => 1,
+                        'fecha_fin' => null
+                    ]);
+            } else { 
+                DB::table('horarios_trabajadores')
+                    ->where('id_horario', $horario->id)
+                    ->update([
+                        'id_horario_historico' => $historico->id,
+                        'es_actual' => 1,
+                        'fecha_fin' => null
+                    ]);
+            }
+
+            // 5. NUEVO: Rescatar las marcaciones antiguas
+            // Basado en tu código anterior, asumo que la columna se llama id_horario_historico_empleado
+            DB::table('marcaciones_empleados') // O el nombre exacto de tu tabla de marcaciones
+                ->where('id_horario', $horario->id)
+                ->update([
+                    'id_horario_historico_empleado' => $historico->id 
+                    // Si tu columna se llama distinto (ej. id_horario_historico), cámbialo aquí arriba
+                ]);
+        }
+
+        DB::commit();
+        return "¡Éxito total! Historiales purgados, asignaciones arregladas y marcaciones pasadas enlazadas correctamente.";
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return "Error al limpiar: " . $e->getMessage();
+    }
+});
+
+Route::get('/sumar-hora-global', function () {
+    // 1. Obtenemos todas las tablas de la base de datos actual
+    $tablas = DB::select('SHOW TABLES');
+    $tablasAfectadas = [];
+
+    foreach ($tablas as $tabla) {
+        // Extraemos el nombre exacto de la tabla
+        $nombreTabla = array_values((array)$tabla)[0];
+
+        // 2. Verificamos si la tabla tiene los campos de Laravel antes de intentar actualizarla
+        // Esto evita errores en tablas como 'migrations' o tablas pivote que no llevan timestamps
+        if (Schema::hasColumn($nombreTabla, 'created_at') && Schema::hasColumn($nombreTabla, 'updated_at')) {
+            
+            // 3. Ejecutamos la suma de 1 hora directamente en la base de datos
+            DB::table($nombreTabla)->update([
+                'created_at' => DB::raw('DATE_ADD(created_at, INTERVAL 1 HOUR)'),
+                'updated_at' => DB::raw('DATE_ADD(updated_at, INTERVAL 1 HOUR)')
+            ]);
+
+            $tablasAfectadas[] = $nombreTabla;
+        }
+    }
+
+    return "¡Éxito! Se sumó 1 hora a los timestamps de las siguientes tablas: <br><br>" . implode('<br>', $tablasAfectadas);
 });
 require __DIR__.'/auth.php';

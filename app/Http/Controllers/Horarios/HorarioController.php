@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Horarios;
 use App\Http\Controllers\Controller;
 use App\Models\Horario\horario;
 use App\Models\Horario\HorarioHistorico;
+use App\Models\HorarioEmpleado\HorarioEmpleado;
 use App\Models\HorarioSucursal\HorarioSucursal;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -51,6 +52,7 @@ class HorarioController extends Controller
             'turno' => ['required', 'integer'],
             'dias' => 'array|required|min:1',
         ]);
+
         $user = Auth::user();
         if (! isset($user->empleado->id_sucursal)) {
             $validated['sucursal_creacion'] = 0;
@@ -58,7 +60,7 @@ class HorarioController extends Controller
             $validated['sucursal_id'] = $user->empleado->id_sucursal;
             $validated['sucursal_creacion'] = $validated['sucursal_id'];
         }
-     
+
         $contaErrr = 0;
 
         // 1. Forzamos el orden y aseguramos que las tildes no se codifiquen (JSON_UNESCAPED_UNICODE)
@@ -89,9 +91,36 @@ class HorarioController extends Controller
         if ($contaErrr > 0) {
             return back()->with('error', 'No se puede crear un horario con los mismos parámetros')->withInput();
         } else {
-            horario::create($validated);
 
-            return redirect()->route('horarios.create')->with('success', 'Horario creado correctamente.');
+            try {
+                DB::transaction(function () use ($validated) {
+
+                    // 3. Crear el Horario Maestro (La "cáscara")
+                    $nuevoHorario = Horario::create($validated);
+
+                    // 4. Formatear horas a H:i:s para que coincidan con el formato del histórico
+                    $horaEntradaFormat = Carbon::parse($validated['hora_ini'])->format('H:i:s');
+                    $horaSalidaFormat = Carbon::parse($validated['hora_fin'])->format('H:i:s');
+
+                    // 5. Nace la "Versión 1" (El Histórico inicial)
+                    HorarioHistorico::create([
+                        'id_horario' => $nuevoHorario->id,
+                        'tipo_horario' => $nuevoHorario->permitido_marcacion,
+                        'hora_entrada' => $horaEntradaFormat,
+                        'hora_salida' => $horaSalidaFormat,
+                        'tolerancia' => $nuevoHorario->tolerancia,
+                        'dias' => $nuevoHorario->dias,
+                        'vigente_desde' => now(),
+                        'vigente_hasta' => null,
+                    ]);
+
+                });
+
+                return redirect()->route('horarios.create')->with('success', 'Horario creado correctamente.');
+
+            } catch (\Exception $e) {
+                return back()->with('error', 'Error al crear el horario: '.$e->getMessage())->withInput();
+            }
         }
     }
 
@@ -117,75 +146,99 @@ class HorarioController extends Controller
     /**
      * Update the specified resource in storage.
      */
-public function update(Request $request, string $id)
-{
-    $validated = $request->validate([
-        'hora_ini' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
-        'hora_fin' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/', 'different:hora_ini'],
-        'permitido_marcacion' => ['required', 'in:0,1'],
-        'estado' => ['required', 'in:0,1'],
-        'tolerancia' => ['required', 'integer', 'min:0'],
-        'requiere_salida' => ['required', 'in:0,1'],
-        'turno_txt' => ['required', 'string'],
-        'turno' => ['required', 'integer'],
-        'dias' => 'array|required|min:1',
-    ]);
+    public function update(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'hora_ini' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
+            'hora_fin' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/', 'different:hora_ini'],
+            'permitido_marcacion' => ['required', 'in:0,1'],
+            'estado' => ['required', 'in:0,1'],
+            'tolerancia' => ['required', 'integer', 'min:0'],
+            'requiere_salida' => ['required', 'in:0,1'],
+            'turno_txt' => ['required', 'string'],
+            'turno' => ['required', 'integer'],
+            'dias' => 'array|required|min:1',
+        ]);
 
-    $horario = horario::findOrFail($id);
+        $horario = horario::findOrFail($id);
 
-    try {
-        DB::transaction(function () use ($horario, $validated) {
+        try {
+            DB::transaction(function () use ($horario, $validated) {
 
-            // 2. Actualizar el Maestro
-            $horario->update($validated);
+                // 2. Actualizar el Maestro
+                $horario->update($validated);
 
-            // CORRECCIÓN: Formatear horas a H:i:s para evitar el error de "Not enough data"
-            // Usamos $validated para tomar el dato crudo que envió el usuario
-            $horaEntradaFormat = Carbon::parse($validated['hora_ini'])->format('H:i:s');
-            $horaSalidaFormat = Carbon::parse($validated['hora_fin'])->format('H:i:s');
+                // CORRECCIÓN: Formatear horas a H:i:s
+                $horaEntradaFormat = Carbon::parse($validated['hora_ini'])->format('H:i:s');
+                $horaSalidaFormat = Carbon::parse($validated['hora_fin'])->format('H:i:s');
 
-            // 3. Manejo del Histórico
+                // 3. Manejo del Histórico
 
-            // A. Cerrar vigente actual
-            HorarioHistorico::where('id_horario', $horario->id)
-                ->vigente() // Asegúrate que este scope solo haga whereNull('vigente_hasta')
-                ->update(['vigente_hasta' => now()]);
+                // A. Cerrar vigente actual
+                HorarioHistorico::where('id_horario', $horario->id)
+                    ->vigente()
+                    ->update(['vigente_hasta' => now()]);
 
-            // B. Crear nuevo histórico
-            $nuevoHistorico = HorarioHistorico::create([
-                'id_horario'      => $horario->id,
-                'tipo_horario'    => $horario->permitido_marcacion,
-                'hora_entrada'    => $horaEntradaFormat, 
-                'hora_salida'     => $horaSalidaFormat,  
-                'tolerancia'      => $horario->tolerancia,
-                'dias'            => $horario->dias, 
-                'vigente_desde'   => now(),
-                'vigente_hasta'   => null,
-            ]);
+                // B. Crear nuevo histórico
+                $nuevoHistorico = HorarioHistorico::create([
+                    'id_horario' => $horario->id,
+                    'tipo_horario' => $horario->permitido_marcacion,
+                    'hora_entrada' => $horaEntradaFormat,
+                    'hora_salida' => $horaSalidaFormat,
+                    'tolerancia' => $horario->tolerancia,
+                    'dias' => $horario->dias,
+                    'vigente_desde' => now(),
+                    'vigente_hasta' => null,
+                ]);
 
-            // 4. ACTUALIZACIÓN DE TABLAS INTERMEDIAS
-            $dataPivot = [
-                'id_horario_historico' => $nuevoHistorico->id,
-                'updated_at' => now(),
-            ];
+                // 4. ACTUALIZACIÓN DE TABLAS INTERMEDIAS (OPCIÓN B: Mantener el historial)
+                $fechaCambio = now()->toDateString(); // Hoy (Ej. 2026-02-26)
+                $fechaFinVieja = now()->subDay()->toDateString(); // Ayer (Ej. 2026-02-25)
 
-            if ($horario->permitido_marcacion == 1) { // Sucursal
-                DB::table('horarios_sucursales')
+                // Determinar la tabla y el campo foráneo según el tipo
+                $tabla = ($horario->permitido_marcacion == 1) ? 'horarios_sucursales' : 'horarios_trabajadores';
+                $campoForaneo = ($horario->permitido_marcacion == 1) ? 'id_sucursal' : 'id_empleado';
+
+                // Buscar solo las asignaciones que están vigentes actualmente para este horario
+                $asignacionesViejas = DB::table($tabla)
                     ->where('id_horario', $horario->id)
-                    ->update($dataPivot);
-            } elseif ($horario->permitido_marcacion == 0) { // Trabajador
-                DB::table('horarios_trabajadores')
-                    ->where('id_horario', $horario->id)
-                    ->update($dataPivot);
-            }
-        });
+                    ->where('es_actual', 1)
+                    ->get();
 
-        return redirect()->route('horarios.index')->with('success', 'Horario actualizado y versionado correctamente.');
+                foreach ($asignacionesViejas as $asignacion) {
 
-    } catch (\Exception $e) {
-        return back()->with('error', 'Error al actualizar: '.$e->getMessage());
+                    // Si la asignación se creó hoy mismo, la cerramos hoy mismo para evitar fechas ilógicas
+                    $fechaFinReal = ($asignacion->fecha_inicio >= $fechaCambio) ? $asignacion->fecha_inicio : $fechaFinVieja;
+
+                    // 4.1 Cerrar la asignación vieja
+                    DB::table($tabla)
+                        ->where('id', $asignacion->id)
+                        ->update([
+                            'fecha_fin' => $fechaFinReal,
+                            'es_actual' => 0,
+                            'updated_at' => now(),
+                        ]);
+
+                    // 4.2 Insertar la nueva asignación en limpio
+                    DB::table($tabla)->insert([
+                        $campoForaneo => $asignacion->{$campoForaneo},
+                        'id_horario' => $horario->id,
+                        'id_horario_historico' => $nuevoHistorico->id,
+                        'fecha_inicio' => $fechaCambio,
+                        'fecha_fin' => null,
+                        'es_actual' => 1,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            });
+
+            return redirect()->route('horarios.index')->with('success', 'Horario actualizado y versionado correctamente.');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al actualizar: '.$e->getMessage());
+        }
     }
-}
 
     /**
      * Remove the specified resource from storage.
@@ -193,14 +246,35 @@ public function update(Request $request, string $id)
     public function destroy(string $id)
     {
         $horario = horario::findOrFail($id);
-        $tieneSuc = HorarioSucursal::where('id_horario', $horario->id)->first();
-        if ($tieneSuc) {
-            return redirect()->route('horarios.index')->with('error', 'No se puede eliminar el horario porque está asociado a una o más sucursales.');
-        } else {
-            $horario->delete();
 
-            return redirect()->route('horarios.index')->with('success', 'Horario eliminado correctamente.');
+        // 1. Verificamos usando Eloquent si tiene sucursales (pasadas o presentes)
+        $tieneSucursal = HorarioSucursal::where('id_horario', $horario->id)->exists();
+
+        // 2. Verificamos usando Eloquent si tiene empleados (pasados o presentes)
+        $tieneTrabajador = HorarioEmpleado::where('id_horario', $horario->id)->exists();
+
+        // 3. Bloqueo de seguridad con el mensaje contextualizado
+        if ($tieneSucursal || $tieneTrabajador) {
+            return redirect()->route('horarios.index')
+                ->with('error', 'No se puede eliminar: Este horario está asignado actualmente o fue asignado en el pasado a uno o más empleados/sucursales. Esto afectaría el historial de reportes.');
         }
 
+        // 4. Si el horario está "limpio", lo borramos de forma segura
+        try {
+            DB::transaction(function () use ($horario) {
+
+                // A. Primero borramos todas sus versiones en la tabla histórica usando Eloquent
+                HorarioHistorico::where('id_horario', $horario->id)->delete();
+
+                // B. Finalmente, borramos el horario maestro
+                $horario->delete();
+
+            });
+
+            return redirect()->route('horarios.index')->with('success', 'Horario y su historial de versiones eliminados correctamente.');
+
+        } catch (\Exception $e) {
+            return redirect()->route('horarios.index')->with('error', 'Error al intentar eliminar el horario: '.$e->getMessage());
+        }
     }
 }
