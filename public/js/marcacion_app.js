@@ -1,5 +1,5 @@
 
-const MODO_PRUEBAS = false; // Cambiar a true solo para desarrollo
+const MODO_PRUEBAS = true; // Cambiar a true solo para desarrollo
 const PRECISION_REQUERIDA = 100; // Metros aceptables
 
 // Ubicación fija de prueba

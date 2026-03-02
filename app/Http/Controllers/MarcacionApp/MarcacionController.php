@@ -29,7 +29,7 @@ class MarcacionController extends Controller
         // 🧪 ZONA DE PRUEBAS - NIVEL DE CLASE
         // =========================================================================
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
-         Carbon::setTestNow(now()->setTime(19, 11, 00));
+        // Carbon::setTestNow(now()->setTime(19, 11, 00));
         // dd(Auth::user()->empleado->sucursal->horarios);
     }
 
@@ -127,6 +127,7 @@ class MarcacionController extends Controller
         [$mostrarModalBloqueo, $marcacionPendiente] = $this->validarBloqueoSalida($horarioRequiereSalida, $entradaActiva, $horarioActivo);
 
         $horariosActivos = $empleado->horarios()->wherePivot('es_actual', 1)->get();
+
         return view('app_marcacion.inicio', array_merge([
             'horariosActivos' => $horariosActivos,
             'entradaActiva' => $entradaActiva,
@@ -394,8 +395,26 @@ class MarcacionController extends Controller
             return back()->withErrors(['error' => $validacionGPS['error']]);
         }
 
-        // Combinar Permisos Aplicados
-        $permisosTotales = array_unique(array_merge($validacionTiempo['permisos_aplicados'] ?? [], $validacionGPS['permisos_aplicados'] ?? []));
+        // =========================================================
+        // 🌟 MAGIA DINÁMICA DE PERMISOS PARA GUARDAR EN BD
+        // =========================================================
+        $permisosActivos = $this->validaPermisos();
+        $permisosTotales = [];
+
+        foreach ($permisosActivos['permisos'] as $codigo => $permiso) {
+            // Regla dinámica 1: LLEGADA_TARDE solo se guarda en Entrada (1)
+            if ($codigo === 'LLEGADA_TARDE' && $validated['tipo_marcacion'] == 2) {
+                continue;
+            }
+
+            // Regla dinámica 2: SALIDA_TEMPRANA solo se guarda en Salida (2)
+            if ($codigo === 'SALIDA_TEMPRANA' && $validated['tipo_marcacion'] == 1) {
+                continue;
+            }
+
+            // El resto (FUERA_RANGO, TELETRABAJO, etc.) aplican a ambos
+            $permisosTotales[] = $permiso->id;
+        }
 
         // Transacción Base de Datos
         $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana, $permisosTotales);
@@ -546,7 +565,7 @@ class MarcacionController extends Controller
     private function validarTiemposTurno($horario, $fechaReferencia, $tipoMarcacion, $entradaAbierta)
     {
         $permisos = $this->validaPermisos();
-        $permisosUsados = [];
+
         if (collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first()) {
             return ['error' => 'Permiso activo exime marcación.'];
         }
@@ -554,11 +573,13 @@ class MarcacionController extends Controller
         $fechaBase = $fechaReferencia->format('Y-m-d');
         $inicioTurno = Carbon::parse($fechaBase.' '.$horario->hora_ini);
         $finTurno = Carbon::parse($fechaBase.' '.$horario->hora_fin);
+
         if ($finTurno->lessThanOrEqualTo($inicioTurno)) {
             $finTurno->addDay();
         }
 
-        $resultado = ['fuera_horario' => null, 'es_olvido' => false, 'permisos_aplicados' => []];
+        // Ya no declaramos 'permisos_aplicados' aquí
+        $resultado = ['fuera_horario' => null, 'es_olvido' => false];
 
         if ($tipoMarcacion == 1) {
             if (now()->lessThanOrEqualTo($finTurno)) {
@@ -585,10 +606,9 @@ class MarcacionController extends Controller
                 }
 
                 // 3. EXCEPCIÓN SUPREMA: Permiso de Llegada Tarde
-                // (Si existe, REEMPLAZA la tolerancia de la sucursal por los minutos otorgados)
+                // (Si existe, suma los minutos a la tolerancia, pero ya no guarda el ID)
                 if (isset($permisos['llegada_tarde']) && $permisos['llegada_tarde']) {
                     $toleranciaAplicar += (int) $permisos['llegada_tarde']->valor;
-                    $permisosUsados[] = $permisos['llegada_tarde']->id;
                 }
 
                 // 4. LA TRAMPA DE LOS SEGUNDOS: Ignorar segundos para ser justos
@@ -609,9 +629,10 @@ class MarcacionController extends Controller
             if ($entradaAbierta) {
                 $limiteOlvido = $finTurno->copy()->addHour();
                 $momentoMinimo = $finTurno->copy();
+
+                // Si tiene salida temprana, restamos los minutos al límite inferior
                 if ($permisos['salida_temprana']) {
                     $momentoMinimo->subMinutes($permisos['salida_temprana']->valor);
-                    $permisosUsados[] = $permisos['salida_temprana']->id;
                 }
 
                 if (now()->greaterThan($limiteOlvido)) {
@@ -622,24 +643,23 @@ class MarcacionController extends Controller
                 }
             }
         }
-        $resultado['permisos_aplicados'] = $permisosUsados;
 
         return $resultado;
     }
 
     private function validarGPS($validated, $sucursal, $esOlvido)
     {
+        // Ya no devolvemos el array de permisos vacíos
         if ($validated['tipo_marcacion'] == 2 && $esOlvido) {
-            return ['distancia' => 0, 'permisos_aplicados' => []];
+            return ['distancia' => 0];
         }
 
         $permisos = $this->validaPermisos();
-        $permisosUsados = [];
         $rango = $sucursal->rango_marcacion_mts;
 
+        // Si tiene permiso fuera de rango, hacemos la matemática
         if ($permisos['fuera_rango']) {
             $rango = $permisos['fuera_rango']->cantidad_mts === null ? PHP_INT_MAX : $rango + $permisos['fuera_rango']->cantidad_mts;
-            $permisosUsados[] = $permisos['fuera_rango']->id;
         }
 
         $distancia = $this->distanciaEnMetros($validated['latitud'], $validated['longitud'], $sucursal->latitud, $sucursal->longitud);
@@ -648,7 +668,7 @@ class MarcacionController extends Controller
             return ['error' => "Estás fuera del rango permitido ($distancia mts)."];
         }
 
-        return ['distancia' => $distancia, 'permisos_aplicados' => $permisosUsados];
+        return ['distancia' => $distancia];
     }
 
     private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana, $permisosTotales)
