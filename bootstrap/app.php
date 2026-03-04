@@ -14,17 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
-        // 1. Aquí registraste tus alias (lo que ya tenías)
+        // 1. Aquí registraste tus alias
         $middleware->alias([
             'check.role' => \App\Http\Middleware\CheckRole::class,
             'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
-        ]);
-
-        // 2. AGREGA ESTA LÍNEA: Confiar en Ngrok para detectar HTTPS
-        $middleware->trustProxies(at: '*');
-        $middleware->web(append: [
+        ])->web(prepend: [
+            \App\Http\Middleware\IdentifyTenant::class,// Esto agrega el middleware a TODAS las rutas de web.php y auth.php automáticamente
             \App\Http\Middleware\MatarCookieFantasma::class,
         ]);
+
         // 3. Tu redirección de login (lo que hicimos antes)
         $middleware->redirectTo(           
             guests: '/login',

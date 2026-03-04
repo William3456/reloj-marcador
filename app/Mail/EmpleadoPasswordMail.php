@@ -18,11 +18,12 @@ class EmpleadoPasswordMail extends Mailable
      */
     public $email;
     public $password;
-
+    public $hostName; // Nueva propiedad para el dominio
     public function __construct($email, $password)
     {
         $this->email = $email;
         $this->password = $password;
+        $this->hostName = request()->getHost(); // Captura el dominio actual para usarlo en la vista
     }
 
 
