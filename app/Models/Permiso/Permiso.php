@@ -21,6 +21,8 @@ class Permiso extends Model
         'fecha_inicio',
         'fecha_fin',
         'estado',
+        'app_creacion',
+        'estado_solicitud',
     ];
 
     // Relación con empleado

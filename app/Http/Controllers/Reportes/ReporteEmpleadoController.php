@@ -15,19 +15,16 @@ use Illuminate\Support\Facades\Auth;
 
 class ReporteEmpleadoController extends Controller
 {
-    /**
-     * Método privado para centralizar la lógica de filtros.
-     * Retorna la colección de empleados ya filtrada y ordenada.
-     */
     private function getEmpleadosFiltrados(Request $request)
     {
         $user = Auth::user();
 
-        // 1. Iniciar la consulta base con relaciones y scopes
+        // 🌟 AGREGADO: Cargamos la relación 'horarios' para optimizar la consulta
         $query = Empleado::visiblePara($user)
-            ->with(['sucursal', 'puesto', 'departamento', 'user.rol']);
+            ->with(['sucursal', 'puesto', 'departamento', 'user.rol', 'horarios' => function ($q) {
+                $q->wherePivot('es_actual', 1);
+            }]);
 
-        // 2. Aplicar Filtros Dinámicos
         if ($request->filled('sucursal')) {
             $query->where('id_sucursal', $request->sucursal);
         }
@@ -41,7 +38,6 @@ class ReporteEmpleadoController extends Controller
         }
 
         if ($request->filled('estado')) {
-            // Casteamos a int por seguridad, como tenías en el PDF
             $query->where('estado', (int)$request->estado);
         }
 
@@ -56,11 +52,9 @@ class ReporteEmpleadoController extends Controller
                 });
         }
 
-        // 3. Ordenamiento
         $query->orderBy('nombres', 'asc')
               ->orderBy('apellidos', 'asc');
 
-        // 4. Retornar la colección de datos
         return $query->get();
     }
 
@@ -68,22 +62,18 @@ class ReporteEmpleadoController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Obtener listas para los Selects (Filtros de la Vista)
         $sucursales = Sucursal::visiblePara($user)->get();
         $puestos = Puesto::visiblePara($user)->get();
         $departamentos = Departamento::visiblePara($user)->get();
 
-        // Lógica de roles para el select
         if ($user->id_rol != 1) {
             $roles = Rol::where('id', '>=', $user->id_rol)->get();
         } else {
             $roles = Rol::all();
         }
 
-        // 2. Obtener empleados usando el método unificado
         $empleados = $this->getEmpleadosFiltrados($request);
 
-        // 3. Retornar vista
         return view('reportes.empleados.empleados_rep', compact(
             'sucursales',
             'roles',
@@ -95,17 +85,22 @@ class ReporteEmpleadoController extends Controller
 
     public function generarPdf(Request $request)
     {
-        // 1. Obtener empleados usando el mismo método unificado
         $empleados = $this->getEmpleadosFiltrados($request);
         $empresa = Empresa::first();
-        // 2. Generamos el PDF usando el layout maestro
-        $pdf = Pdf::loadView('reportes.empleados.pdf', compact('empleados','empresa'));
 
-        // 3. Configuración de papel
-        $pdf->setPaper('letter', 'portrait');
+        // Recopilar nombres legibles de los filtros para el encabezado del PDF
+        $filtros = [
+            'sucursal' => $request->filled('sucursal') ? Sucursal::find($request->sucursal)->nombre : 'Todas las Sucursales',
+            'estado' => $request->filled('estado') ? ($request->estado == '1' ? 'Activos' : 'Inactivos') : 'Todos',
+            'login' => $request->filled('login') ? ($request->login == '1' ? 'Con Acceso' : 'Sin Acceso') : 'Todos',
+            'puesto' => $request->filled('puesto') ? Puesto::find($request->puesto)->desc_puesto : 'Todos',
+            'departamento' => $request->filled('departamento') ? Departamento::find($request->departamento)->nombre_depto : 'Todos',
+        ];
 
+        $pdf = Pdf::loadView('reportes.empleados.pdf', compact('empleados', 'empresa', 'filtros'));
         
-        // 4. Abrir PDF
+        $pdf->setPaper('letter', 'landscape');
+
         return $pdf->stream('reporte_empleados.pdf');
     }
 }

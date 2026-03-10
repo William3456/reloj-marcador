@@ -67,7 +67,7 @@
         @if ($role == 3)
             <a href="{{ route('marcacion.inicio') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-               {{ request()->routeIs('marcacion.inicio') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                       {{ request()->routeIs('marcacion.inicio') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fas fa-home w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak
@@ -79,7 +79,7 @@
             </a>
             <a href="{{ route('marcacion.historial') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-               {{ request()->routeIs('marcacion.historial') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                       {{ request()->routeIs('marcacion.historial') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fas fa-clock w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak
@@ -89,11 +89,43 @@
                     Historial
                 </div>
             </a>
+            <div x-data="{ open: {{ request()->routeIs('marcacion.permisos.*') ? 'true' : 'false' }} }">
+                <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }"
+                    class="w-full flex items-center py-3 rounded-lg transition-all group relative {{ request()->routeIs('marcacion.permisos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                    :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
+
+                    <div class="flex items-center">
+                        <i class="fas fa-user-shield w-5 text-center shrink-0"></i>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Mis
+                            Permisos</span>
+                    </div>
+
+                    <i x-show="sidebarExpanded" x-cloak
+                        class="fas fa-chevron-down text-xs transition-transform duration-200"
+                        :class="open ? 'rotate-180' : ''"></i>
+
+                    <div x-show="!sidebarExpanded" x-cloak
+                        class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                        Mis Permisos
+                    </div>
+                </button>
+
+                <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
+                    <a href="{{ route('marcacion.permisos.index') }}"
+                        class="block py-2 text-sm {{ request()->routeIs('marcacion.permisos.index') ? $activeLinkClass : $inactiveLinkClass }}">
+                        Ver mis solicitudes
+                    </a>
+                    <a href="{{ route('marcacion.permisos.create') }}"
+                        class="block py-2 text-sm {{ request()->routeIs('marcacion.permisos.create') ? $activeLinkClass : $inactiveLinkClass }}">
+                        Solicitar permiso
+                    </a>
+                </div>
+            </div>
         @endif
         @if ($role == 1 || $role == 2)
             <a href="{{ route('dashboard') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-               {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                       {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fas fa-home w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak
@@ -106,7 +138,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('marcaciones.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('marcaciones.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('marcaciones.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-user-clock w-5 text-center shrink-0"></i>
@@ -123,13 +155,14 @@
                 </button>
                 <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
                     <a href="{{ route('marcaciones.index') }}"
-                        class="block py-2 text-sm {{ request()->routeIs('marcaciones.index') ? $activeLinkClass : $inactiveLinkClass }}">Ver marcaciones</a>
+                        class="block py-2 text-sm {{ request()->routeIs('marcaciones.index') ? $activeLinkClass : $inactiveLinkClass }}">Ver
+                        marcaciones</a>
                 </div>
             </div>
 
             <div x-data="{ open: {{ request()->routeIs('horarios.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('horarios.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('horarios.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-clock w-5 text-center shrink-0"></i>
@@ -154,7 +187,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('sucursales*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('sucursales*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('sucursales*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-store w-5 text-center shrink-0"></i>
@@ -174,9 +207,9 @@
                         class="block py-2 text-sm {{ request()->routeIs('sucursales.index') ? $activeLinkClass : $inactiveLinkClass }}">Lista
                         sucursales</a>
                     @if ($role == 1)
-                    <a href="{{ route('sucursales.create') }}"
-                        class="block py-2 text-sm {{ request()->routeIs('sucursales.create') ? $activeLinkClass : $inactiveLinkClass }}">Añadir
-                        sucursal</a>
+                        <a href="{{ route('sucursales.create') }}"
+                            class="block py-2 text-sm {{ request()->routeIs('sucursales.create') ? $activeLinkClass : $inactiveLinkClass }}">Añadir
+                            sucursal</a>
                     @endif
                     <a href="{{ route('sucursaleshorarios.asign') }}"
                         class="block py-2 text-sm {{ request()->routeIs('sucursaleshorarios.asign') ? $activeLinkClass : $inactiveLinkClass }}">Asignar
@@ -187,7 +220,7 @@
             <div
                 x-data="{ open: {{ request()->routeIs('empleados.*') || request()->routeIs('empleadoshorarios.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('empleados.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('empleados.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-users w-5 text-center shrink-0"></i>
@@ -216,7 +249,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('permisos.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('permisos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('permisos.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-user-shield w-5 text-center shrink-0"></i>
@@ -243,7 +276,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('departamentos.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('departamentos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('departamentos.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-building w-5 text-center shrink-0"></i>
@@ -271,7 +304,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('puestos.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('puestos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('puestos.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-briefcase w-5 text-center shrink-0"></i>
@@ -297,7 +330,7 @@
             </div>
             <div x-data="{ open: {{ request()->routeIs('reportes.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                            {{ request()->routeIs('reportes.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                    {{ request()->routeIs('reportes.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fa-solid fa-file w-5 text-center shrink-0"></i>
@@ -326,66 +359,59 @@
         @endif
     </nav>
 
-<div class="border-t border-gray-200 bg-gray-50 shrink-0 transition-all duration-300"
-     x-data="{ showLogoutModal: false }"
-     :class="sidebarExpanded ? 'p-4' : 'p-2'">
+    <div class="border-t border-gray-200 bg-gray-50 shrink-0 transition-all duration-300"
+        x-data="{ showLogoutModal: false }" :class="sidebarExpanded ? 'p-4' : 'p-2'">
 
-    <button type="button"
-            @click="showLogoutModal = true"
+        <button type="button" @click="showLogoutModal = true"
             class="flex items-center w-full text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all group relative"
             :class="sidebarExpanded ? 'px-4 py-2' : 'justify-center py-3'">
 
-        <i class="fas fa-sign-out-alt w-5 text-center shrink-0"></i>
-        <span x-show="sidebarExpanded" x-cloak class="ml-3 whitespace-nowrap">Cerrar Sesión</span>
+            <i class="fas fa-sign-out-alt w-5 text-center shrink-0"></i>
+            <span x-show="sidebarExpanded" x-cloak class="ml-3 whitespace-nowrap">Cerrar Sesión</span>
 
-        <div x-show="!sidebarExpanded" x-cloak
-             class="absolute left-full ml-2 bg-red-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
-            Salir
-        </div>
-    </button>
+            <div x-show="!sidebarExpanded" x-cloak
+                class="absolute left-full ml-2 bg-red-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
+                Salir
+            </div>
+        </button>
 
-    <template x-teleport="body">
-        <div x-show="showLogoutModal"
-             style="display: none;"
-             class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0">
+        <template x-teleport="body">
+            <div x-show="showLogoutModal" style="display: none;"
+                class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
+                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
 
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all"
-                 @click.away="showLogoutModal = false">
-                
-                <div class="p-6 text-center">
-                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                        <i class="fas fa-power-off text-red-600 text-xl"></i>
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all"
+                    @click.away="showLogoutModal = false">
+
+                    <div class="p-6 text-center">
+                        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                            <i class="fas fa-power-off text-red-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Cerrar sesión</h3>
+                        <p class="text-sm text-gray-500 mt-2">¿Estás seguro de que deseas salir?</p>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900">Cerrar sesión</h3>
-                    <p class="text-sm text-gray-500 mt-2">¿Estás seguro de que deseas salir?</p>
-                </div>
 
-                <div class="bg-gray-50 px-6 py-4 flex gap-3">
-                    <button type="button"
-                            @click="showLogoutModal = false"
+                    <div class="bg-gray-50 px-6 py-4 flex gap-3">
+                        <button type="button" @click="showLogoutModal = false"
                             class="flex-1 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium shadow-sm transition-colors">
-                        Cancelar
-                    </button>
-
-                    <form method="POST" action="{{ route('logout') }}" class="flex-1">
-                        @csrf
-                        <button type="submit"
-                                class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-sm transition-colors">
-                            Salir
+                            Cancelar
                         </button>
-                    </form>
+
+                        <form method="POST" action="{{ route('logout') }}" class="flex-1">
+                            @csrf
+                            <button type="submit"
+                                class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-sm transition-colors">
+                                Salir
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-    </template>
+        </template>
 
-</div>
+    </div>
 </aside>
 
 <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-30 xl:hidden"
@@ -421,27 +447,21 @@
         modalTitle: '', 
         modalMessage: '', 
         buttonText: '' 
-     }"
-     @open-confirm-modal.window="
+     }" @open-confirm-modal.window="
         open = true; 
         actionUrl = $event.detail.url;
         modalTitle = $event.detail.title;
         modalMessage = $event.detail.message;
         buttonText = $event.detail.buttonText;
-     "
-     x-show="open"
-     style="display: none;"
-     class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
-     x-transition:enter="transition ease-out duration-300"
-     x-transition:enter-start="opacity-0"
-     x-transition:enter-end="opacity-100"
-     x-transition:leave="transition ease-in duration-200"
-     x-transition:leave-start="opacity-100"
-     x-transition:leave-end="opacity-0">
+     " x-show="open" style="display: none;"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
+    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
 
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all"
-         @click.away="open = false">
-        
+        @click.away="open = false">
+
         <div class="p-6 text-center">
             <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4 animate-pulse">
                 <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
@@ -452,14 +472,14 @@
 
         <div class="bg-gray-50 px-6 py-4 flex gap-3">
             <button type="button" @click="open = false"
-                    class="flex-1 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium shadow-sm transition-colors">
+                class="flex-1 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium shadow-sm transition-colors">
                 Cancelar
             </button>
 
             <form :action="actionUrl" method="POST" class="flex-1">
                 @csrf
                 @method('DELETE') <button type="submit"
-                        class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-sm transition-colors flex items-center justify-center gap-2">
+                    class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-sm transition-colors flex items-center justify-center gap-2">
                     <i class="fas fa-trash-alt text-xs"></i>
                     <span x-text="buttonText"></span>
                 </button>

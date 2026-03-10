@@ -29,7 +29,7 @@ class MarcacionController extends Controller
         // 🧪 ZONA DE PRUEBAS - NIVEL DE CLASE
         // =========================================================================
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
-        // Carbon::setTestNow(now()->setTime(19, 11, 00));
+         //Carbon::setTestNow(now()->addDay(6)->setTime(13, 01, 12));
         // dd(Auth::user()->empleado->sucursal->horarios);
     }
 
@@ -815,38 +815,20 @@ class MarcacionController extends Controller
         $normalizarDia = fn ($dia) => substr(Str::slug($dia), 0, 3);
         $hoyNorm = $normalizarDia($diaSemana);
 
-        $candidatosRaw = $empleado->horarios()->wherePivot('es_actual', 1)->get()->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
+        // 1. Obtener los horarios específicos asignados al empleado para el día de hoy
+        $candidatosRaw = $empleado->horarios()
+            ->wherePivot('es_actual', 1)
+            ->get()
+            ->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
+
+        // 2. Si el empleado no tiene turnos personalizados, usamos los de la sucursal como respaldo
         if ($candidatosRaw->isEmpty()) {
             $candidatosRaw = $sucursal->horarios->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
         }
 
-        $horariosSucursalHoy = $sucursal->horarios->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
-
-        return $candidatosRaw->filter(function ($hEmp) use ($horariosSucursalHoy) {
-            if ($horariosSucursalHoy->isEmpty()) {
-                return false;
-            }
-
-            $iniEmp = Carbon::parse($hEmp->hora_ini);
-            $finEmp = Carbon::parse($hEmp->hora_fin);
-            if ($finEmp->lessThan($iniEmp)) {
-                $finEmp->addDay();
-            }
-
-            foreach ($horariosSucursalHoy as $hs) {
-                $iniSuc = Carbon::parse($hs->hora_ini);
-                $finSuc = Carbon::parse($hs->hora_fin);
-                if ($finSuc->lessThan($iniSuc)) {
-                    $finSuc->addDay();
-                }
-
-                if ($iniEmp->greaterThanOrEqualTo($iniSuc->copy()->subMinutes(30)) && $finEmp->lessThanOrEqualTo($finSuc->copy()->addMinutes(15))) {
-                    return true;
-                }
-            }
-
-            return false;
-        })->sortBy('hora_ini');
+        // 3. Retornamos los turnos ordenados cronológicamente.
+        // (Se eliminó el cruce restrictivo con la sucursal para que respete horarios como el de 14:00 a 17:30)
+        return $candidatosRaw->sortBy('hora_ini')->values();
     }
 
     private function calcularEstadoJornadaApp($candidatos, $historialHoy, $entradasHoyIds, $entradaActiva, $hoy, $ahora)

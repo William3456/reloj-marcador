@@ -34,6 +34,9 @@ Schema::create('permiso_trabajador', function (Blueprint $table) {
 
             $table->boolean('estado')->default(true);
 
+            $table->integer('app_creacion ')->comment('1=Panel admin, 2=App movil')->default(1);
+            $table->integer('estado_solicitud')->comment('1=en espera, 2=aprobado,3=rechazado')->default(1);
+
             $table->timestamps();
 
             // FK

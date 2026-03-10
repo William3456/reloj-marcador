@@ -17,9 +17,6 @@ use Illuminate\Support\Str;
 
 class ReporteMarcacionesController extends Controller
 {
-    // =========================================================================
-    // 1. VISTA WEB
-    // =========================================================================
     public function index(Request $request)
     {
         $sucursales = Sucursal::visiblePara(Auth::user())->where('estado', 1)->get();
@@ -36,15 +33,11 @@ class ReporteMarcacionesController extends Controller
         return view('reportes.marcaciones.marcaciones_rep', compact('marcaciones', 'sucursales', 'empleadosList'));
     }
 
-    // =========================================================================
-    // 2. GENERACIÓN DE PDF
-    // =========================================================================
     public function generarPdf(Request $request)
     {
         $registros = $this->generarDataReporte($request);
         $empresa = Empresa::first();
 
-        // Diccionario para traducir el filtro seleccionado a texto legible en el PDF
         $nombresFiltros = [
             'presente' => 'Asistencia Perfecta (Puntuales)',
             'extra' => 'Turnos Extras',
@@ -55,10 +48,14 @@ class ReporteMarcacionesController extends Controller
             'sin_cierre' => 'Olvidos de Salida / Sin Cierre',
         ];
 
+        // 🌟 AGREGADO: Cargamos los horarios de la sucursal para mostrarlos en el PDF
+        $sucursalObj = $request->filled('sucursal') ? Sucursal::with('horarios')->find($request->sucursal) : null;
+
         $filtros = [
             'desde' => $request->input('desde') ?? date('Y-m-01'),
             'hasta' => $request->input('hasta') ?? date('Y-m-d'),
-            'sucursal' => $request->filled('sucursal') ? Sucursal::find($request->sucursal)->nombre : 'Todas',
+            'sucursal_nombre' => $sucursalObj ? $sucursalObj->nombre : 'Consolidado General (Todas)',
+            'sucursal_obj' => $sucursalObj, 
             'incidencia' => $request->filled('incidencia') ? ($nombresFiltros[$request->incidencia] ?? 'Todos') : 'Todos los registros',
         ];
 
@@ -68,9 +65,6 @@ class ReporteMarcacionesController extends Controller
         return $pdf->stream('reporte_asistencia.pdf');
     }
 
-    // =========================================================================
-    // 3. EL MOTOR CORE ADAPTADO A REPORTES
-    // =========================================================================
     private function generarDataReporte(Request $request)
     {
         $hoy = Carbon::now();
@@ -84,7 +78,6 @@ class ReporteMarcacionesController extends Controller
         $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : $hastaPorDefecto;
 
         $user = Auth::user();
-        // 1. Obtener Empleados y sus permisos
         $queryEmpleados = Empleado::with(['sucursal', 'puesto', 'permisos' => function ($q) use ($desde, $hasta) {
             $q->where('estado', 1)
                 ->where(function ($q2) use ($desde, $hasta) {
@@ -106,7 +99,6 @@ class ReporteMarcacionesController extends Controller
         $empleados = $queryEmpleados->orderBy('apellidos')->get();
         $empleadosIds = $empleados->pluck('id');
 
-        // 2. Pre-cargar Horarios y Marcaciones (NUEVO: Cargamos 'historico')
         $historialHorariosTodos = HorarioEmpleado::with(['horario', 'historico'])->whereIn('id_empleado', $empleadosIds)->get()->groupBy('id_empleado');
 
         $marcacionesReales = MarcacionEmpleado::whereIn('id_empleado', $empleadosIds)
@@ -119,7 +111,6 @@ class ReporteMarcacionesController extends Controller
         $reporte = collect();
         $periodo = CarbonPeriod::create($desde, $hasta);
 
-        // 3. Procesamiento Día a Día
         foreach ($empleados as $emp) {
             $horariosDelEmpleado = $historialHorariosTodos->get($emp->id, collect());
             $marcacionesDelEmpleado = $marcacionesReales->get($emp->id, collect())->groupBy(fn ($m) => $m->created_at->format('Y-m-d'));
@@ -128,7 +119,6 @@ class ReporteMarcacionesController extends Controller
                 $fechaStr = $fechaObj->format('Y-m-d');
                 $diaSemana = Str::slug($fechaObj->locale('es')->isoFormat('dddd'));
 
-                // NUEVO: Filtramos y Mapeamos con el Histórico
                 $turnosEsperados = $horariosDelEmpleado->filter(function ($asig) use ($fechaStr, $diaSemana) {
                     $inicioValido = empty($asig->fecha_inicio) || $asig->fecha_inicio <= $fechaStr;
                     $finValido = empty($asig->fecha_fin) || $asig->fecha_fin >= $fechaStr;
@@ -154,7 +144,6 @@ class ReporteMarcacionesController extends Controller
                     }
 
                     $newAsig->horario = $newHorario;
-
                     return $newAsig;
                 })->sortBy(fn ($asig) => $asig->horario->hora_ini);
 
@@ -162,7 +151,6 @@ class ReporteMarcacionesController extends Controller
                 $marcacionesLibres = collect($marcacionesDelDia->all());
                 $turnosProcesados = [];
 
-                // RONDA 1: Match Exacto
                 foreach ($turnosEsperados as $asig) {
                     $marcacion = $marcacionesLibres->first(function ($m) use ($asig) {
                         if ($m->id_horario_historico_empleado && $asig->id_horario_historico) {
@@ -171,7 +159,6 @@ class ReporteMarcacionesController extends Controller
                         if ($m->id_horario && $asig->id_horario) {
                             return $m->id_horario == $asig->id_horario;
                         }
-
                         return false;
                     });
                     if ($marcacion) {
@@ -182,7 +169,6 @@ class ReporteMarcacionesController extends Controller
                     }
                 }
 
-                // RONDA 2: Match Proximidad
                 foreach ($turnosEsperados as $asig) {
                     if (is_null($turnosProcesados[$asig->id]) && $marcacionesLibres->isNotEmpty()) {
                         $horaInicioTurno = Carbon::parse($fechaStr.' '.$asig->horario->hora_ini);
@@ -194,7 +180,6 @@ class ReporteMarcacionesController extends Controller
                     }
                 }
 
-                // Generar Filas del Reporte
                 foreach ($turnosEsperados as $asig) {
                     $marcacion = $turnosProcesados[$asig->id];
                     $datosEstado = $this->determinarEstadoReporte($marcacion, $fechaObj, $hoy, $asig->horario, $emp);
@@ -208,6 +193,7 @@ class ReporteMarcacionesController extends Controller
                         'empleado' => $emp,
                         'sucursal' => $emp->sucursal,
                         'horario_programado' => Carbon::parse($asig->horario->hora_ini)->format('H:i').' - '.Carbon::parse($asig->horario->hora_fin)->format('H:i'),
+                        'tolerancia' => $datosEstado['tolerancia_calculada'], // <-- AHORA USAMOS LA CALCULADA
                         'entrada_real' => $marcacion ? $marcacion->created_at : null,
                         'salida_real' => ($marcacion && $marcacion->salida) ? $marcacion->salida->created_at : null,
                         'estado_key' => $datosEstado['key'],
@@ -217,7 +203,6 @@ class ReporteMarcacionesController extends Controller
                     ]);
                 }
 
-                // Generar Filas para Turnos Extras
                 foreach ($marcacionesLibres as $mExtra) {
                     $datosEstado = $this->determinarEstadoReporte($mExtra, $fechaObj, $hoy, null, $emp);
                     $estadoKeyExtra = 'extra';
@@ -231,6 +216,7 @@ class ReporteMarcacionesController extends Controller
                         'empleado' => $emp,
                         'sucursal' => $emp->sucursal,
                         'horario_programado' => 'Turno Extra',
+                        'tolerancia' => 0, 
                         'entrada_real' => $mExtra->created_at,
                         'salida_real' => $mExtra->salida ? $mExtra->salida->created_at : null,
                         'estado_key' => $estadoKeyExtra,
@@ -242,30 +228,19 @@ class ReporteMarcacionesController extends Controller
             }
         }
 
-        // =========================================================================
-        // 4. APLICAR FILTRO DE INCIDENCIA AVANZADO
-        // =========================================================================
         if ($request->filled('incidencia')) {
             $filtro = $request->incidencia;
 
             $reporte = $reporte->filter(function ($row) use ($filtro) {
                 switch ($filtro) {
-                    case 'presente':
-                        return $row['estado_key'] === 'presente';
-                    case 'tarde_total':
-                        return in_array($row['estado_key'], ['tarde', 'tarde_con_permiso']);
-                    case 'tarde_sin_permiso':
-                        return $row['estado_key'] === 'tarde';
-                    case 'ausente':
-                        return $row['estado_key'] === 'ausente';
-                    case 'con_permiso':
-                        return ! empty($row['permiso_info']);
-                    case 'sin_cierre':
-                        return $row['estado_key'] === 'sin_cierre' || $row['es_olvido_salida'] === true;
-                    case 'extra':
-                        return $row['estado_key'] === 'extra';
-                    default:
-                        return true;
+                    case 'presente': return $row['estado_key'] === 'presente';
+                    case 'tarde_total': return in_array($row['estado_key'], ['tarde', 'tarde_con_permiso']);
+                    case 'tarde_sin_permiso': return $row['estado_key'] === 'tarde';
+                    case 'ausente': return $row['estado_key'] === 'ausente';
+                    case 'con_permiso': return ! empty($row['permiso_info']);
+                    case 'sin_cierre': return $row['estado_key'] === 'sin_cierre' || $row['es_olvido_salida'] === true;
+                    case 'extra': return $row['estado_key'] === 'extra';
+                    default: return true;
                 }
             });
         }
@@ -282,7 +257,25 @@ class ReporteMarcacionesController extends Controller
         $minutosTarde = 0;
         $permisoInfo = null;
         $esOlvidoSalida = false;
+        $toleranciaFinal = 0;
 
+        // 1. Obtener Tolerancia Base (Incluso si no vino a trabajar, debemos saber cuál era su tolerancia)
+        if ($horario) {
+            $toleranciaFinal = $horario->tolerancia;
+            if ($emp->sucursal && $emp->sucursal->horarios && $emp->sucursal->horarios->isNotEmpty()) {
+                $horaTeorica = Carbon::parse($fechaObj->format('Y-m-d').' '.$horario->hora_ini);
+                $horarioSucursal = $emp->sucursal->horarios->sortBy(function ($hs) use ($horaTeorica) {
+                    $horaInicioSucursal = Carbon::parse($horaTeorica->format('Y-m-d').' '.$hs->hora_ini);
+                    return abs($horaTeorica->diffInMinutes($horaInicioSucursal));
+                })->first();
+
+                if ($horarioSucursal) {
+                    $toleranciaFinal = $horarioSucursal->tolerancia;
+                }
+            }
+        }
+
+        // 2. Permisos del Día
         $permisosDelDia = $emp && $emp->relationLoaded('permisos') ? $emp->permisos->filter(fn ($p) => $fechaObj->between(Carbon::parse($p->fecha_inicio), Carbon::parse($p->fecha_fin))) : collect();
         $permisosExoneracion = $permisosDelDia->whereIn('id_tipo_permiso', [5, 6]);
         $tieneExoneracion = $permisosExoneracion->isNotEmpty();
@@ -290,15 +283,19 @@ class ReporteMarcacionesController extends Controller
         if ($tieneExoneracion) {
             $p = $permisosExoneracion->first();
             $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio, 'hasta' => $p->fecha_fin];
-            $key = 'permiso';
         }
 
+        // 3. Evaluaciones si hay marcación
         if ($marcacion) {
-            $key = 'presente';
-
+            
             if ($marcacion->permisos->isNotEmpty()) {
                 $p = $marcacion->permisos->first();
                 $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
+                
+                // Si la marcación tiene un permiso de Llegada Tarde, sumar los minutos a la tolerancia que mostraremos
+                if ($p->tipoPermiso && $p->tipoPermiso->codigo === 'LLEGADA_TARDE') {
+                    $toleranciaFinal += (int) $p->valor;
+                }
             } elseif ($marcacion->salida && $marcacion->salida->permisos->isNotEmpty()) {
                 $p = $marcacion->salida->permisos->first();
                 $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
@@ -324,39 +321,48 @@ class ReporteMarcacionesController extends Controller
                 }
             }
 
-            // --- SIMPLIFICACIÓN: Confiamos 100% en el campo de la BD ---
-            $esTarde = ($horario && $marcacion->fuera_horario == 1);
-
-            if ($esTarde) {
+            // Calculo Dinámico de la impuntualidad
+            $esTarde = false;
+            if ($horario) {
                 $horaTeorica = Carbon::parse($fechaObj->format('Y-m-d').' '.$horario->hora_ini);
-                $entradaReal = $marcacion->created_at->copy()->startOfMinute(); // Ignoramos segundos
+                $entradaReal = $marcacion->created_at->copy()->startOfMinute();
+                $horaLimite = $horaTeorica->copy()->addMinutes($toleranciaFinal)->startOfMinute();
 
-                // Calculamos cuántos minutos de retraso tuvo realmente
-                $diferencia = $horaTeorica->diffInMinutes($entradaReal, false);
-                $minutosTarde = $diferencia > 0 ? $diferencia : 0;
+                if ($entradaReal->greaterThan($horaLimite)) {
+                    $esTarde = true;
+                    $diferencia = $horaTeorica->diffInMinutes($entradaReal, false);
+                    $minutosTarde = $diferencia > 0 ? $diferencia : 0;
+                }
             }
 
             if ($esOlvidoSalida) {
                 $key = 'sin_cierre';
             } elseif ($esTarde) {
                 $key = $permisoInfo ? 'tarde_con_permiso' : 'tarde';
-            } elseif ($permisoInfo || $tieneExoneracion) {
+            } elseif ($tieneExoneracion) {
                 $key = 'permiso';
+            } else {
+                $key = 'presente';
             }
 
             if (! $horario && ! $esOlvidoSalida) {
                 $key = 'extra';
             }
 
-        } elseif (! $tieneExoneracion) {
-            $horaInicioTurno = Carbon::parse($fechaObj->format('Y-m-d').' '.($horario ? $horario->hora_ini : '00:00'));
-            if ($fechaObj->isFuture() || ($fechaObj->isToday() && $hoy->lt($horaInicioTurno))) {
-                $key = 'programado';
+        } else {
+            if ($tieneExoneracion) {
+                $key = 'permiso';
             } else {
-                $key = 'ausente';
+                $horaInicioTurno = Carbon::parse($fechaObj->format('Y-m-d').' '.($horario ? $horario->hora_ini : '00:00'));
+                if ($fechaObj->isFuture() || ($fechaObj->isToday() && $hoy->lt($horaInicioTurno))) {
+                    $key = 'programado';
+                } else {
+                    $key = 'ausente';
+                }
             }
         }
 
-        return ['key' => $key, 'minutos_tarde' => $minutosTarde, 'permiso_info' => $permisoInfo, 'es_olvido_salida' => $esOlvidoSalida];
+        // DEVOLVEMOS LA TOLERANCIA FINAL CALCULADA PARA QUE LA VISTA LA MUESTRE CORRECTAMENTE
+        return ['key' => $key, 'minutos_tarde' => $minutosTarde, 'permiso_info' => $permisoInfo, 'es_olvido_salida' => $esOlvidoSalida, 'tolerancia_calculada' => $toleranciaFinal];
     }
 }

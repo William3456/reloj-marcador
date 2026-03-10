@@ -1,9 +1,9 @@
 @php
     $esEditar = isset($permiso);
-    
+
     // LÓGICA DE UBICACIÓN LIBRE
     // 1. Valor por defecto: 0 (No)
-    $valorUbicacionLibre = 0; 
+    $valorUbicacionLibre = 0;
 
     if (old('ubicacion_libre') !== null) {
         // 2. Si hay un old (recarga por validación), usamos ese valor
@@ -15,7 +15,47 @@
 @endphp
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {{-- ===================== INFORMACIÓN DE ORIGEN (Solo en Edit) ===================== --}}
+    @if ($esEditar)
+        <div
+            class="col-span-1 md:col-span-2 mb-2 p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-wrap gap-6 items-center">
+            <div>
+                <span class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Origen del Permiso</span>
+                @if($permiso->app_creacion == 2)
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">
+                        <i class="fa-solid fa-mobile-screen mr-1.5"></i> App Móvil
+                    </span>
+                @else
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200">
+                        <i class="fa-solid fa-user-tie mr-1.5"></i> Panel de Control
+                    </span>
+                @endif
+            </div>
 
+            <div class="w-px h-8 bg-gray-200 hidden md:block"></div>
+
+            <div>
+                <span class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Estado de Solicitud</span>
+                @if($permiso->estado_solicitud == 1)
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-lg border border-yellow-200">En
+                        Revisión</span>
+                @elseif($permiso->estado_solicitud == 2)
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-200">Aprobado</span>
+                @elseif($permiso->estado_solicitud == 3)
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200">Rechazado</span>
+                @else
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 bg-gray-200 text-gray-600 text-xs font-bold rounded-lg border border-gray-300">Asignación
+                        Directa</span>
+                @endif
+            </div>
+        </div>
+    @endif
     {{-- ===================== Sucursal ===================== --}}
     <div>
         <x-input-label for="id_sucursal" value="Sucursal" />
@@ -109,18 +149,18 @@
     {{-- ===================== NUEVO CAMPO: Ubicación Libre (Condicional) ===================== --}}
     <div id="campo_ubicacion_libre" class="hidden">
         <x-input-label for="ubicacion_libre" value="¿Ubicación libre?" />
-        
-        <select id="ubicacion_libre" name="ubicacion_libre" 
-                class="mt-1 block w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-            
+
+        <select id="ubicacion_libre" name="ubicacion_libre"
+            class="mt-1 block w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+
             {{-- Opción NO (0) --}}
             <option value="0" @selected($valorUbicacionLibre == 0)>No</option>
-            
+
             {{-- Opción SÍ (1) --}}
             <option value="1" @selected($valorUbicacionLibre == 1)>Sí</option>
 
         </select>
-        
+
         <p class="text-xs text-gray-500 mt-1">Si selecciona "Sí", no se validará el rango de metros.</p>
     </div>
 
@@ -140,9 +180,8 @@
     <div id="campo_fecha_inicio" class="hidden">
         <x-input-label for="fecha_inicio" value="Fecha inicio" />
         <x-text-input id="fecha_inicio" name="fecha_inicio" type="date"
-            value="{{ old('fecha_inicio', $permiso?->fecha_inicio) }}" 
-            min="{{ !$esEditar ? now()->toDateString() : '' }}"
-            class="mt-1 block w-full" />
+            value="{{ old('fecha_inicio', $permiso?->fecha_inicio) }}"
+            min="{{ !$esEditar ? now()->toDateString() : '' }}" class="mt-1 block w-full" />
     </div>
     <div id="campo_fecha_fin" class="hidden">
         <x-input-label for="fecha_fin" value="Fecha fin" />
@@ -160,7 +199,7 @@
 <script>
     const ES_EDITAR = @json($esEditar);
 
-function toggle(id, show) {
+    function toggle(id, show) {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', !show);
     }
@@ -170,11 +209,11 @@ function toggle(id, show) {
         if (!tipo || tipo.selectedIndex < 0) return;
 
         const opt = tipo.options[tipo.selectedIndex];
-        const valTipo = tipo.value; 
+        const valTipo = tipo.value;
 
         // 1. Determinar si es el tipo especial (value=1)
         // Nota: Asegúrate de que el value '1' corresponda al tipo que lleva esta lógica en tu DB
-        let esTipoUno = (valTipo == 1); 
+        let esTipoUno = (valTipo == 1);
         toggle('campo_ubicacion_libre', esTipoUno);
 
         // 2. Lógica de Distancia
@@ -182,20 +221,20 @@ function toggle(id, show) {
 
         if (esTipoUno) {
             const ubicacionLibre = document.getElementById('ubicacion_libre').value;
-            
+
             if (ubicacionLibre == '1') {
                 // Si es SÍ, ocultamos distancia
                 mostrarDistancia = false;
-            } 
-             // Si es NO, 'mostrarDistancia' se mantiene true (porque dataset.distancia es 1)
+            }
+            // Si es NO, 'mostrarDistancia' se mantiene true (porque dataset.distancia es 1)
         }
 
         toggle('campo_distancia', mostrarDistancia);
-        
+
         // Manejo de 'required'
         const inputDistancia = document.getElementById('cantidad_mts');
-        if(inputDistancia) {
-            if(mostrarDistancia) {
+        if (inputDistancia) {
+            if (mostrarDistancia) {
                 inputDistancia.setAttribute('required', 'required');
             } else {
                 inputDistancia.removeAttribute('required');
@@ -246,7 +285,7 @@ function toggle(id, show) {
 
         // Listener para cambio de tipo de permiso
         $('#tipo_permiso').on('change', actualizarCampos);
-        
+
         // NUEVO: Listener para cambio en el select de ubicación libre
         $('#ubicacion_libre').on('change', actualizarCampos);
 

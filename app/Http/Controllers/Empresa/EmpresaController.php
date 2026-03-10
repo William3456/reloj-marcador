@@ -27,30 +27,36 @@ class EmpresaController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+   public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:100|min:10',
-            'direccion' => 'required|string|max:250',
-            'telefono' => 'required|string|max:13',
+            'nombre'          => 'required|string|max:100|min:10',
+            'direccion'       => 'required|string|max:250',
+            'telefono'        => 'required|string|max:13',
             'registro_fiscal' => 'required|string|max:20',
-            'nit' => 'required|string|max:15',
-            'dui' => 'required|string|max:10',
-            'correo' => 'required|email|max:150',
+            'nit'             => 'required|string|max:17',
+            'dui'             => 'required|string|max:10',
+            'correo'          => 'required|email|max:150',
         ]);
+        
+        // 1. Buscamos el primer registro de la tabla (la única empresa)
+        $empresa = Empresa::first();
 
-        // Si existe una empresa con el mismo NIT, actualiza; si no, crea una nueva
-        $empresa = Empresa::updateOrCreate(
-            ['nit' => $validated['nit']], // Campo para buscar
-            $validated // Datos para actualizar
-        );
+        if ($empresa) {
+            // 2. Si ya existe, simplemente actualizamos sus datos
+            $empresa->update($validated);
+            $mensaje = 'Empresa actualizada correctamente.';
+        } else {
+            // 3. Si la tabla está vacía, creamos el primer y único registro
+            $empresa = Empresa::create($validated);
+            $mensaje = 'Empresa creada correctamente.';
+        }
 
+        // 4. Retornamos la respuesta a tu AJAX (jQuery)
         return response()->json([
             'success' => true,
             'empresa' => $empresa,
-            'message' => $empresa->wasRecentlyCreated
-                ? 'Empresa creada correctamente.'
-                : 'Empresa actualizada correctamente.',
+            'message' => $mensaje
         ]);
     }
 

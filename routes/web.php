@@ -10,6 +10,7 @@ use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\HorariosSucursal\HorarioSucursalController;
 use App\Http\Controllers\MarcacionApp\HistorialController;
 use App\Http\Controllers\MarcacionApp\MarcacionController;
+use App\Http\Controllers\MarcacionApp\PermisoAppController;
 use App\Http\Controllers\Permiso\PermisoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Puestos\PuestosController;
@@ -21,9 +22,9 @@ use App\Models\Horario\HorarioHistorico;
 use App\Models\Turnos\Turnos;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -43,21 +44,37 @@ Route::get('/', function () {
 
     // Si es Admin o Gerente (Rol 1 o 2), mostrar Dashboard
     return view('dashboard');
-})->middleware(['auth', 'verified','prevent-back-history'])->name('home');
+})->middleware(['auth', 'verified', 'prevent-back-history'])->name('home');
 
 /*
 |--------------------------------------------------------------------------
 | RUTAS PARA EMPLEADOS (ROL 3) - LA APP MÓVIL
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'check.role:3','prevent-back-history'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.role:3', 'prevent-back-history'])->group(function () {
 
     Route::controller(MarcacionController::class)->prefix('marcacion')->name('marcacion.')->group(function () {
         Route::get('/inicio', 'index')->name('inicio');
         Route::post('/store', 'store')->name('store');
         Route::get('/historial', [HistorialController::class, 'index'])->name('historial');
     });
+    // MÓDULO DE AUTOSERVICIO DE PERMISOS (APP MÓVIL)
+    Route::controller(PermisoAppController::class)
+        ->prefix('marcacion/permisos')
+        ->name('marcacion.permisos.') // <-- Nombres de ruta únicos para la app
+        ->group(function () {
 
+            // URL: /marcacion/permisos -> Bandeja "Mis Solicitudes"
+            Route::get('/', 'index')->name('index');
+
+            // URL: /marcacion/permisos/solicitar -> Formulario
+            Route::get('/solicitar', 'create')->name('create');
+
+            // URL: /marcacion/permisos/store -> Guardar
+            Route::post('/store', 'store')->name('store');
+
+            Route::delete('/{id}', 'destroy')->name('destroy');
+        });
 });
 
 /*
@@ -65,7 +82,7 @@ Route::middleware(['auth', 'verified', 'check.role:3','prevent-back-history'])->
 | RUTAS ADMINISTRATIVAS (ROLES 1 y 2) - GESTIÓN
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'check.role:1-2','prevent-back-history'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.role:1-2', 'prevent-back-history'])->group(function () {
 
     // Dashboard Administrativo
     Route::get('/dashboard', function () {
@@ -112,6 +129,7 @@ Route::middleware(['auth', 'verified', 'check.role:1-2','prevent-back-history'])
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::patch('/{id}/procesar', 'procesar')->name('procesar');
     });
 
     // --- DEPARTAMENTOS ---
@@ -161,8 +179,8 @@ Route::middleware(['auth', 'verified', 'check.role:1-2','prevent-back-history'])
     Route::get('/reportes/empleados/pdf', [ReporteEmpleadoController::class, 'generarPdf'])->name('empleados.pdf');
     Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
     // Rutas de Reporte de Marcaciones
-    //Route::get('/reportes/marcaciones', [ReporteMarcacionesController::class, 'index'])->name('marcaciones.index');
-    //Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
+    // Route::get('/reportes/marcaciones', [ReporteMarcacionesController::class, 'index'])->name('marcaciones.index');
+    // Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
 
     // --- EMPRESAS (LISTADO SOLO PARA ROL 2 SEGÚN TU CÓDIGO ANTERIOR) ---
     Route::view('/empresas', 'empresas.lista')->name('empresas.home')->middleware('check.role:2');
@@ -174,7 +192,7 @@ Route::middleware(['auth', 'verified', 'check.role:1-2','prevent-back-history'])
 | RUTAS SUPER ADMIN (SOLO ROL 1)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', 'check.role:1','prevent-back-history'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.role:1', 'prevent-back-history'])->group(function () {
     Route::controller(EmpresaController::class)->prefix('empresa')->name('empresas.')->group(function () {
         Route::post('/', 'store')->name('store');
         Route::get('/show', 'show')->name('show');
@@ -186,7 +204,7 @@ Route::middleware(['auth', 'verified', 'check.role:1','prevent-back-history'])->
 | PERFIL DE USUARIO (COMÚN PARA TODOS)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth','prevent-back-history'])->group(function () {
+Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -217,16 +235,12 @@ Route::get('/test-mail', function () {
         $m->to('tu_correo@gmail.com')->subject('Prueba');
     });
 });
-Route::get('/limpiar-todo', function() {
-    Artisan::call('config:clear');
-    Artisan::call('cache:clear');
-    return 'Limpio';
-});
-Route::get('/limpiar-cache', function() {
+Route::get('/limpiar-todo', function () {
     Artisan::call('optimize:clear');
     Artisan::call('view:clear');
     Artisan::call('route:clear');
     Artisan::call('config:clear');
+
     return 'Caché de Laravel limpia y optimizada al 100%';
 });
 
@@ -241,7 +255,7 @@ Route::get('/limpiar-historiales', function () {
 
         // 2. Vaciar históricos viejos
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        HorarioHistorico::query()->delete(); 
+        HorarioHistorico::query()->delete();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $horarios = horario::all();
@@ -249,32 +263,32 @@ Route::get('/limpiar-historiales', function () {
         foreach ($horarios as $horario) {
             // 3. Crear el histórico fundacional perfecto (desde el 2020)
             $historico = HorarioHistorico::create([
-                'id_horario'    => $horario->id,
-                'tipo_horario'  => $horario->permitido_marcacion,
-                'hora_entrada'  => $horario->hora_ini,
-                'hora_salida'   => $horario->hora_fin,
-                'tolerancia'    => $horario->tolerancia,
-                'dias'          => $horario->dias,
-                'vigente_desde' => '2020-01-01 00:00:00', 
+                'id_horario' => $horario->id,
+                'tipo_horario' => $horario->permitido_marcacion,
+                'hora_entrada' => $horario->hora_ini,
+                'hora_salida' => $horario->hora_fin,
+                'tolerancia' => $horario->tolerancia,
+                'dias' => $horario->dias,
+                'vigente_desde' => '2020-01-01 00:00:00',
                 'vigente_hasta' => null,
             ]);
 
             // 4. Conectar a los empleados/sucursales activos con este nuevo histórico
-            if ($horario->permitido_marcacion == 1) { 
+            if ($horario->permitido_marcacion == 1) {
                 DB::table('horarios_sucursales')
                     ->where('id_horario', $horario->id)
                     ->update([
                         'id_horario_historico' => $historico->id,
                         'es_actual' => 1,
-                        'fecha_fin' => null
+                        'fecha_fin' => null,
                     ]);
-            } else { 
+            } else {
                 DB::table('horarios_trabajadores')
                     ->where('id_horario', $horario->id)
                     ->update([
                         'id_horario_historico' => $historico->id,
                         'es_actual' => 1,
-                        'fecha_fin' => null
+                        'fecha_fin' => null,
                     ]);
             }
 
@@ -283,17 +297,19 @@ Route::get('/limpiar-historiales', function () {
             DB::table('marcaciones_empleados') // O el nombre exacto de tu tabla de marcaciones
                 ->where('id_horario', $horario->id)
                 ->update([
-                    'id_horario_historico_empleado' => $historico->id 
+                    'id_horario_historico_empleado' => $historico->id,
                     // Si tu columna se llama distinto (ej. id_horario_historico), cámbialo aquí arriba
                 ]);
         }
 
         DB::commit();
-        return "¡Éxito total! Historiales purgados, asignaciones arregladas y marcaciones pasadas enlazadas correctamente.";
+
+        return '¡Éxito total! Historiales purgados, asignaciones arregladas y marcaciones pasadas enlazadas correctamente.';
 
     } catch (\Exception $e) {
         DB::rollBack();
-        return "Error al limpiar: " . $e->getMessage();
+
+        return 'Error al limpiar: '.$e->getMessage();
     }
 });
 
@@ -304,22 +320,22 @@ Route::get('/sumar-hora-global', function () {
 
     foreach ($tablas as $tabla) {
         // Extraemos el nombre exacto de la tabla
-        $nombreTabla = array_values((array)$tabla)[0];
+        $nombreTabla = array_values((array) $tabla)[0];
 
         // 2. Verificamos si la tabla tiene los campos de Laravel antes de intentar actualizarla
         // Esto evita errores en tablas como 'migrations' o tablas pivote que no llevan timestamps
         if (Schema::hasColumn($nombreTabla, 'created_at') && Schema::hasColumn($nombreTabla, 'updated_at')) {
-            
+
             // 3. Ejecutamos la suma de 1 hora directamente en la base de datos
             DB::table($nombreTabla)->update([
                 'created_at' => DB::raw('DATE_ADD(created_at, INTERVAL 1 HOUR)'),
-                'updated_at' => DB::raw('DATE_ADD(updated_at, INTERVAL 1 HOUR)')
+                'updated_at' => DB::raw('DATE_ADD(updated_at, INTERVAL 1 HOUR)'),
             ]);
 
             $tablasAfectadas[] = $nombreTabla;
         }
     }
 
-    return "¡Éxito! Se sumó 1 hora a los timestamps de las siguientes tablas: <br><br>" . implode('<br>', $tablasAfectadas);
+    return '¡Éxito! Se sumó 1 hora a los timestamps de las siguientes tablas: <br><br>'.implode('<br>', $tablasAfectadas);
 });
 require __DIR__.'/auth.php';
