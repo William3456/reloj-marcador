@@ -1,7 +1,11 @@
 <x-guest-layout>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
-
+    @if (session('error'))
+        <div class="mb-4 font-medium text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i> {{ session('error') }}
+        </div>
+    @endif
     <form method="POST" action="{{ route('login') }}" id="form-login">
         @csrf
 
@@ -10,7 +14,7 @@
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required
                 autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+
         </div>
 
         <!-- Password -->
@@ -20,7 +24,7 @@
             <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required
                 autocomplete="current-password" />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+
         </div>
 
         <!-- Remember Me -->
@@ -53,26 +57,34 @@
                     window.location.reload();
                 }
             });
-            document.addEventListener('DOMContentLoaded', function() {
-            const formLogin = document.getElementById('form-login');
-            
-            if (formLogin) {
-                // Interceptamos el formulario justo un milisegundo antes de que se envíe
-                formLogin.addEventListener('submit', function() {
-                    
-                    // 1. Buscamos el token fresco e inmutable que Laravel pone en la etiqueta <meta> del <head>
-                    const tokenFresco = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                    
-                    // 2. Buscamos el input oculto dentro del formulario
-                    const inputToken = formLogin.querySelector('input[name="_token"]');
-                    
-                    // 3. Sobreescribimos cualquier basura que el autocompletado haya puesto ahí
-                    if (inputToken && tokenFresco) {
-                        inputToken.value = tokenFresco;
-                    }
-                });
-            }
-        });
+            document.addEventListener('DOMContentLoaded', function () {
+
+                // 1. Pedimos un token 100% nuevo al servidor (agregamos el tiempo para burlar cualquier caché)
+                fetch('/refresh-csrf?t=' + new Date().getTime())
+                    .then(response => response.json())
+                    .then(data => {
+                        // 2. Actualizamos la etiqueta meta de la cabecera
+                        const metaToken = document.querySelector('meta[name="csrf-token"]');
+                        if (metaToken) metaToken.setAttribute('content', data.token);
+
+                        // 3. Actualizamos el campo oculto de nuestro formulario
+                        const inputToken = document.querySelector('input[name="_token"]');
+                        if (inputToken) inputToken.value = data.token;
+                    })
+                    .catch(error => console.error('Error refrescando token:', error));
+
+                // Protección contra autocompletado (Lo que ya teníamos)
+                const formLogin = document.getElementById('form-login');
+                if (formLogin) {
+                    formLogin.addEventListener('submit', function () {
+                        const tokenFresco = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                        const inputForm = formLogin.querySelector('input[name="_token"]');
+                        if (inputForm && tokenFresco) {
+                            inputForm.value = tokenFresco;
+                        }
+                    });
+                }
+            });
         </script>
     @endpush
 </x-guest-layout>

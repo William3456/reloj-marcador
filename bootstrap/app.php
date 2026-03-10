@@ -36,19 +36,17 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        
-        // 4. EL INTERCEPTOR DEL ERROR 419
-        $exceptions->render(function (TokenMismatchException $e, Request $request) {
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
             
-            // Si la petición viene por AJAX/Fetch (útil a futuro)
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Token CSRF expirado. Recarga la página.'], 419);
-            }
+            // 🌟 FORZAR EL LOG DEL ERROR 419
+            \Illuminate\Support\Facades\Log::warning('Error 419 CSRF detectado', [
+                'url' => $request->fullUrl(),
+                'ip' => $request->ip(),
+                'dispositivo' => $request->userAgent(),
+            ]);
 
-            // Si es una petición tradicional (Formulario web)
             return redirect()->back()
-                ->withInput($request->except('_token', 'password', 'password_confirmation'))
-                ->with('error', 'Tu sesión expiró por inactividad. La página se actualizó por seguridad, por favor intenta de nuevo.');
+                ->withInput($request->except('_token'))
+                ->with('error', 'La sesión expiró por seguridad. Por favor, intenta de nuevo.');
         });
-
     })->create();
