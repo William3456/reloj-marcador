@@ -2,7 +2,7 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ route('login') }}" id="form-login">
         @csrf
 
         <!-- Email Address -->
@@ -53,6 +53,26 @@
                     window.location.reload();
                 }
             });
+            document.addEventListener('DOMContentLoaded', function() {
+            const formLogin = document.getElementById('form-login');
+            
+            if (formLogin) {
+                // Interceptamos el formulario justo un milisegundo antes de que se envíe
+                formLogin.addEventListener('submit', function() {
+                    
+                    // 1. Buscamos el token fresco e inmutable que Laravel pone en la etiqueta <meta> del <head>
+                    const tokenFresco = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    
+                    // 2. Buscamos el input oculto dentro del formulario
+                    const inputToken = formLogin.querySelector('input[name="_token"]');
+                    
+                    // 3. Sobreescribimos cualquier basura que el autocompletado haya puesto ahí
+                    if (inputToken && tokenFresco) {
+                        inputToken.value = tokenFresco;
+                    }
+                });
+            }
+        });
         </script>
     @endpush
 </x-guest-layout>
