@@ -26,13 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // 3. Tu redirección de login (lo que hicimos antes)
         $middleware->redirectTo(           
             guests: '/login',
-            users: function (Request $request) {
-                if ($request->user() && $request->user()->id_rol === 3) {
-                    return '/marcacion/inicio'; // <--- Esta es la URL correcta definida en web.php
-                }
-
-                return '/dashboard';
-            }
+            users: '/dashboard'
         );
     })
     ->withExceptions(function (Exceptions $exceptions) {

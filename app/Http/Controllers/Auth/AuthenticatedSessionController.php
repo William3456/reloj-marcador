@@ -23,17 +23,27 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-    {
-        $request->authenticate();
+{
+    $request->authenticate();
 
-        $request->session()->regenerate();
-        
-        if ($request->user()->id_rol == 3) {
-            return redirect()->route('marcacion.inicio');
-        }
+    // 🌟 PASO CRUCIAL PARA MÓVILES:
+    // Forzamos la regeneración y el guardado inmediato en disco/BD
+    $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+    // 🌟 DOBLE CANDADO:
+    // Obligamos a Laravel a escribir los datos de sesión YA MISMO
+    // antes de que el navegador móvil haga la redirección.
+    $request->session()->save(); 
+
+    $user = Auth::user();
+
+    // Redirección manual según rol para evitar conflictos con el middleware global
+    if ($user->id_rol === 3) {
+        return redirect()->intended('/marcacion/inicio');
     }
+
+    return redirect()->intended(route('dashboard', absolute: false));
+}
 
     /**
      * Destroy an authenticated session.
