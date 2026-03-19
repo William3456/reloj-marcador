@@ -51,9 +51,9 @@ class PermisoAppController extends Controller
             $cruceFechas = Permiso::where('id_empleado', $empleado->id)
                 ->where('id_tipo_permiso', $tipo->id)
                 ->where('estado', 1) // Solo aplica si choca con uno ya activo
-                ->where(function($query) use ($request) {
+                ->where(function ($query) use ($request) {
                     $query->where('fecha_inicio', '<=', $request->fecha_fin)
-                          ->where('fecha_fin', '>=', $request->fecha_inicio);
+                        ->where('fecha_fin', '>=', $request->fecha_inicio);
                 })
                 ->exists();
 
@@ -101,15 +101,43 @@ class PermisoAppController extends Controller
         $permiso->save();
 
         try {
+            // 1. Correo al empleado solicitante
             if ($empleado->user && $empleado->user->email) {
                 Mail::to($empleado->user->email)->send(new SolicitudPermisoEmpleadoMail($permiso));
             }
 
-            $correoAdmin = $empleado->sucursal->correo ?? 'admin@tuempresa.com';
+            // 2. Correo al encargado principal de la sucursal
+            $correoAdmin = $empleado->sucursal->correo_encargado ?? 'admin@tuempresa.com';
             Mail::to($correoAdmin)->send(new SolicitudPermisoAdminMail($permiso, $empleado));
 
-            $correoSuperAdmin = User::where('id_rol', 1)->pluck('email')->toArray();
-            Mail::to($correoSuperAdmin)->send(new SolicitudPermisoAdminMail($permiso, $empleado));
+            // 3. NUEVO: Correos a usuarios Rol 2 Encargados de la misma sucursal, activos y que no sean el Admin
+            $correosRol2 = User::join('empleados', 'users.id_empleado', '=', 'empleados.id')
+                ->where('users.id_rol', 2)
+                ->where('empleados.estado', 1) // Empleado activo
+                ->where('empleados.id_sucursal', $empleado->id_sucursal) // De la misma sucursal
+                ->where('users.email', '!=', $correoAdmin) // Evitar duplicar el correo del paso 2
+                ->whereNotNull('users.email') // Prevenir errores si hay nulos
+                ->pluck('users.email')
+                ->unique() // Elimina posibles correos duplicados en el array final
+                ->toArray();
+            //dd($correosRol2);
+            if (! empty($correosRol2)) {
+                foreach ($correosRol2 as $correo) {
+                    Mail::to($correo)->send(new SolicitudPermisoAdminMail($permiso, $empleado));
+                }
+            }
+
+            // 4. Correo a Super Administradores (Rol 1)
+            $correoSuperAdmin = User::where('id_rol', 1)
+                ->whereNotNull('email')
+                ->pluck('email')
+                ->toArray();
+
+            if (!empty($correoSuperAdmin)) {
+                foreach ($correoSuperAdmin as $correoSuper) {
+                    Mail::to($correoSuper)->send(new SolicitudPermisoAdminMail($permiso, $empleado));
+                }
+            }
 
         } catch (\Exception $e) {
             Log::error('Error al enviar correo de permiso: '.$e->getMessage());

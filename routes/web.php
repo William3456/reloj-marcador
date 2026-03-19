@@ -339,7 +339,5 @@ Route::get('/sumar-hora-global', function () {
     return '¡Éxito! Se sumó 1 hora a los timestamps de las siguientes tablas: <br><br>'.implode('<br>', $tablasAfectadas);
 });
 
-Route::get('/refresh-csrf', function() {
-    return response()->json(['token' => csrf_token()]);
-});
+
 require __DIR__.'/auth.php';

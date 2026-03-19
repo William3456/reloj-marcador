@@ -30,8 +30,8 @@
         <!-- Remember Me -->
         <div class="block mt-4">
             <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox"
-                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
+                <input id="remember_me" type="checkbox" 
+                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember" checked>
                 <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
             </label>
         </div>
@@ -58,20 +58,6 @@
                 }
             });
             document.addEventListener('DOMContentLoaded', function () {
-
-                // 1. Pedimos un token 100% nuevo al servidor (agregamos el tiempo para burlar cualquier caché)
-                fetch('/refresh-csrf?t=' + new Date().getTime())
-                    .then(response => response.json())
-                    .then(data => {
-                        // 2. Actualizamos la etiqueta meta de la cabecera
-                        const metaToken = document.querySelector('meta[name="csrf-token"]');
-                        if (metaToken) metaToken.setAttribute('content', data.token);
-
-                        // 3. Actualizamos el campo oculto de nuestro formulario
-                        const inputToken = document.querySelector('input[name="_token"]');
-                        if (inputToken) inputToken.value = data.token;
-                    })
-                    .catch(error => console.error('Error refrescando token:', error));
 
                 // Protección contra autocompletado (Lo que ya teníamos)
                 const formLogin = document.getElementById('form-login');
