@@ -97,9 +97,10 @@ class MarcacionController extends Controller
         $permisos = $this->validaPermisos();
         $permisoActivo = collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first();
         $historialHoy = collect();
+        $horariosActivos = $empleado->horarios()->wherePivot('es_actual', 1)->get();
 
         if ($permisoActivo) {
-            return view('app_marcacion.inicio', compact('permisoActivo', 'historialHoy'));
+            return view('app_marcacion.inicio', compact('permisoActivo', 'historialHoy', 'horariosActivos'));
         }
 
         // 2. Obtener Actividad de Hoy
@@ -126,7 +127,6 @@ class MarcacionController extends Controller
 
         [$mostrarModalBloqueo, $marcacionPendiente] = $this->validarBloqueoSalida($horarioRequiereSalida, $entradaActiva, $horarioActivo);
 
-        $horariosActivos = $empleado->horarios()->wherePivot('es_actual', 1)->get();
 
         return view('app_marcacion.inicio', array_merge([
             'horariosActivos' => $horariosActivos,
