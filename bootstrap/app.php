@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.role' => \App\Http\Middleware\CheckRole::class,
             'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
         ])->web(prepend: [
-            \App\Http\Middleware\IdentifyTenant::class,// Esto agrega el middleware a TODAS las rutas de web.php y auth.php automáticamente
+            \App\Http\Middleware\IdentifyTenant::class,// Hacer switch entre bds
             \App\Http\Middleware\MatarCookieFantasma::class,
         ]);
 

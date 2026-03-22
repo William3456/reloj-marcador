@@ -1,7 +1,7 @@
 <x-app-layout title="Solicitar Permiso">
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight tracking-tight">Solicitar Permiso</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight tracking-tight">Solicitar permiso</h2>
         </div>
     </x-slot>
 
@@ -13,7 +13,7 @@
                 <i class="fa-solid fa-circle-info"></i>
             </div>
             <div>
-                <h3 class="text-sm font-bold text-blue-800">Nueva Solicitud</h3>
+                <h3 class="text-sm font-bold text-blue-800">Nueva solicitud</h3>
                 <p class="text-xs text-blue-600 mt-0.5 leading-snug">
                     Tu solicitud será enviada a jefatura para su aprobación. Recibirás un correo cuando sea procesada.
                 </p>

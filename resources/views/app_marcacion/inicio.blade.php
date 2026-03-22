@@ -1,12 +1,12 @@
 <x-app-layout title="Marcación de Asistencia">
     <x-slot name="header">
-        {{-- MODIFICACIÓN 1: Header flexible para incluir el botón de info sin mover el título --}}
+        
         <div class="relative flex items-center justify-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Registro de Asistencia') }}
+                {{ __('Registro de asistencia') }}
             </h2>
             
-            {{-- Botón Trigger del Modal --}}
+            
             <button onclick="toggleModal('modal-sucursal')" class="absolute right-0 p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-colors focus:outline-none">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -53,7 +53,7 @@
                         <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         </div>
-                        <h3 class="text-2xl font-bold mb-2">Permiso Asignado</h3>
+                        <h3 class="text-2xl font-bold mb-2">Permiso asignado</h3>
                         <p class="text-green-100 text-sm">Tienes un permiso activo para hoy: {{ $permisoActivo->tipoPermiso->nombre ?? 'Permiso Especial' }}</p>
                         <p class="text-xs text-green-200 mt-4">No es necesario marcar asistencia.</p>
                     </div>
@@ -66,7 +66,7 @@
                         <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                             <i class="far fa-clock text-3xl"></i>
                         </div>
-                        <h3 class="text-2xl font-bold mb-2">Próximo Turno</h3>
+                        <h3 class="text-2xl font-bold mb-2">Próximo turno</h3>
                         <p class="text-indigo-100 text-sm mb-4">Inicia a las <span class="font-bold text-white">{{ $proximoHorario->format('H:i') }}</span></p>
                         <div class="bg-indigo-800/50 rounded-lg p-3 inline-block">
                             <span class="text-xs uppercase tracking-widest text-indigo-300">Faltan</span>
@@ -81,7 +81,7 @@
                         <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </div>
-                        <h3 class="text-2xl font-bold mb-2">Jornada Finalizada</h3>
+                        <h3 class="text-2xl font-bold mb-2">Jornada finalizada</h3>
                         <p class="text-red-100 text-sm">Tus turnos de hoy han concluido.</p>
                         <p class="text-xs text-red-200 mt-4 font-bold bg-red-800/30 inline-block px-3 py-1 rounded-lg">No registraste asistencia el día de hoy.</p>
                     </div>
@@ -93,7 +93,7 @@
                         <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         </div>
-                        <h3 class="text-2xl font-bold mb-2">¡Jornada Completada!</h3>
+                        <h3 class="text-2xl font-bold mb-2">¡Jornada completada!</h3>
                         <p class="text-green-100 text-sm">Has finalizado todos tus turnos de hoy.</p>
                         <p class="text-xs text-green-200 mt-4">Nos vemos en tu próximo turno.</p>
                     </div>
@@ -173,7 +173,7 @@
                         <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-500">Sin Turnos Asignados</h3>
+                        <h3 class="text-xl font-bold text-gray-500">Sin turnos asignados</h3>
                         <p class="text-gray-400 text-sm mt-2">No tienes horarios programados para hoy.</p>
                     </div>
                 @endif  

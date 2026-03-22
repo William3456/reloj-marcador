@@ -64,6 +64,49 @@
             </main>
         </div>
     </div>
+    {{-- ========================================================= --}}
+    {{-- MARCA DE AGUA FLOTANTE: MODO DEMO --}}
+    {{-- ========================================================= --}}
+    @if(isset($empresaGlobal) && $empresaGlobal->tipo_licencia == 0)
+        @php
+            // Aseguramos comparar solo las fechas (00:00:00) para tener un número entero exacto
+            $hoy = \Carbon\Carbon::today();
+            $vencimiento = $empresaGlobal->fecha_exp_licencia ? \Carbon\Carbon::parse($empresaGlobal->fecha_exp_licencia)->startOfDay() : null;
+            $diasRestantes = $vencimiento ? (int) $hoy->diffInDays($vencimiento, false) : 0;
+            
+            // Lógica de colores y textos
+            if ($diasRestantes > 3) {
+                $bgGradient = 'from-blue-600 to-indigo-600';
+                $textoTiempo = $diasRestantes . ' días restantes';
+                $iconoAnimacion = 'animate-spin-slow';
+            } elseif ($diasRestantes > 0) {
+                $bgGradient = 'from-orange-500 to-red-500';
+                $textoTiempo = 'Solo ' . $diasRestantes . ' días restantes';
+                $iconoAnimacion = 'animate-pulse';
+            } elseif ($diasRestantes === 0) {
+                // 🌟 CORRECCIÓN: Hoy es el último día, aún está activa
+                $bgGradient = 'from-red-600 to-red-800 ring-4 ring-red-500/50';
+                $textoTiempo = '¡Último día de prueba!';
+                $iconoAnimacion = 'animate-bounce';
+            } else {
+                $bgGradient = 'from-gray-700 to-gray-900';
+                $textoTiempo = 'Prueba Finalizada';
+                $iconoAnimacion = '';
+            }
+        @endphp
+        
+        <div class="fixed bottom-6 right-6 z-[9999] pointer-events-none">
+            <div class="bg-gradient-to-r {{ $bgGradient }} text-white px-5 py-2.5 rounded-full shadow-2xl border border-white/20 flex items-center gap-3 backdrop-blur-md opacity-95 transform transition-all duration-300">
+                <div class="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-stopwatch {{ $iconoAnimacion }} text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-black tracking-widest text-[10px] uppercase leading-none">Modo Demo</span>
+                    <span class="text-[11px] font-medium leading-tight text-white/90">{{ $textoTiempo }}</span>
+                </div>
+            </div>
+        </div>
+    @endif
     @stack('scripts')
 </body>
 </html>

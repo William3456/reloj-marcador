@@ -8,6 +8,7 @@ use App\Http\Controllers\Empresa\EmpresaController;
 use App\Http\Controllers\Horarios\HorarioController;
 use App\Http\Controllers\HorariosEmpleados\HorarioEmpleadoController;
 use App\Http\Controllers\HorariosSucursal\HorarioSucursalController;
+use App\Http\Controllers\LicenciaController;
 use App\Http\Controllers\MarcacionApp\HistorialController;
 use App\Http\Controllers\MarcacionApp\MarcacionController;
 use App\Http\Controllers\MarcacionApp\PermisoAppController;
@@ -175,16 +176,14 @@ Route::middleware(['auth', 'verified', 'check.role:1-2', 'prevent-back-history']
         Route::get('/rep-marcaciones', 'index')->name('marcaciones_rep');
     });
 
-    // Generación de PDF (Se deja fuera del grupo 'prefix' anterior para mantener tu nombre de ruta exacto si lo usas en JS)
+    
     Route::get('/reportes/empleados/pdf', [ReporteEmpleadoController::class, 'generarPdf'])->name('empleados.pdf');
     Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
-    // Rutas de Reporte de Marcaciones
-    // Route::get('/reportes/marcaciones', [ReporteMarcacionesController::class, 'index'])->name('marcaciones.index');
-    // Route::get('/reportes/marcaciones/pdf', [ReporteMarcacionesController::class, 'generarPdf'])->name('marcaciones.pdf');
-
-    // --- EMPRESAS (LISTADO SOLO PARA ROL 2 SEGÚN TU CÓDIGO ANTERIOR) ---
+    
+    
     Route::view('/empresas', 'empresas.lista')->name('empresas.home')->middleware('check.role:2');
-
+    Route::get('/empresas/licencias', [LicenciaController::class, 'index'])->name('empresas.licencias')->middleware('check.role:1');
+    Route::put('/empresas/licencias/{id}', [LicenciaController::class, 'update'])->name('empresas.update_licencia');
 });
 
 /*

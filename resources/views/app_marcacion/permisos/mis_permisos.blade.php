@@ -1,7 +1,7 @@
 <x-app-layout title="Mis Permisos">
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight tracking-tight">Mis Solicitudes</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight tracking-tight">Mis solicitudes</h2>
         </div>
     </x-slot>
 
