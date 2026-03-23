@@ -112,6 +112,7 @@
                                     <input type="date" name="fecha_exp_licencia" 
                                         value="{{ $empresa->fecha_exp_licencia ? \Carbon\Carbon::parse($empresa->fecha_exp_licencia)->format('Y-m-d') : '' }}"
                                         :required="tipoLicencia == '0'"
+                                        min="{{ \Carbon\Carbon::now()->format('Y-m-d') }}"
                                         class="w-full pl-9 text-sm rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2">
                                 </div>
                             </div>
