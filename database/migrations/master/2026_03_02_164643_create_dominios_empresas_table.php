@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('db_username');
             $table->string('db_password')->nullable();
             $table->string('logo')->nullable(); // Para futuras personalizaciones
+            $table->string('favicon')->nullable(); // Para futuras personalizaciones
             $table->json('configuraciones')->nullable(); // Para las personalizaciones futuras
             $table->integer('tipo_licencia')->default(1)->comment('1: Permanente, 0: Demo');
             $table->date('fecha_exp_licencia')->nullable()->comment('Solo para licencias demo');

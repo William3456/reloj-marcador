@@ -56,7 +56,6 @@
                 <th style="width: 20%;">Nombre Completo</th>
                 <th style="width: 14%;">Sucursal</th>
                 <th style="width: 17%;">Área / Puesto</th>
-                {{-- NUEVA COLUMNA DE HORARIOS --}}
                 <th style="width: 17%;">Horarios / Días</th>
                 <th style="width: 11%; text-align: center;">Rol</th>
                 <th style="width: 7%; text-align: center;">Acceso</th>
@@ -87,7 +86,6 @@
                     <td>
                         @if($empleado->horarios && $empleado->horarios->isNotEmpty())
                             @php
-                                // 🌟 MAGIA AQUÍ: Filtramos para quitar duplicados históricos
                                 $horariosUnicos = $empleado->horarios->unique('id');
                             @endphp
                             @foreach($horariosUnicos as $horario)

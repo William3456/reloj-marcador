@@ -2,7 +2,6 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight flex items-center gap-2">
-                <i class="fa-solid fa-building-shield text-blue-600"></i>
                 {{ __('Gestión de licencias ') }}
             </h2>
         </div>

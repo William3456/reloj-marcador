@@ -20,7 +20,12 @@
         :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center'">
 
         <a href="{{ route('dashboard') }}" class="flex items-center space-x-2 overflow-hidden whitespace-nowrap">
-            <x-application-logo class="block h-8 w-auto fill-current text-blue-600 shrink-0" />
+            @if(isset($empresaGlobal) && $empresaGlobal->logo)
+                <img src="{{ Storage::url($empresaGlobal->logo) }}" alt="Logo Empresa"
+                    class="block h-8 w-auto object-contain shrink-0 rounded">
+            @else
+                <x-application-logo class="block h-8 w-auto fill-current text-blue-600 shrink-0" />
+            @endif
 
             <span x-show="sidebarExpanded" x-cloak x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 transform scale-90"
@@ -67,7 +72,7 @@
         @if ($role == 3)
             <a href="{{ route('marcacion.inicio') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-                       {{ request()->routeIs('marcacion.inicio') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                           {{ request()->routeIs('marcacion.inicio') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fas fa-home w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak
@@ -79,7 +84,7 @@
             </a>
             <a href="{{ route('marcacion.historial') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-                       {{ request()->routeIs('marcacion.historial') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                           {{ request()->routeIs('marcacion.historial') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fas fa-clock w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak
@@ -125,7 +130,7 @@
         @if ($role == 1 || $role == 2)
             <a href="{{ route('dashboard') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-                       {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                           {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fas fa-home w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak
@@ -138,7 +143,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('marcaciones.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('marcaciones.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('marcaciones.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-user-clock w-5 text-center shrink-0"></i>
@@ -162,7 +167,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('horarios.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('horarios.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('horarios.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-clock w-5 text-center shrink-0"></i>
@@ -187,7 +192,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('sucursales*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('sucursales*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('sucursales*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-store w-5 text-center shrink-0"></i>
@@ -220,7 +225,7 @@
             <div
                 x-data="{ open: {{ request()->routeIs('empleados.*') || request()->routeIs('empleadoshorarios.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('empleados.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('empleados.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-users w-5 text-center shrink-0"></i>
@@ -249,7 +254,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('permisos.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('permisos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('permisos.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-user-shield w-5 text-center shrink-0"></i>
@@ -276,7 +281,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('departamentos.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('departamentos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('departamentos.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-building w-5 text-center shrink-0"></i>
@@ -304,7 +309,7 @@
 
             <div x-data="{ open: {{ request()->routeIs('puestos.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('puestos.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('puestos.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fas fa-briefcase w-5 text-center shrink-0"></i>
@@ -330,7 +335,7 @@
             </div>
             <div x-data="{ open: {{ request()->routeIs('reportes.*') ? 'true' : 'false' }} }">
                 <button @click="if(!sidebarExpanded) { sidebarExpanded = true; open = true; } else { open = !open; }" class="w-full flex items-center py-3 rounded-lg transition-all group relative
-                                    {{ request()->routeIs('reportes.*') ? $activeBtnClass : $inactiveBtnClass }}"
+                                        {{ request()->routeIs('reportes.*') ? $activeBtnClass : $inactiveBtnClass }}"
                     :class="sidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'">
                     <div class="flex items-center">
                         <i class="fa-solid fa-file w-5 text-center shrink-0"></i>
@@ -360,7 +365,7 @@
         @if ($role == 1)
             <a href="{{ route('empresas.licencias') }}"
                 class="flex items-center py-3 rounded-lg transition-all duration-200 group relative
-                       {{ request()->routeIs('empresas.licencias') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
+                           {{ request()->routeIs('empresas.licencias') ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md' : $inactiveBtnClass }}"
                 :class="sidebarExpanded ? 'px-4' : 'justify-center px-2'">
                 <i class="fa-solid fa-award w-5 text-center shrink-0"></i>
                 <span x-show="sidebarExpanded" x-cloak

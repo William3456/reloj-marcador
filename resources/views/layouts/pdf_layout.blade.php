@@ -8,17 +8,17 @@
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
-            margin-top: 100px; /* Margen superior para el encabezado */
+            margin-top: 120px; /* 🌟 CORREGIDO: Aumentado un poco más para que no se pegue al logo empujado */
             margin-bottom: 60px; /* Margen inferior para el pie de página */
         }
 
         /* Encabezado Fijo en todas las páginas */
         header {
             position: fixed;
-            top: -60px;
+            top: -60px; /* Mantener la misma posición fija */
             left: 0px;
             right: 0px;
-            height: 80px;
+            height: 95px; /* 🌟 CORREGIDO: Aumentado un poco de 80px a 95px para acomodar el empujón hacia abajo sin cortar el texto */
             border-bottom: 1px solid #ddd;
         }
 
@@ -64,12 +64,34 @@
 
     {{-- Encabezado (Aparece en todas las hojas) --}}
     <header>
+        @php
+            $logoBase64 = null;
+            if (isset($empresaGlobal) && $empresaGlobal->logo) {
+                // Buscamos la ruta absoluta del archivo en el disco del servidor
+                $rutaAbsoluta = storage_path('app/public/' . $empresaGlobal->logo);
+
+                if (file_exists($rutaAbsoluta)) {
+                    // Convertimos a base64 para que el PDF lo incruste directamente
+                    $tipo = pathinfo($rutaAbsoluta, PATHINFO_EXTENSION);
+                    $datos = file_get_contents($rutaAbsoluta);
+                    $logoBase64 = 'data:image/' . $tipo . ';base64,' . base64_encode($datos);
+                }
+            }
+        @endphp
+        
+        {{-- 🌟 1. CONTENEDOR CENTRADO CON EMPUJÓN HACIA ABAJO --}}
+        @if($logoBase64)
+        <div style="text-align: center; width: 100%; padding-top: 30px;">
+             {{-- Centrar horizontalmente vía parent div. max-height limita el tamaño --}}
+             <img src="{{ $logoBase64 }}" alt="Logo Empresa" style="max-height: 65px; width: auto;">
+        </div>
+        @endif
+
+        {{-- 2. Tu tabla original intacta abajo del logo --}}
         <table style="border:none;">
             <tr>
                 <td style="border:none; width: 20%;">
-                    {{-- Aquí iría tu logo --}}
-                    {{-- <img src="{{ public_path('img/logo.png') }}" width="100"> --}}
-                    <h2 style="color: #d32f2f;">{{ $empresa->nombre }}</h2>
+                    <h2 style="color: #d32f2f;">{{ $empresa->nombre ?? config('app.name') }}</h2>
                 </td>
                 <td style="border:none; text-align:center;">
                     <h1>Reloj Marcador</h1>
