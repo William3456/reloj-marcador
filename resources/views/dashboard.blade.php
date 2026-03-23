@@ -34,7 +34,7 @@
 
                     {{-- Textos de Bienvenida --}}
                     <div class="text-center md:text-left flex-grow">
-                        <p class="text-xs font-bold tracking-widest uppercase text-blue-600 mb-1">Panel de</p>
+                        <p class="text-xs font-bold tracking-widest uppercase text-blue-600 mb-1">Panel de control</p>
                         <h2 class="text-3xl md:text-4xl font-black text-gray-800 leading-tight">{{ $nombreEmpresa }}</h2>
                         
                         {{-- Detalles extra opcionales (Solo si la empresa ya llenó sus datos locales) --}}
