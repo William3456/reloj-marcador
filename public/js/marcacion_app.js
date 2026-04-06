@@ -16,6 +16,10 @@ const inputLng = document.getElementById('longitud');
 const gpsAccuracyText = document.getElementById('gps-accuracy');
 const inputFoto = document.getElementById('input-foto');
 
+const btnMarcarModal = document.getElementById('btn-marcar-modal');
+const statusGpsModal = document.getElementById('gps-status-modal');
+const gpsAccuracyTextModal = document.getElementById('gps-accuracy-modal');
+
 // Variables de estado
 let gpsValido = false;
 let fotoValida = false;
@@ -73,39 +77,48 @@ function success(position) {
     if (acc <= PRECISION_REQUERIDA) colorPrecision = 'text-green-600';
     else if (acc <= PRECISION_REQUERIDA * 2) colorPrecision = 'text-orange-500';
 
-    gpsAccuracyText.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
+    if(gpsAccuracyText) gpsAccuracyText.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
+    
+    if(gpsAccuracyTextModal) gpsAccuracyTextModal.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
 
     // 2. Evaluar si la precisión es aceptable
     if (acc <= PRECISION_REQUERIDA) {
-        // -- SEÑAL BUENA --
         gpsValido = true;
 
-        // Llenar inputs ocultos
-        inputLat.value = lat;
-        inputLng.value = lng;
+        if(inputLat) inputLat.value = lat;
+        if(inputLng) inputLng.value = lng;
 
-        // Actualizar UI
-        statusGps.textContent = "Ubicación Precisa Confirmada";
-        statusGps.className = "text-sm font-bold text-green-700";
+        if(statusGps) {
+            statusGps.textContent = "Ubicación Precisa Confirmada";
+            statusGps.className = "text-sm font-bold text-green-700";
+        }
+        
+        if(statusGpsModal) {
+            statusGpsModal.textContent = "Ubicación Precisa Confirmada";
+            statusGpsModal.className = "text-sm font-bold text-green-700";
+        }
 
-        // Icono estático (ya encontró)
         const iconContainer = document.getElementById('gps-icon');
         if (iconContainer) iconContainer.classList.remove('animate-bounce');
 
-        // Actualizar inputs del modal de bloqueo si existe
         const modalLat = document.querySelector('.lat-bloqueo');
         const modalLng = document.querySelector('.lng-bloqueo');
         if (modalLat) modalLat.value = lat;
         if (modalLng) modalLng.value = lng;
 
     } else {
-        // -- SEÑAL MALA / INESTABLE --
         gpsValido = false;
 
-        statusGps.innerHTML = `Mejorando señal... <span class="text-xs text-orange-600">(Acércate a una ventana)</span>`;
-        statusGps.className = "text-sm font-bold text-orange-500 animate-pulse";
+        if(statusGps) {
+            statusGps.innerHTML = `Mejorando señal... <span class="text-xs text-orange-600">(Acércate a una ventana)</span>`;
+            statusGps.className = "text-sm font-bold text-orange-500 animate-pulse";
+        }
+        
+        if(statusGpsModal) {
+            statusGpsModal.innerHTML = `Mejorando señal... <span class="text-xs text-orange-600">(Acércate a una ventana)</span>`;
+            statusGpsModal.className = "text-sm font-bold text-orange-500 animate-pulse";
+        }
 
-        // Icono animado (buscando)
         const iconContainer = document.getElementById('gps-icon');
         if (iconContainer) iconContainer.classList.add('animate-bounce');
     }
@@ -116,10 +129,45 @@ function success(position) {
 function error(err) {
     console.warn('GPS Error: ' + err.message);
     gpsValido = false;
-    statusGps.textContent = "Sin señal GPS. Activa la ubicación.";
-    statusGps.className = "text-sm font-bold text-red-600";
-    gpsAccuracyText.textContent = "";
+    
+    if(statusGps) {
+        statusGps.textContent = "Sin señal GPS. Activa la ubicación.";
+        statusGps.className = "text-sm font-bold text-red-600";
+        gpsAccuracyText.textContent = "";
+    }
+    
+    if(statusGpsModal) {
+        statusGpsModal.textContent = "Sin señal GPS. Activa la ubicación.";
+        statusGpsModal.className = "text-sm font-bold text-red-600";
+        gpsAccuracyTextModal.textContent = "";
+    }
     actualizarEstadoBoton();
+}
+
+function actualizarEstadoBoton() {
+    if (enviandoFormulario) return;
+    
+    // 1. Botón Principal
+    if (btnMarcar) {
+        if (gpsValido && fotoValida) {
+            btnMarcar.disabled = false;
+            btnMarcar.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+        } else {
+            btnMarcar.disabled = true;
+            btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    // 2. Botón del Modal de Olvido
+    if (btnMarcarModal) {
+        if (gpsValido && fotoValida) {
+            btnMarcarModal.disabled = false;
+            btnMarcarModal.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+        } else {
+            btnMarcarModal.disabled = true;
+            btnMarcarModal.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
 }
 
 // --- FOTOGRAFÍA ---
@@ -196,21 +244,6 @@ function previewImageModal(event) {
     }
 }
 
-// --- VALIDACIÓN FINAL ---
-function actualizarEstadoBoton() {
-    if (!btnMarcar) return;
-
-    if (enviandoFormulario) return;
-    // El botón se habilita SOLO si hay GPS preciso Y Foto tomada
-    if (gpsValido && fotoValida) {
-        btnMarcar.disabled = false;
-        btnMarcar.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
-        // Restaurar gradiente original si se quiere, o dejar clases CSS base
-    } else {
-        btnMarcar.disabled = true;
-        btnMarcar.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-}
 
 let mapHistorial;
 let markerHistorial;

@@ -651,10 +651,16 @@
                     <input type="hidden" name="latitud" class="lat-bloqueo">
                     <input type="hidden" name="longitud" class="lng-bloqueo">
 
-                    {{-- NUEVO: Input de Foto para el Modal --}}
+                    {{-- NUEVO: Indicador de GPS en el Modal --}}
+                    <div class="flex items-center justify-between bg-red-50 p-3 rounded-xl border border-red-100 mb-4">
+                        <div class="flex items-center"><span id="gps-status-modal" class="text-sm text-red-500 font-medium animate-pulse">Buscando GPS...</span></div>
+                        <div id="gps-accuracy-modal" class="text-xs text-red-400"></div>
+                    </div>
+
+                    {{-- Input de Foto para el Modal --}}
                     <div class="mb-6">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Evidencia de salida</label>
-                        <div class="relative w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-red-200 flex flex-col items-center justify-center overflow-hidden group">
+                        <div class="relative w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-red-200 flex flex-col items-center justify-center overflow-hidden group hover:border-red-400 transition-colors">
                             <img id="preview-foto-modal" class="absolute inset-0 w-full h-full object-cover hidden" />
                             
                             <div id="placeholder-modal" class="text-center">
@@ -668,7 +674,8 @@
                         </div>
                     </div>
 
-                    <button type="submit" id="btn-marcar-modal" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center">
+                    {{-- 🌟 BOTÓN BLOQUEADO POR DEFECTO --}}
+                    <button type="submit" id="btn-marcar-modal" disabled class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         REGISTRAR SALIDA AHORA
                     </button>
@@ -679,6 +686,6 @@
 </div>
 @endif
 @push('scripts')
-    <script src="{{ asset('js/marcacion_app.js') }}"></script>
+    <script src="{{ asset('js/marcacion_app.js?v=1.0') }}"></script>
 @endpush
 </x-app-layout>
