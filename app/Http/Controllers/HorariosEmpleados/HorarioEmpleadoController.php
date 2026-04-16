@@ -4,6 +4,7 @@ namespace App\Http\Controllers\HorariosEmpleados;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empleado\Empleado;
+use App\Models\Empleado\HomeOffice;
 use App\Models\Horario\horario;
 use App\Models\HorarioEmpleado\HorarioEmpleado;
 use App\Models\HorarioSucursal\HorarioSucursal;
@@ -54,11 +55,20 @@ class HorarioEmpleadoController extends Controller
         try {
             $empleados = Empleado::where('id_sucursal', $id)
                 ->where('estado', 1)
-                ->with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios' => function($query) {
-                    // FILTRO CRÍTICO: Solo cargar los horarios vigentes
-                    $query->where('es_actual', true)
-                          ->whereNull('fecha_fin'); 
-                }])
+                ->with([
+                    'puesto',
+                    'departamento',
+                    'sucursal',
+                    'empresa',
+                    'horarios' => function ($query) {
+                        // FILTRO CRÍTICO: Solo cargar los horarios vigentes
+                        $query->where('es_actual', true)
+                            ->whereNull('fecha_fin');
+                    },
+                    'trabajo_remoto' => function ($query) {
+                        $query->where('es_actual', true)->whereNull('fecha_fin');
+                    },
+                ])
                 ->get();
 
             $empleados->each(function ($emp) {
@@ -68,6 +78,8 @@ class HorarioEmpleadoController extends Controller
 
                 $emp->horarios_nuevos = [];
                 $emp->horarios_eliminados = [];
+                $emp->remoto_accion = null;
+                $emp->remoto_pendiente = [];
             });
 
             return response()->json($empleados);
@@ -95,65 +107,88 @@ class HorarioEmpleadoController extends Controller
     public function store(Request $request)
     {
         DB::transaction(function () use ($request) {
-            
-            // Definimos las fechas de vigencia
+
             $fechaHoy = now()->toDateString();
             $fechaAyer = now()->subDay()->toDateString();
 
-       
+            // 1. PROCESAR ELIMINADOS (Horarios presenciales)
             if ($request->filled('eliminados')) {
-                
                 foreach ($request->eliminados as $empleadoID => $horarios) {
-                    //dd($horarios);
-                    // En lugar de hacer delete(), cerramos la vigencia del horario
                     HorarioEmpleado::where('id_empleado', $empleadoID)
                         ->whereIn('id_horario', $horarios)
-                        ->where('es_actual', true) // Solo tocamos los que están vigentes
+                        ->where('es_actual', true)
                         ->update([
-                            'fecha_fin' => DB::raw("
-                                CASE 
-                                    WHEN fecha_inicio = '{$fechaHoy}' THEN '{$fechaHoy}'
-                                    ELSE '{$fechaAyer}'
-                                END
-                            "),
-                            'es_actual' => false
+                            'fecha_fin' => DB::raw("CASE WHEN fecha_inicio = '{$fechaHoy}' THEN '{$fechaHoy}' ELSE '{$fechaAyer}' END"),
+                            'es_actual' => false,
                         ]);
                 }
             }
 
-            // 2. PROCESAR "NUEVOS" (Abrir nuevo ciclo)
+            // 2. PROCESAR NUEVOS (Horarios presenciales)
             if ($request->filled('nuevos')) {
                 foreach ($request->nuevos as $empleadoID => $horarios) {
                     foreach ($horarios as $horarioID) {
-
-                        // Obtenemos los detalles del horario original para guardar el id_horario_historico
                         $horarioOriginal = Horario::find($horarioID);
                         $id_historico = $horarioOriginal ? $horarioOriginal->id_horario_historico : null;
 
-                        // Verificamos si ya existe uno igual activo para no duplicar
-                        $existeActivo = HorarioEmpleado::where('id_empleado', $empleadoID)
-                            ->where('id_horario', $horarioID)
-                            ->where('es_actual', true)
-                            ->exists();
-
-                        // Si no existe uno activo, creamos el nuevo registro con la fecha de inicio
-                        if (!$existeActivo) {
-                            HorarioEmpleado::create([
+                        HorarioEmpleado::updateOrCreate(
+                            [
                                 'id_empleado' => $empleadoID,
                                 'id_horario' => $horarioID,
-                                'id_horario_historico' => $id_historico, // Si lo usas
+                                'es_actual' => true,
+                            ],
+                            [
+                                'id_horario_historico' => $id_historico,
                                 'fecha_inicio' => $fechaHoy,
                                 'fecha_fin' => null,
-                                'es_actual' => true
+                            ]
+                        );
+                    }
+                }
+            }
+
+            // ====================================================================
+            // 3. PROCESAR "HOME OFFICE" USANDO EL MODELO
+            // ====================================================================
+            if ($request->filled('remoto_accion')) {
+                foreach ($request->remoto_accion as $empleadoID => $accion) {
+
+                    if ($accion === 'eliminar') {
+                        // ACCIÓN: ELIMINAR (Cerrar ciclo, no borrar de la BD)
+                        HomeOffice::where('id_empleado', $empleadoID)
+                            ->where('es_actual', true)
+                            ->update([
+                                // Si se asignó hoy mismo y se elimina hoy mismo, la fecha de fin es hoy.
+                                // Si viene de días atrás, la fecha de fin es ayer.
+                                'fecha_fin' => DB::raw("CASE WHEN fecha_inicio = '{$fechaHoy}' THEN '{$fechaHoy}' ELSE '{$fechaAyer}' END"),
+                                'es_actual' => false,
                             ]);
-                        }
+
+                    } elseif ($accion === 'asignar' && isset($request->remoto_dias[$empleadoID])) {
+                        // ACCIÓN: ASIGNAR NUEVOS DÍAS
+
+                        // 1. Cerramos el registro anterior (si existía alguno vigente)
+                        HomeOffice::where('id_empleado', $empleadoID)
+                            ->where('es_actual', true)
+                            ->update([
+                                'fecha_fin' => DB::raw("CASE WHEN fecha_inicio = '{$fechaHoy}' THEN '{$fechaHoy}' ELSE '{$fechaAyer}' END"),
+                                'es_actual' => false,
+                            ]);
+
+                        // 2. Creamos el nuevo registro vigente con la nueva configuración de días
+                        HomeOffice::create([
+                            'id_empleado' => $empleadoID,
+                            'dias' => $request->remoto_dias[$empleadoID],
+                            'fecha_inicio' => $fechaHoy,
+                            'fecha_fin' => null,
+                            'es_actual' => true,
+                            'estado' => 1,
+                        ]);
                     }
                 }
             }
         });
 
-        return back()->with('success', 'Horarios actualizados y guardados en el historial correctamente');
+        return back()->with('success', 'Configuraciones de horarios y trabajo remoto actualizadas correctamente.');
     }
-
-
 }

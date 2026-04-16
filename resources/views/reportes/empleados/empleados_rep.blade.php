@@ -162,10 +162,11 @@
                                     </td>
 
                                     {{-- CELDA DE HORARIOS --}}
+                                    {{-- CELDA DE HORARIOS --}}
                                     <td class="px-4 py-3 whitespace-normal min-w-[160px]">
+                                        {{-- 1. Horarios Presenciales --}}
                                         @if($empleado->horarios && $empleado->horarios->isNotEmpty())
                                             @php
-                                                // 🌟 MAGIA AQUÍ: Filtramos para quitar duplicados históricos
                                                 $horariosUnicos = $empleado->horarios->unique('id');
                                             @endphp
                                             <div class="space-y-1">
@@ -186,6 +187,40 @@
                                             </div>
                                         @else
                                             <span class="text-xs text-gray-400 italic">No asignado</span>
+                                        @endif
+
+                                        {{-- 2. TRABAJO REMOTO (Lógica de Vigencia Actual) --}}
+                                        @php
+                                            $esRemotoActivo = false;
+                                            $diasRemotoStr = '';
+                                            $configRemoto = $empleado->trabajo_remoto;
+
+                                            if ($configRemoto) {
+                                                $hoy = \Carbon\Carbon::today();
+                                                $inicio = \Carbon\Carbon::parse($configRemoto->fecha_inicio)->startOfDay();
+                                                $fin = $configRemoto->fecha_fin ? \Carbon\Carbon::parse($configRemoto->fecha_fin)->startOfDay() : null;
+
+                                                // Si el día de hoy cae dentro de la vigencia del permiso remoto
+                                                if ($hoy->greaterThanOrEqualTo($inicio) && ($fin === null || $hoy->lessThanOrEqualTo($fin))) {
+                                                    $esRemotoActivo = true;
+                                                    $diasArr = is_array($configRemoto->dias) ? $configRemoto->dias : json_decode($configRemoto->dias, true);
+                                                    
+                                                    if(is_array($diasArr)) {
+                                                        $diasRemotoStr = implode(', ', array_map(function($d) {
+                                                            return mb_convert_case(mb_substr(trim($d), 0, 3, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                                                        }, $diasArr));
+                                                    }
+                                                }
+                                            }
+                                        @endphp
+
+                                        @if($esRemotoActivo && !empty($diasRemotoStr))
+                                            <div class="mt-1.5 bg-purple-50 border border-purple-200 rounded px-2 py-1 shadow-sm flex flex-col">
+                                                <div class="text-[9px] font-black text-purple-700 uppercase flex items-center gap-1">
+                                                    <i class="fa-solid fa-house-laptop"></i> Remoto
+                                                </div>
+                                                <div class="text-[9px] text-purple-600 font-bold uppercase">{{ $diasRemotoStr }}</div>
+                                            </div>
                                         @endif
                                     </td>
 

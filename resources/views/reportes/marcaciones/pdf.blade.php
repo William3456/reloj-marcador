@@ -128,7 +128,16 @@
                 <tr>
                     <td>
                         <div style="font-weight: bold; color: #0f172a;">{{ $row['fecha']->format('d/m/Y') }}</div>
-                        <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">{{ $row['fecha']->locale('es')->isoFormat('dddd') }}</div>
+                        <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase; margin-bottom: 3px;">
+                            {{ $row['fecha']->locale('es')->isoFormat('dddd') }}
+                        </div>
+
+                        
+                        @if($row['es_dia_remoto'])
+                            <div style="font-size: 7px; font-weight: bold; color: #6b21a8; background-color: #f3e8ff; border: 1px solid #e9d5ff; padding: 2px 4px; border-radius: 3px; display: inline-block;">
+                                REMOTO
+                            </div>
+                        @endif
                     </td>
                     <td>
                         <div style="font-weight: bold; color: #0f172a; font-size: 11px;">{{ $row['empleado']->nombres }} {{ $row['empleado']->apellidos }}</div>

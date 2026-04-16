@@ -28,6 +28,7 @@ return new class extends Migration
             $table->unsignedBigInteger('id_horario')->nullable;
             $table->unsignedBigInteger('id_horario_historico_empleado')->nullable;
             $table->unsignedBigInteger('id_horario_historico_sucursal')->nullable;
+            $table->boolean('es_remoto')->default(false);
             $table->timestamps();
         });
     }

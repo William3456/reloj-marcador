@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MarcacionApp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empleado\Empleado;
+use App\Models\Empleado\HomeOffice;
 use App\Models\Horario\horario;
 use App\Models\Horario\HorarioHistorico;
 use App\Models\HorarioEmpleado\HorarioEmpleado;
@@ -389,8 +390,33 @@ class MarcacionController extends Controller
         if (isset($validacionTiempo['error'])) {
             return back()->withErrors(['error' => $validacionTiempo['error']]);
         }
+        // =========================================================
+        //  VERIFICACIÓN DE TRABAJO REMOTO PARA EL DÍA DE HOY
+        // =========================================================
+        $esRemoto = false;
+        
+        // 1. Buscamos explícitamente el registro ACTIVO para este empleado
+        $configRemoto = HomeOffice::where('id_empleado', $empleado->id)
+                            ->where('es_actual', true)
+                            ->first();
 
-        $validacionGPS = $this->validarGPS($validated, $sucursal, $validacionTiempo['es_olvido']);
+        if ($configRemoto) {
+            // 2. Nos aseguramos de tener un array válido (por si acaso viene como string JSON)
+            $diasAsignados = is_string($configRemoto->dias) ? json_decode($configRemoto->dias, true) : $configRemoto->dias;
+            
+            if (is_array($diasAsignados)) {
+                // Convertimos todo a minúsculas por seguridad
+                $diasRemoto = array_map('mb_strtolower', $diasAsignados);
+                
+                // Comparamos si el día de hoy está en su lista
+                if (in_array(mb_strtolower($diaSemana), $diasRemoto)) {
+                    $esRemoto = true;
+                }
+            }
+        }
+        
+        $validacionGPS = $this->validarGPS($validated, $sucursal, $validacionTiempo['es_olvido'], $esRemoto);
+        
         if (isset($validacionGPS['error'])) {
             return back()->withErrors(['error' => $validacionGPS['error']]);
         }
@@ -415,9 +441,9 @@ class MarcacionController extends Controller
             // El resto (FUERA_RANGO, TELETRABAJO, etc.) aplican a ambos
             $permisosTotales[] = $permiso->id;
         }
-
+        
         // Transacción Base de Datos
-        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana, $permisosTotales);
+        $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana, $permisosTotales, $esRemoto);
 
         // Foto
         $this->procesarImagen($request->file('ubi_foto'), $marcacion, $empleado, $validated['tipo_marcacion']);
@@ -647,13 +673,22 @@ class MarcacionController extends Controller
         return $resultado;
     }
 
-    private function validarGPS($validated, $sucursal, $esOlvido)
+    private function validarGPS($validated, $sucursal, $esOlvido, $esRemoto = false)
     {
-        // Ya no devolvemos el array de permisos vacíos
+        // 1. Si es una regularización de olvido de un día pasado, la distancia no importa
         if ($validated['tipo_marcacion'] == 2 && $esOlvido) {
             return ['distancia' => 0];
         }
 
+        // 2. Calculamos la distancia REAL sin importar qué pase después
+        $distancia = $this->distanciaEnMetros($validated['latitud'], $validated['longitud'], $sucursal->latitud, $sucursal->longitud);
+
+        // 3. LÓGICA HOME OFFICE: Si hoy le toca remoto, lo dejamos pasar con su distancia real
+        if ($esRemoto) {
+            return ['distancia' => $distancia];
+        }
+
+        // 4. Si es presencial, aplicamos las validaciones estrictas normales
         $permisos = $this->validaPermisos();
         $rango = $sucursal->rango_marcacion_mts;
 
@@ -662,8 +697,6 @@ class MarcacionController extends Controller
             $rango = $permisos['fuera_rango']->cantidad_mts === null ? PHP_INT_MAX : $rango + $permisos['fuera_rango']->cantidad_mts;
         }
 
-        $distancia = $this->distanciaEnMetros($validated['latitud'], $validated['longitud'], $sucursal->latitud, $sucursal->longitud);
-
         if ($distancia > ($rango + $sucursal->margen_error_gps_mts)) {
             return ['error' => "Estás fuera del rango permitido ($distancia mts)."];
         }
@@ -671,9 +704,9 @@ class MarcacionController extends Controller
         return ['distancia' => $distancia];
     }
 
-    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana, $permisosTotales)
+    private function guardarRegistro($validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $diaSemana, $permisosTotales, $esRemoto)
     {
-        return DB::transaction(function () use ($diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $permisosTotales) {
+        return DB::transaction(function () use ($diaSemana, $validated, $empleado, $sucursal, $horario, $validacionTiempo, $distancia, $entradaAbierta, $permisosTotales,$esRemoto) {
 
             $horarioSucursal = $sucursal->horarios->first(fn ($h) => $h->permitido_marcacion == 1 && in_array($diaSemana, $h->dias));
 
@@ -704,6 +737,7 @@ class MarcacionController extends Controller
                 'latitud' => $validated['latitud'], 'longitud' => $validated['longitud'], 'distancia_real_mts' => $distancia,
                 'tipo_marcacion' => $validated['tipo_marcacion'], 'fuera_horario' => $validacionTiempo['fuera_horario'],
                 'id_marcacion_entrada' => $validated['tipo_marcacion'] == 2 ? $entradaAbierta?->id : null,
+                'es_remoto' => $esRemoto,
             ]);
 
             if (! empty($permisosTotales)) {

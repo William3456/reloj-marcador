@@ -55,7 +55,7 @@ class ReporteMarcacionesController extends Controller
             'desde' => $request->input('desde') ?? date('Y-m-01'),
             'hasta' => $request->input('hasta') ?? date('Y-m-d'),
             'sucursal_nombre' => $sucursalObj ? $sucursalObj->nombre : 'Consolidado General (Todas)',
-            'sucursal_obj' => $sucursalObj, 
+            'sucursal_obj' => $sucursalObj,
             'incidencia' => $request->filled('incidencia') ? ($nombresFiltros[$request->incidencia] ?? 'Todos') : 'Todos los registros',
         ];
 
@@ -78,7 +78,9 @@ class ReporteMarcacionesController extends Controller
         $hasta = $request->input('hasta') ? Carbon::parse($request->input('hasta'))->endOfDay() : $hastaPorDefecto;
 
         $user = Auth::user();
-        $queryEmpleados = Empleado::with(['sucursal', 'puesto', 'permisos' => function ($q) use ($desde, $hasta) {
+        $queryEmpleados = Empleado::with(['sucursal', 'puesto', 'trabajo_remoto' => function ($q) {
+            $q->where('es_actual', 1);
+        }, 'permisos' => function ($q) use ($desde, $hasta) {
             $q->where('estado', 1)
                 ->where(function ($q2) use ($desde, $hasta) {
                     $q2->where('fecha_inicio', '<=', $hasta)->where('fecha_fin', '>=', $desde);
@@ -119,6 +121,39 @@ class ReporteMarcacionesController extends Controller
                 $fechaStr = $fechaObj->format('Y-m-d');
                 $diaSemana = Str::slug($fechaObj->locale('es')->isoFormat('dddd'));
 
+                $marcacionesDelDia = $marcacionesDelEmpleado->get($fechaStr, collect());
+
+                $esDiaRemoto = false;
+
+                // 1. Prioridad: ¿Alguna marcación de este día fue remota?
+                foreach ($marcacionesDelDia as $mDia) {
+                    if ($mDia->es_remoto) {
+                        $esDiaRemoto = true;
+                    }
+                    if ($mDia->salida && $mDia->salida->es_remoto) {
+                        $esDiaRemoto = true;
+                    }
+                }
+
+                // 2. Si no marcó remoto, verificamos si le correspondía por configuración
+                if (! $esDiaRemoto && $emp->trabajo_remoto) {
+                    $config = $emp->trabajo_remoto;
+                    $inicio = \Carbon\Carbon::parse($config->fecha_inicio)->startOfDay();
+                    $fin = $config->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->startOfDay() : null;
+                    $fechaFila = $fechaObj->copy()->startOfDay();
+
+                    // Comparamos si la fecha actual del ciclo entra en la vigencia
+                    if ($fechaFila->greaterThanOrEqualTo($inicio) && ($fin === null || $fechaFila->lessThanOrEqualTo($fin))) {
+                        $diasConfig = is_array($config->dias) ? $config->dias : json_decode($config->dias, true);
+                        if (is_array($diasConfig)) {
+                            $diasConfig = array_map('mb_strtolower', $diasConfig);
+                            if (in_array(mb_strtolower($fechaObj->locale('es')->isoFormat('dddd')), $diasConfig)) {
+                                $esDiaRemoto = true;
+                            }
+                        }
+                    }
+                }
+
                 $turnosEsperados = $horariosDelEmpleado->filter(function ($asig) use ($fechaStr, $diaSemana) {
                     $inicioValido = empty($asig->fecha_inicio) || $asig->fecha_inicio <= $fechaStr;
                     $finValido = empty($asig->fecha_fin) || $asig->fecha_fin >= $fechaStr;
@@ -144,10 +179,10 @@ class ReporteMarcacionesController extends Controller
                     }
 
                     $newAsig->horario = $newHorario;
+
                     return $newAsig;
                 })->sortBy(fn ($asig) => $asig->horario->hora_ini);
 
-                $marcacionesDelDia = $marcacionesDelEmpleado->get($fechaStr, collect());
                 $marcacionesLibres = collect($marcacionesDelDia->all());
                 $turnosProcesados = [];
 
@@ -159,6 +194,7 @@ class ReporteMarcacionesController extends Controller
                         if ($m->id_horario && $asig->id_horario) {
                             return $m->id_horario == $asig->id_horario;
                         }
+
                         return false;
                     });
                     if ($marcacion) {
@@ -196,6 +232,9 @@ class ReporteMarcacionesController extends Controller
                         'tolerancia' => $datosEstado['tolerancia_calculada'], // <-- AHORA USAMOS LA CALCULADA
                         'entrada_real' => $marcacion ? $marcacion->created_at : null,
                         'salida_real' => ($marcacion && $marcacion->salida) ? $marcacion->salida->created_at : null,
+                        'es_dia_remoto' => $esDiaRemoto,
+                        'es_remoto_entrada' => $marcacion ? (bool)$marcacion->es_remoto : false,
+                        'es_remoto_salida' => ($marcacion && $marcacion->salida) ? (bool)$marcacion->salida->es_remoto : false,
                         'estado_key' => $datosEstado['key'],
                         'minutos_tarde' => $datosEstado['minutos_tarde'],
                         'permiso_info' => $datosEstado['permiso_info'],
@@ -216,9 +255,12 @@ class ReporteMarcacionesController extends Controller
                         'empleado' => $emp,
                         'sucursal' => $emp->sucursal,
                         'horario_programado' => 'Turno Extra',
-                        'tolerancia' => 0, 
+                        'tolerancia' => 0,
                         'entrada_real' => $mExtra->created_at,
                         'salida_real' => $mExtra->salida ? $mExtra->salida->created_at : null,
+                        'es_dia_remoto' => $esDiaRemoto,
+                        'es_remoto_entrada' => (bool)$mExtra->es_remoto,
+                        'es_remoto_salida' => $mExtra->salida ? (bool)$mExtra->salida->es_remoto : false,
                         'estado_key' => $estadoKeyExtra,
                         'minutos_tarde' => 0,
                         'permiso_info' => $datosEstado['permiso_info'],
@@ -266,6 +308,7 @@ class ReporteMarcacionesController extends Controller
                 $horaTeorica = Carbon::parse($fechaObj->format('Y-m-d').' '.$horario->hora_ini);
                 $horarioSucursal = $emp->sucursal->horarios->sortBy(function ($hs) use ($horaTeorica) {
                     $horaInicioSucursal = Carbon::parse($horaTeorica->format('Y-m-d').' '.$hs->hora_ini);
+
                     return abs($horaTeorica->diffInMinutes($horaInicioSucursal));
                 })->first();
 
@@ -287,11 +330,11 @@ class ReporteMarcacionesController extends Controller
 
         // 3. Evaluaciones si hay marcación
         if ($marcacion) {
-            
+
             if ($marcacion->permisos->isNotEmpty()) {
                 $p = $marcacion->permisos->first();
                 $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
-                
+
                 // Si la marcación tiene un permiso de Llegada Tarde, sumar los minutos a la tolerancia que mostraremos
                 if ($p->tipoPermiso && $p->tipoPermiso->codigo === 'LLEGADA_TARDE') {
                     $toleranciaFinal += (int) $p->valor;

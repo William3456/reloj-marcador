@@ -83,7 +83,9 @@
                     </td>
 
                     {{-- CELDA DE HORARIOS --}}
+                    {{-- CELDA DE HORARIOS --}}
                     <td>
+                        {{-- Horarios Presenciales --}}
                         @if($empleado->horarios && $empleado->horarios->isNotEmpty())
                             @php
                                 $horariosUnicos = $empleado->horarios->unique('id');
@@ -106,6 +108,40 @@
                             @endforeach
                         @else
                             <span style="color: #94a3b8; font-style: italic; font-size: 9px;">Sin asignar</span>
+                        @endif
+
+                        {{-- TRABAJO REMOTO PDF --}}
+                        @php
+                            $esRemotoActivo = false;
+                            $diasRemotoStr = '';
+                            $configRemoto = $empleado->trabajo_remoto;
+
+                            if ($configRemoto) {
+                                $hoy = \Carbon\Carbon::today();
+                                $inicio = \Carbon\Carbon::parse($configRemoto->fecha_inicio)->startOfDay();
+                                $fin = $configRemoto->fecha_fin ? \Carbon\Carbon::parse($configRemoto->fecha_fin)->startOfDay() : null;
+
+                                if ($hoy->greaterThanOrEqualTo($inicio) && ($fin === null || $hoy->lessThanOrEqualTo($fin))) {
+                                    $esRemotoActivo = true;
+                                    $diasArr = is_array($configRemoto->dias) ? $configRemoto->dias : json_decode($configRemoto->dias, true);
+                                    if(is_array($diasArr)) {
+                                        $diasRemotoStr = implode(', ', array_map(function($d) {
+                                            return mb_convert_case(mb_substr(trim($d), 0, 3, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                                        }, $diasArr));
+                                    }
+                                }
+                            }
+                        @endphp
+
+                        @if($esRemotoActivo && !empty($diasRemotoStr))
+                            <div style="margin-top: 4px; padding: 4px; background-color: #faf5ff; border: 1px solid #e9d5ff; border-radius: 4px;">
+                                <div style="font-size: 8px; font-weight: bold; color: #6b21a8; text-transform: uppercase;">
+                                    REMOTO
+                                </div>
+                                <div style="font-size: 8px; color: #9333ea; font-weight: bold; text-transform: uppercase; margin-top: 2px;">
+                                    {{ $diasRemotoStr }}
+                                </div>
+                            </div>
                         @endif
                     </td>
 

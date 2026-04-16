@@ -6,7 +6,6 @@
                 {{ __('Registro de asistencia') }}
             </h2>
             
-            
             <button onclick="toggleModal('modal-sucursal')" class="absolute right-0 p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-colors focus:outline-none">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -18,14 +17,58 @@
 <div class="py-6 px-4"> 
         <div class="max-w-md mx-auto space-y-6"> 
 
+            @php
+                $esHoyRemoto = false;
+                $empleadoLogueado = Auth::user()->empleado;
+                
+                if ($empleadoLogueado) {
+                    // 🌟 CORRECCIÓN: Buscamos explícitamente el registro activo en la BD
+                    $config = \App\Models\Empleado\HomeOffice::where('id_empleado', $empleadoLogueado->id)
+                                    ->where('es_actual', 1)
+                                    ->first();
+
+                    if ($config) {
+                        $hoy = \Carbon\Carbon::today();
+                        $inicio = \Carbon\Carbon::parse($config->fecha_inicio)->startOfDay();
+                        $fin = $config->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->startOfDay() : null;
+
+                        // Validar si hoy entra en el rango de vigencia
+                        if ($hoy->greaterThanOrEqualTo($inicio) && ($fin === null || $hoy->lessThanOrEqualTo($fin))) {
+                            // Extraemos el día en minúsculas (ej. "jueves")
+                            $diaSemanaActual = mb_strtolower($hoy->locale('es')->isoFormat('dddd'));
+                            $diasConfig = is_array($config->dias) ? $config->dias : json_decode($config->dias, true);
+                            
+                            if (is_array($diasConfig)) {
+                                $diasConfig = array_map('mb_strtolower', $diasConfig);
+                                
+                                // Verificamos si "jueves" está en el arreglo
+                                if (in_array($diaSemanaActual, $diasConfig)) {
+                                    $esHoyRemoto = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            @endphp
+
             {{-- RELOJ --}}
-            <div class="bg-white shadow-lg rounded-2xl p-6 text-center border-t-4 border-blue-600 relative overflow-hidden">
+            <div class="bg-white shadow-lg rounded-2xl p-6 text-center {{ $esHoyRemoto ? 'border-t-4 border-purple-600' : 'border-t-4 border-blue-600' }} relative overflow-hidden">
                 <div class="absolute top-3 right-3 opacity-10">
-                    <svg class="w-12 h-12 text-blue-800" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
+                    <svg class="w-12 h-12 {{ $esHoyRemoto ? 'text-purple-800' : 'text-blue-800' }}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
                 </div>
-                <p class="text-gray-500 text-xs uppercase tracking-widest font-bold mb-1 relative z-10">Hora Actual</p>
+                
+                {{-- 🌟 2. MOSTRAR SI ES DÍA REMOTO EN EL HEADER 🌟 --}}
+                <div class="flex items-center justify-center gap-2 mb-1 relative z-10">
+                    <p class="text-gray-500 text-xs uppercase tracking-widest font-bold">Hora Actual</p>
+                    @if($esHoyRemoto)
+                        <span class="bg-purple-100 text-purple-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 border border-purple-200">
+                            <i class="fa-solid fa-house-laptop"></i> Remoto
+                        </span>
+                    @endif
+                </div>
+
                 <div id="reloj-tiempo-real" class="text-5xl font-black text-gray-800 tracking-tight relative z-10">--:--:--</div>
-                <p class="text-blue-600 font-medium text-sm mt-2 uppercase relative z-10" id="fecha-actual">
+                <p class="{{ $esHoyRemoto ? 'text-purple-600' : 'text-blue-600' }} font-medium text-sm mt-2 uppercase relative z-10" id="fecha-actual">
                     {{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd, D [de] MMMM') }}
                 </p>
             </div>
@@ -113,6 +156,8 @@
                             <input type="hidden" name="latitud" id="latitud">
                             <input type="hidden" name="longitud" id="longitud">
                             <input type="hidden" name="ubicacion" id="ubicacion_texto">
+                            {{-- 🌟 PASAMOS LA VARIABLE A JAVASCRIPT MEDIANTE UN INPUT HIDDEN --}}
+                            <input type="hidden" id="es_hoy_remoto" value="{{ $esHoyRemoto ? '1' : '0' }}">
 
                             <div class="mb-6">
                                 <label class="block text-sm font-bold text-gray-700 mb-3">Tipo de Registro</label>
@@ -151,10 +196,14 @@
 
                             @if($mostrarForm)
                                 <div class="space-y-6">
-                                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                        <div class="flex items-center"><span id="gps-status" class="text-sm text-gray-500 font-medium">Buscando GPS...</span></div>
+                                    {{-- 🌟 3. AQUÍ ES DONDE ESTÁ EL CONTENEDOR DEL GPS --}}
+                                    <div id="contenedor-gps-info" class="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 transition-colors">
+                                        <div class="flex items-center">
+                                            <span id="gps-status" class="text-sm text-gray-500 font-medium">Buscando GPS...</span>
+                                        </div>
                                         <div id="gps-accuracy" class="text-xs text-gray-400"></div>
                                     </div>
+                                    
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-3">Evidencia</label>
                                         <div class="relative w-full h-48 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center overflow-hidden group hover:border-blue-400 transition-colors">
@@ -241,6 +290,14 @@
                                 // Recolector dinámico de Badges
                                 $badges = [];
                                 
+                                // 🌟 BADGE DE HOME OFFICE (Se añade primero para que resalte)
+                                if ($reg->es_remoto) {
+                                    $badges[] = [
+                                        'texto' => '<i class="fa-solid fa-house-laptop mr-1"></i> Remoto', 
+                                        'color' => 'bg-purple-100 text-purple-700 border-purple-200'
+                                    ];
+                                }
+
                                 // Estado Nativo (Tarde / Olvido normal de hoy)
                                 if($reg->tipo_marcacion == 1 && $reg->fuera_horario) { 
                                     $badges[] = ['texto' => 'Tarde', 'color' => 'bg-orange-100 text-orange-700 border-orange-200']; 
@@ -250,7 +307,6 @@
 
                                 // BADGE ESPECIAL PARA OLVIDOS DE OTROS DÍAS
                                 if ($esOlvidoPasado) {
-                                    // Consultamos directo a DB la fecha de la entrada original sin romper relaciones
                                     $fechaEntradaAntigua = \Illuminate\Support\Facades\DB::table('marcaciones_empleados')
                                                             ->where('id', $reg->id_marcacion_entrada)
                                                             ->value('created_at');
@@ -267,6 +323,9 @@
                                     }
                                 }
 
+                                // 🌟 TEXTO DINÁMICO DE UBICACIÓN
+                                $textoUbicacion = $reg->es_remoto ? 'Home office (Remoto)' : ($reg->sucursal->nombre ?? 'Ubicación GPS');
+
                                 // Convertir a HTML crudo para enviarlo al Modal
                                 $badgesHtml = '';
                                 foreach($badges as $b) {
@@ -279,7 +338,7 @@
                                  data-tipo="{{ $tipoTexto }}"
                                  data-hora="{{ $reg->created_at->format('h:i A') }}"
                                  data-fecha="{{ $reg->created_at->locale('es')->isoFormat('dddd, D [de] MMMM') }}"
-                                 data-sucursal="{{ $reg->sucursal->nombre ?? 'Ubicación GPS' }}"
+                                 data-sucursal="{{ $textoUbicacion }}"
                                  data-foto="{{ Storage::url($reg->ubi_foto) }}"
                                  data-lat="{{ $reg->latitud }}"
                                  data-lng="{{ $reg->longitud }}"
@@ -298,14 +357,10 @@
                                 <div class="ml-4 flex-grow">
                                     <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
                                         <p class="text-sm font-bold text-gray-800 mr-1">{{ $tipoTexto }}</p>
-                                        @foreach($badges as $badge)
-                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border {{ $badge['color'] }}">
-                                                {{ $badge['texto'] }}
-                                            </span>
-                                        @endforeach
+                                        {!! $badgesHtml !!}
                                     </div>
                                     <p class="text-xs text-gray-500">
-                                        {{ $reg->created_at->format('h:i A') }} • {{ $reg->sucursal->nombre ?? 'GPS' }}
+                                        {{ $reg->created_at->format('h:i A') }} • <span class="{{ $reg->es_remoto ? 'text-purple-600 font-semibold' : '' }}">{{ $textoUbicacion }}</span>
                                     </p>
                                 </div>
 
@@ -369,9 +424,8 @@
         </div>
     </div>
 
-    {{-- MODIFICACIÓN 2: Modal de Información de Sucursal (Fuera del flujo principal) --}}
-    {{-- MODAL DE INFORMACIÓN DE SUCURSAL Y TURNOS --}}
-    <div id="modal-sucursal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    {{-- MODIFICACIÓN 2: Modal de Información de Sucursal --}}
+<div id="modal-sucursal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         {{-- Backdrop oscuro --}}
         <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('modal-sucursal')"></div>
 
@@ -389,10 +443,6 @@
                             </svg>
                         </button>
                     </div>
-
-                    {{-- Cuerpo del Modal --}}
-                    {{-- Cuerpo del Modal COMPACTO --}}
-                    {{-- ... (código anterior del modal) ... --}}
 
 {{-- Cuerpo del Modal COMPACTO --}}
 <div class="px-4 py-4 space-y-4">
@@ -416,15 +466,17 @@
     <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
 
         {{-- ======================================================= --}}
-        {{-- NUEVA SECCIÓN: PERMISOS VIGENTES --}}
+        {{-- SECCIÓN: 🌟 3. PERMISOS VIGENTES Y FUTUROS (CORREGIDO) 🌟 --}}
         {{-- ======================================================= --}}
         @php
-            // Consultamos los permisos del empleado que aún no han vencido (fecha_fin >= hoy)
-            // Asumiendo que la relación en el modelo Empleado es 'permisos'
+            $hoyCarbon = \Carbon\Carbon::today();
+
+            // Consultamos los permisos del empleado que están en el presente o futuro.
+            // Para que un permiso sea vigente o futuro, su 'fecha_fin' debe ser mayor o igual a HOY.
             $misPermisos = Auth::user()->empleado->permisos()
                 ->where('estado', 1)
-                ->whereDate('fecha_fin', '>=', \Carbon\Carbon::today())
-                ->with('tipoPermiso') // Cargamos el tipo para mostrar el nombre
+                ->whereDate('fecha_fin', '>=', $hoyCarbon->format('Y-m-d'))
+                ->with('tipoPermiso') 
                 ->orderBy('fecha_inicio', 'asc')
                 ->get();
         @endphp
@@ -433,16 +485,28 @@
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-orange-700 font-bold text-[10px] uppercase tracking-wide">
-                        <i class="fa-solid fa-file-contract mr-1"></i> Permisos Activos
+                        <i class="fa-solid fa-file-contract mr-1"></i> Permisos Activos o Futuros
                     </span>
                 </div>
 
                 <div class="space-y-2">
                     @foreach($misPermisos as $permiso)
                         @php
-                             $esHoy = \Carbon\Carbon::now()->between($permiso->fecha_inicio, $permiso->fecha_fin);
+                            
+                            $hoyExacto = \Carbon\Carbon::now(); 
+                            
+                            $fInicio = \Carbon\Carbon::parse($permiso->fecha_inicio)->startOfDay();
+                            
+                            $fFin = \Carbon\Carbon::parse($permiso->fecha_fin)->endOfDay(); 
+                            
+                            
+                            $esHoy = $hoyExacto->between($fInicio, $fFin);
+                            
+                            
+                            $esFuturo = $fInicio->greaterThan($hoyExacto);
                         @endphp
-                        <div class="bg-white border-l-4 {{ $esHoy ? 'border-orange-500 shadow-sm' : 'border-orange-200 opacity-80' }} rounded-r px-3 py-2 border-y border-r border-gray-200">
+                        
+                        <div class="bg-white border-l-4 {{ $esHoy ? 'border-orange-500 shadow-sm' : 'border-blue-400 opacity-90' }} rounded-r px-3 py-2 border-y border-r border-gray-200">
                             
                             {{-- Título y Badge --}}
                             <div class="flex justify-between items-start mb-1">
@@ -450,24 +514,25 @@
                                     {{ $permiso->tipoPermiso->nombre ?? 'Permiso' }}
                                 </span>
                                 @if($esHoy)
-                                    <span class="text-[8px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                                    <span class="text-[8px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full animate-pulse uppercase">
                                         ACTIVO HOY
+                                    </span>
+                                @elseif($esFuturo)
+                                    <span class="text-[8px] bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded-full uppercase border border-blue-100">
+                                        PRÓXIMO
                                     </span>
                                 @endif
                             </div>
 
                             {{-- Fechas --}}
-                            <div class="text-[10px] text-gray-500 flex items-center gap-1">
-                                <i class="fa-regular fa-calendar text-gray-400"></i>
+                            <div class="text-[10px] {{ $esHoy ? 'text-orange-600 font-medium' : 'text-gray-500' }} flex items-center gap-1">
+                                <i class="fa-regular fa-calendar {{ $esHoy ? 'text-orange-500' : 'text-gray-400' }}"></i>
                                 <span>
-                                    {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d M') }} 
-                                    - 
-                                    {{ \Carbon\Carbon::parse($permiso->fecha_fin)->format('d M') }}
+                                    {{ $fInicio->format('d M') }} - {{ $fFin->format('d M') }}
                                 </span>
                             </div>
                             
-                            <div class="text-[10px] text-gray-500 flex items-center gap-1">
-                                
+                            <div class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                                 <span>
                                     @if($permiso->valor !== null)
                                         <i class="fa-regular fa-clock text-gray-400"></i>
@@ -499,7 +564,7 @@
         {{-- ======================================================= --}}
 
 
-        {{-- 1. SECCIÓN: MIS TURNOS (Código existente) --}}
+        {{-- 1. SECCIÓN: MIS TURNOS --}}
         <div class="mb-3 mt-2">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-blue-700 font-bold text-[10px] uppercase tracking-wide">
@@ -510,7 +575,6 @@
             {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 @forelse($horariosActivos->sortBy('hora_ini') as $miHorario)
-                    {{-- ... (Tu código de horarios existente se mantiene IGUAL AQUÍ) ... --}}
                     @php
                         // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
                         $esTurnoActual = false;
@@ -567,7 +631,7 @@
 
         <div class="border-t border-gray-200 my-2"></div>
 
-        {{-- 2. SECCIÓN: HORARIOS SUCURSAL (Código existente se mantiene) --}}
+        {{-- 2. SECCIÓN: HORARIOS SUCURSAL --}}
         <div class="mb-2">
             <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención General:</span>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -611,6 +675,7 @@
             </div>
         </div>
     </div>
+
 {{-- MODAL BLOQUEANTE: Marcación Pendiente --}}
 @if(isset($mostrarModalBloqueo) && $mostrarModalBloqueo)
 <div id="modal-bloqueo" class="fixed inset-0 z-[100] overflow-y-auto">
@@ -631,7 +696,7 @@
                     </div>
                     <ul class="list-disc list-inside text-sm space-y-1">
                     @foreach ($errors->getMessages() as $key => $messages)
-                        @if ($key !== 'ubi_foto') {{-- <-- AQUÍ FILTRAMOS QUE NO SE MUESTRE --}}
+                        @if ($key !== 'ubi_foto')
                             @foreach ($messages as $message)
                                 <li>{{ $message }}</li>
                             @endforeach
@@ -651,13 +716,11 @@
                     <input type="hidden" name="latitud" class="lat-bloqueo">
                     <input type="hidden" name="longitud" class="lng-bloqueo">
 
-                    {{-- NUEVO: Indicador de GPS en el Modal --}}
                     <div class="flex items-center justify-between bg-red-50 p-3 rounded-xl border border-red-100 mb-4">
                         <div class="flex items-center"><span id="gps-status-modal" class="text-sm text-red-500 font-medium animate-pulse">Buscando GPS...</span></div>
                         <div id="gps-accuracy-modal" class="text-xs text-red-400"></div>
                     </div>
 
-                    {{-- Input de Foto para el Modal --}}
                     <div class="mb-6">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Evidencia de salida</label>
                         <div class="relative w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-red-200 flex flex-col items-center justify-center overflow-hidden group hover:border-red-400 transition-colors">
@@ -674,7 +737,6 @@
                         </div>
                     </div>
 
-                    {{-- 🌟 BOTÓN BLOQUEADO POR DEFECTO --}}
                     <button type="submit" id="btn-marcar-modal" disabled class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         REGISTRAR SALIDA AHORA

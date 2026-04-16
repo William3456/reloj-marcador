@@ -50,16 +50,59 @@
                 <div class="relative">
 
                     {{-- 1. CABECERA DE FECHA --}}
-                    <div class="sticky top-0 z-10 bg-gray-50 py-2 mb-2 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-black text-blue-800 bg-blue-100 px-3 py-1 rounded-full uppercase shadow-sm">
-                                {{ $dia['fecha_obj']->locale('es')->isoFormat('dddd D') }}
-                            </span>
-                            <span class="ml-2 text-[10px] font-bold text-gray-500 uppercase">
-                                {{ $dia['fecha_obj']->locale('es')->isoFormat('MMMM YYYY') }}
-                            </span>
+                    @php
+                        $esDiaRemoto = false;
+                        // Usamos copy() para no alterar la variable original del ciclo
+                        $fechaFila = $dia['fecha_obj']->copy()->startOfDay(); 
+                        $empleadoLogueado = auth()->user()->empleado;
+
+                        // A. Prioridad: ¿Marcó como remoto? (Hecho histórico)
+                        foreach($dia['turnos'] as $t) {
+                            if ($t->marcacion && $t->marcacion->es_remoto) $esDiaRemoto = true;
+                            if ($t->marcacion && $t->marcacion->salida && $t->marcacion->salida->es_remoto) $esDiaRemoto = true;
+                        }
+
+                        // B. Planificación: ¿Le correspondía remoto en esta fecha específica?
+                        if (!$esDiaRemoto && $empleadoLogueado && $empleadoLogueado->trabajo_remoto) {
+                            $config = $empleadoLogueado->trabajo_remoto;
+                            $inicio = \Carbon\Carbon::parse($config->fecha_inicio)->startOfDay();
+                            $fin = $config->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->startOfDay() : null;
+
+                            // VALIDACIÓN DE RANGO
+                            $estaVigenteEnFecha = $fechaFila->greaterThanOrEqualTo($inicio) && 
+                                                 ($fin === null || $fechaFila->lessThanOrEqualTo($fin));
+
+                            if ($estaVigenteEnFecha) {
+                                $diaSemana = mb_strtolower($dia['fecha_obj']->locale('es')->isoFormat('dddd'));
+                                $diasConfig = is_array($config->dias) ? $config->dias : json_decode($config->dias, true);
+                                
+                                if (is_array($diasConfig)) {
+                                    $diasConfig = array_map('mb_strtolower', $diasConfig);
+                                    if (in_array($diaSemana, $diasConfig)) {
+                                        $esDiaRemoto = true;
+                                    }
+                                }
+                            }
+                        }
+                    @endphp
+                    <div class="sticky top-0 z-10 bg-gray-50 py-2 mb-2 flex items-start sm:items-center justify-between gap-2">
+                        <div class="flex items-center flex-wrap gap-2">
+                            <div>
+                                <span class="text-xs font-black text-blue-800 bg-blue-100 px-3 py-1 rounded-full uppercase shadow-sm">
+                                    {{ $dia['fecha_obj']->locale('es')->isoFormat('dddd D') }}
+                                </span>
+                                <span class="ml-2 text-[10px] font-bold text-gray-500 uppercase">
+                                    {{ $dia['fecha_obj']->locale('es')->isoFormat('MMMM YYYY') }}
+                                </span>
+                            </div>
+                            {{--  BADGE HOME OFFICE A NIVEL DE DÍA --}}
+                            @if($esDiaRemoto)
+                                <span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded-md border border-purple-200 shadow-sm flex items-center gap-1">
+                                    <i class="fa-solid fa-house-laptop"></i> HOME OFFICE (Trabajo remoto)
+                                </span>
+                            @endif
                         </div>
-                        <div class="px-2 py-0.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-500 shadow-sm">
+                        <div class="px-2 py-0.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-500 shadow-sm whitespace-nowrap">
                             {{ $dia['completados'] }}/{{ $dia['total_turnos'] }} Turnos
                         </div>
                     </div>

@@ -29,6 +29,7 @@ class MarcacionEmpleado extends Model
         'id_horario',
         'id_horario_historico_empleado',
         'id_horario_historico_sucursal',
+        'es_remoto',
     ];
 
     public function sucursal()

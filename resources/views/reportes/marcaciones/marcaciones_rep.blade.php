@@ -191,7 +191,16 @@
                                             <tr class="hover:bg-gray-50 transition-colors">
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm font-bold text-gray-800">{{ $turno['fecha']->format('d/m/Y') }}</div>
-                                                    <div class="text-[11px] text-gray-400 font-medium uppercase">{{ $turno['fecha']->locale('es')->isoFormat('dddd') }}</div>
+                                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                                        <span class="text-[11px] text-gray-400 font-medium uppercase">{{ $turno['fecha']->locale('es')->isoFormat('dddd') }}</span>
+                                                        
+                                                        
+                                                        @if($turno['es_dia_remoto'])
+                                                            <span class="text-[8px] bg-purple-100 text-purple-700 font-black px-1.5 py-0.5 rounded border border-purple-200 uppercase flex items-center gap-1">
+                                                                <i class="fa-solid fa-house-laptop"></i> Remoto
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 text-center">
                                                     <span class="px-3 py-1 bg-gray-100 rounded-md text-xs font-mono font-medium text-gray-600 border border-gray-200">{{ $turno['horario_programado'] }}</span>

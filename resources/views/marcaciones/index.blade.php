@@ -94,9 +94,50 @@
                                 @foreach ($empData['fechas'] as $fechaStr => $fechaData)
                                     <div>
                                         {{-- Encabezado de la Fecha --}}
-                                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b border-gray-100 pb-2 uppercase tracking-wide flex items-center gap-2">
-                                            <i class="fa-regular fa-calendar-days text-blue-500"></i>
-                                            {{ $fechaData['fecha_obj']->locale('es')->isoFormat('dddd, D [de] MMMM YYYY') }}
+                                        @php
+                                            $esDiaRemoto = false;
+                                            $fechaFila = $fechaData['fecha_obj']->startOfDay();
+                                            
+                                            // 1. Prioridad: ¿Marcó como remoto? (Hecho histórico)
+                                            foreach($fechaData['turnos'] as $t) {
+                                                if ($t->marcacion && $t->marcacion->es_remoto) $esDiaRemoto = true;
+                                                if ($t->marcacion && $t->marcacion->salida && $t->marcacion->salida->es_remoto) $esDiaRemoto = true;
+                                            }
+
+                                            // 2. Planificación: ¿Le correspondía remoto en esta fecha específica?
+                                            if (!$esDiaRemoto && isset($emp->trabajo_remoto)) {
+                                                $config = $emp->trabajo_remoto;
+                                                $inicio = \Carbon\Carbon::parse($config->fecha_inicio)->startOfDay();
+                                                $fin = $config->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->startOfDay() : null;
+
+                                                // VALIDACIÓN DE RANGO: ¿La fecha de la fila está dentro de la vigencia?
+                                                $estaVigenteEnFecha = $fechaFila->greaterThanOrEqualTo($inicio) && 
+                                                                     ($fin === null || $fechaFila->lessThanOrEqualTo($fin));
+
+                                                if ($estaVigenteEnFecha) {
+                                                    $diaSemana = mb_strtolower($fechaData['fecha_obj']->locale('es')->isoFormat('dddd'));
+                                                    $diasConfig = is_array($config->dias) ? $config->dias : json_decode($config->dias, true);
+                                                    
+                                                    if (is_array($diasConfig)) {
+                                                        $diasConfig = array_map('mb_strtolower', $diasConfig);
+                                                        if (in_array($diaSemana, $diasConfig)) {
+                                                            $esDiaRemoto = true;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        @endphp
+                                        <h3 class="text-sm font-bold text-gray-700 mb-4 border-b border-gray-100 pb-2 uppercase tracking-wide flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-regular fa-calendar-days text-blue-500"></i>
+                                                {{ $fechaData['fecha_obj']->locale('es')->isoFormat('dddd, D [de] MMMM YYYY') }}
+                                            </div>
+                                            
+                                            @if($esDiaRemoto)
+                                                <span class="bg-purple-100 text-purple-800 text-[10px] font-black px-2.5 py-1 rounded-md border border-purple-200 shadow-sm flex items-center gap-1.5">
+                                                    <i class="fa-solid fa-house-laptop"></i> HOME OFFICE
+                                                </span>
+                                            @endif
                                         </h3>
 
                                         {{-- Grid de Turnos de ese Día --}}

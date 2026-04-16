@@ -70,7 +70,10 @@ class Empleado extends Model
     {
         return $this->hasOne(User::class, 'id_empleado');
     }
-
+    public function trabajo_remoto()
+    {
+        return $this->hasOne(HomeOffice::class, 'id_empleado', 'id');
+    }
     public function scopeVisiblePara($query, $user)
     {
         if ($user->rol->id == 1) {

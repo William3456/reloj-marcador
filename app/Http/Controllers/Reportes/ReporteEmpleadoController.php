@@ -19,11 +19,16 @@ class ReporteEmpleadoController extends Controller
     {
         $user = Auth::user();
 
-        // 🌟 AGREGADO: Cargamos la relación 'horarios' para optimizar la consulta
+        // 🌟 AGREGADO: Cargamos la relación 'trabajo_remoto' filtrada por 'es_actual'
         $query = Empleado::visiblePara($user)
-            ->with(['sucursal', 'puesto', 'departamento', 'user.rol', 'horarios' => function ($q) {
-                $q->wherePivot('es_actual', 1);
-            }]);
+            ->with(['sucursal', 'puesto', 'departamento', 'user.rol', 
+                'horarios' => function ($q) {
+                    $q->wherePivot('es_actual', 1);
+                },
+                'trabajo_remoto' => function ($q) {
+                    $q->where('es_actual', 1);
+                }
+            ]);
 
         if ($request->filled('sucursal')) {
             $query->where('id_sucursal', $request->sucursal);
