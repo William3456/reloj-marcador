@@ -167,7 +167,14 @@ class HorarioEmpleadoController extends Controller
                     } elseif ($accion === 'asignar' && isset($request->remoto_dias[$empleadoID])) {
                         // ACCIÓN: ASIGNAR NUEVOS DÍAS
 
-                        // 1. Cerramos el registro anterior (si existía alguno vigente)
+                        
+                        $diasTratados = collect($request->remoto_dias[$empleadoID])
+                            ->map(fn ($d) => mb_strtolower(trim($d))) // Pasamos a minúsculas
+                            ->sort()                                  // Ordenamos alfabéticamente
+                            ->values()                                // Reindexamos las llaves
+                            ->toArray();                              // Lo pasamos como array al modelo
+
+                        // 2. Cerramos el registro anterior (si existía alguno vigente)
                         HomeOffice::where('id_empleado', $empleadoID)
                             ->where('es_actual', true)
                             ->update([
@@ -175,10 +182,10 @@ class HorarioEmpleadoController extends Controller
                                 'es_actual' => false,
                             ]);
 
-                        // 2. Creamos el nuevo registro vigente con la nueva configuración de días
+                        // 3. Creamos el nuevo registro vigente
                         HomeOffice::create([
                             'id_empleado' => $empleadoID,
-                            'dias' => $request->remoto_dias[$empleadoID],
+                            'dias' => $diasTratados, // 👈 Pasamos nuestro array procesado
                             'fecha_inicio' => $fechaHoy,
                             'fecha_fin' => null,
                             'es_actual' => true,

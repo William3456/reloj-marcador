@@ -22,4 +22,9 @@ class HomeOffice extends Model
         'dias' => 'array',
         'es_actual' => 'boolean',
     ];
+    
+    protected function asJson($value)
+    {
+        return json_encode($value, JSON_UNESCAPED_UNICODE);
+    }
 }
