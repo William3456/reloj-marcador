@@ -331,6 +331,14 @@
                                 foreach($badges as $b) {
                                     $badgesHtml .= '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>';
                                 }
+                                $horasPermisoStr = "";
+                                if(isset($reg->permisos)) {
+                                    foreach($reg->permisos as $p) {
+                                        if($p->hora_ini && $p->hora_fin) {
+                                            $horasPermisoStr = \Carbon\Carbon::parse($p->hora_ini)->format('H:i') . ' a ' . \Carbon\Carbon::parse($p->hora_fin)->format('H:i');
+                                        }
+                                    }
+                                }
                             @endphp
 
                             <div onclick="abrirDetalleHistorial(this)"
@@ -342,7 +350,8 @@
                                  data-foto="{{ Storage::url($reg->ubi_foto) }}"
                                  data-lat="{{ $reg->latitud }}"
                                  data-lng="{{ $reg->longitud }}"
-                                 data-badges="{{ $badgesHtml }}">
+                                 data-badges="{{ $badgesHtml }}"
+                                 data-horas-permiso="{{ $horasPermisoStr }}">
                                 
                                 {{-- Icono --}}
                                 <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $iconoBg }}">
@@ -375,52 +384,70 @@
             @endif
 {{-- MODAL DETALLE HISTORIAL (Idéntico al de Historial) --}}
     <div id="modal-detalle-historial" class="fixed inset-0 z-[120] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="cerrarDetalleHistorial()"></div>
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="cerrarDetalleHistorial()"></div>
 
-        <div class="fixed inset-x-0 bottom-0 bg-white rounded-t-[30px] shadow-2xl transform transition-transform duration-300 overflow-hidden max-w-md mx-auto">
-            <div class="flex justify-center pt-3" onclick="cerrarDetalleHistorial()">
-                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-            </div>
+    <div class="fixed inset-x-0 bottom-0 bg-white rounded-t-[30px] shadow-2xl transform transition-transform duration-300 overflow-hidden max-w-md mx-auto flex flex-col max-h-[90vh]">
+        <div class="flex justify-center pt-3 flex-shrink-0" onclick="cerrarDetalleHistorial()">
+            <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>
 
-            <div class="p-6 pb-10">
-                {{-- Encabezado --}}
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <div class="flex items-center flex-wrap gap-2 mb-1">
-                            <h3 id="md-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
-                            {{-- Contenedor dinámico para inyectar los múltiples badges --}}
-                            <div id="md-badges-container" class="flex items-center flex-wrap gap-1"></div>
-                        </div>
-                        <p id="md-fecha" class="text-blue-600 font-medium text-sm"></p>
-                    </div>
-                    <button onclick="cerrarDetalleHistorial()" class="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-
-                {{-- Foto --}}
-                <div class="mb-6 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner min-h-[14rem]">
-                    <img id="md-img" src="" class="w-full h-56 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+Evidencia';" />
-                </div>
-
-                {{-- Info Ubicación --}}
-                <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-                    <div class="flex items-center mb-4 pb-4 border-b border-gray-100">
-                        <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600 mr-3">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5"></path></svg>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sucursal Asignada</p>
-                            <p id="md-sucursal" class="text-sm font-bold text-gray-900">---</p>
+        <div class="p-6 overflow-y-auto custom-scrollbar">
+           {{-- Encabezado --}}
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    {{-- 🌟 Título, Badges y Horas en la misma línea --}}
+                    <div class="flex items-center flex-wrap gap-2 mb-1">
+                        <h3 id="md-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
+                        <div id="md-badges-container" class="flex items-center flex-wrap gap-1"></div>
+                        
+                        {{-- CAJA DE HORAS (Ahora junto a los permisos) --}}
+                        <div id="md-permiso-box" class="hidden inline-flex items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">
+                            <i class="fa-regular fa-clock"></i>
+                            <span id="md-permiso-horas">---</span>
                         </div>
                     </div>
                     
-                    {{-- Mapa --}}
-                    <div id="md-mapa" class="w-full h-40 rounded-xl overflow-hidden bg-gray-100 relative z-0"></div>
+                    {{-- Fecha sola abajo --}}
+                    <p id="md-fecha" class="text-blue-600 font-medium text-sm"></p>
                 </div>
+                
+                <button onclick="cerrarDetalleHistorial()" class="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            {{-- IMPORTANTE: Borra el div gigante de id="md-permiso-box" que estaba aquí abajo --}}
+
+            
+
+            {{-- Foto --}}
+            <div class="mb-4 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner">
+                <img id="md-img" src="" class="w-full h-48 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+Evidencia';" />
+            </div>
+
+            {{-- Info Ubicación --}}
+            <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                <div class="flex items-center mb-3 pb-3 border-b border-gray-100">
+                    <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600 mr-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sucursal</p>
+                        <p id="md-sucursal" class="text-sm font-bold text-gray-900">---</p>
+                    </div>
+                </div>
+                <div id="md-mapa" class="w-full h-40 rounded-xl overflow-hidden bg-gray-100 relative z-0"></div>
             </div>
         </div>
+
+        {{-- Footer fijo --}}
+        <div class="p-4 bg-gray-50 border-t border-gray-100 flex-shrink-0">
+            <button onclick="cerrarDetalleHistorial()" class="w-full py-3 bg-gray-800 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
+                Cerrar Detalle
+            </button>
+        </div>
     </div>
+</div>
         </div>
     </div>
 
@@ -466,7 +493,7 @@
     <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
 
         {{-- ======================================================= --}}
-        {{-- SECCIÓN: 🌟 3. PERMISOS VIGENTES Y FUTUROS (CORREGIDO) 🌟 --}}
+        {{-- SECCIÓN:  3. PERMISOS VIGENTES Y FUTUROS --}}
         {{-- ======================================================= --}}
         @php
             $hoyCarbon = \Carbon\Carbon::today();
@@ -492,17 +519,11 @@
                 <div class="space-y-2">
                     @foreach($misPermisos as $permiso)
                         @php
-                            
                             $hoyExacto = \Carbon\Carbon::now(); 
-                            
                             $fInicio = \Carbon\Carbon::parse($permiso->fecha_inicio)->startOfDay();
-                            
                             $fFin = \Carbon\Carbon::parse($permiso->fecha_fin)->endOfDay(); 
                             
-                            
                             $esHoy = $hoyExacto->between($fInicio, $fFin);
-                            
-                            
                             $esFuturo = $fInicio->greaterThan($hoyExacto);
                         @endphp
                         
@@ -528,26 +549,43 @@
                             <div class="text-[10px] {{ $esHoy ? 'text-orange-600 font-medium' : 'text-gray-500' }} flex items-center gap-1">
                                 <i class="fa-regular fa-calendar {{ $esHoy ? 'text-orange-500' : 'text-gray-400' }}"></i>
                                 <span>
-                                    {{ $fInicio->format('d M') }} - {{ $fFin->format('d M') }}
-                                </span>
-                            </div>
-                            
-                            <div class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
-                                <span>
-                                    @if($permiso->valor !== null)
-                                        <i class="fa-regular fa-clock text-gray-400"></i>
-                                        {{ $permiso->valor ? 'Valor: ' . $permiso->valor .' mins.' : 'Sin valor asignado' }} 
-                                    @elseif($permiso->id_tipo_permiso == 1)
-                                        @if($permiso->cantidad_mts != null)
-                                            <i class="fa-solid fa-arrows-left-right text-gray-400"></i>
-                                            {{ 'Cantidad: ' . $permiso->cantidad_mts . ' mts.' }}
-                                        @else
-                                            <i class="fa-solid fa-arrows-left-right text-gray-400"></i>
-                                            Es posible marcar en cualquier ubicación   
-                                        @endif   
+                                    {{ $fInicio->format('d M') }}
+                                    @if($fInicio->format('Y-m-d') !== $fFin->format('Y-m-d'))
+                                        - {{ $fFin->format('d M') }}
                                     @endif
                                 </span>
                             </div>
+                            
+                            {{--  NUEVO: Horarios del permiso (Si aplican) --}}
+                            @if($permiso->hora_ini && $permiso->hora_fin)
+                                <div class="text-[10px] text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
+                                    <i class="fa-regular fa-clock text-indigo-500"></i>
+                                    <span>
+                                        {{ \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') }}
+                                    </span>
+                                </div>
+                            @endif
+                            
+                            {{-- Valores Adicionales (Ocultar el tiempo en minutos si ya tenemos rango de horas) --}}
+                            @if(!($permiso->hora_ini && $permiso->hora_fin))
+                                <div class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                                    <span>
+                                        @if($permiso->valor !== null)
+                                            <i class="fa-regular fa-clock text-gray-400"></i>
+                                            {{ $permiso->valor ? 'Valor: ' . $permiso->valor .' mins.' : 'Sin valor asignado' }} 
+                                        @elseif($permiso->id_tipo_permiso == 1)
+                                            @if($permiso->cantidad_mts != null)
+                                                <i class="fa-solid fa-arrows-left-right text-gray-400"></i>
+                                                {{ 'Cantidad: ' . $permiso->cantidad_mts . ' mts.' }}
+                                            @else
+                                                <i class="fa-solid fa-arrows-left-right text-gray-400"></i>
+                                                Es posible marcar en cualquier ubicación   
+                                            @endif   
+                                        @endif
+                                    </span>
+                                </div>
+                            @endif
+
                             {{-- Motivo (Opcional, cortado si es muy largo) --}}
                             @if($permiso->motivo)
                                 <p class="text-[9px] text-gray-400 mt-1 italic truncate">
@@ -748,6 +786,6 @@
 </div>
 @endif
 @push('scripts')
-    <script src="{{ asset('js/marcacion_app.js?v=1.0') }}"></script>
+    <script src="{{ asset('js/marcacion_app.js?v=1.1') }}"></script>
 @endpush
 </x-app-layout>

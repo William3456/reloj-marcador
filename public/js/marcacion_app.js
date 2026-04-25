@@ -281,12 +281,30 @@ function abrirDetalleHistorial(elemento) {
     const lat = parseFloat(elemento.getAttribute('data-lat'));
     const lng = parseFloat(elemento.getAttribute('data-lng'));
     const badgesHtml = elemento.getAttribute('data-badges');
+    
+    // NUEVO: Recibimos las horas
+    const horasPermiso = elemento.getAttribute('data-horas-permiso');
 
     document.getElementById('md-titulo').innerText = tipo;
     document.getElementById('md-fecha').innerText = fecha + ' • ' + hora;
     document.getElementById('md-img').src = fotoUrl;
     document.getElementById('md-sucursal').innerText = sucursal;
     document.getElementById('md-badges-container').innerHTML = badgesHtml;
+
+    // 🌟 NUEVO: Mostrar u ocultar la caja de horas
+    const boxPermiso = document.getElementById('md-permiso-box');
+    const txtHoras = document.getElementById('md-permiso-horas');
+
+    if (boxPermiso && txtHoras) {
+        if (horasPermiso && horasPermiso.trim() !== "" && horasPermiso !== "null") {
+            txtHoras.innerText = horasPermiso;
+            boxPermiso.classList.remove('hidden');
+            boxPermiso.classList.add('inline-flex'); // Aseguramos que se muestre compacto
+        } else {
+            boxPermiso.classList.add('hidden');
+            boxPermiso.classList.remove('inline-flex');
+        }
+    }
 
     const modal = document.getElementById('modal-detalle-historial');
     modal.classList.remove('hidden');

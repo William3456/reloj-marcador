@@ -20,6 +20,8 @@ class Permiso extends Model
         'valor',
         'fecha_inicio',
         'fecha_fin',
+        'hora_ini',
+        'hora_fin',
         'estado',
         'app_creacion',
         'estado_solicitud',

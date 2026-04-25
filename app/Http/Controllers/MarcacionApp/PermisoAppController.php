@@ -27,12 +27,16 @@ class PermisoAppController extends Controller
     // Guarda y envía correos
     public function store(Request $request)
     {
+        
         $request->validate([
             'id_tipo_permiso' => 'required|exists:tipos_permiso,id',
             'motivo' => 'required|string|max:500',
+            'hora_ini' => 'nullable|date_format:H:i',
+            'hora_fin' => 'nullable|date_format:H:i|after:hora_ini',
         ]);
 
         $empleado = Auth::user()->empleado;
+        $tipo = TipoPermiso::findOrFail($request->id_tipo_permiso);
 
         // Regla 1: Verificar si ya tiene un permiso general en espera
         $permisoPendiente = Permiso::where('id_empleado', $empleado->id)
@@ -44,22 +48,27 @@ class PermisoAppController extends Controller
                 ->with('error', 'Ya tienes una solicitud en revisión. Por favor, espera a que sea procesada antes de solicitar otra.');
         }
 
-        // 🌟 NUEVA REGLA 2: VALIDACIÓN DE CRUCE DE FECHAS (APP)
-        $tipo = TipoPermiso::findOrFail($request->id_tipo_permiso);
+        
+        // Si es por horas, la fecha fin es igual a la fecha inicio.
+        $fechaInicioReal = $request->fecha_inicio;
+        $fechaFinReal = $request->fecha_fin;
 
-        if ($tipo->requiere_fechas && $request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+        if ($tipo->codigo === 'PERMISO_POR_HORAS') {
+            $fechaFinReal = $request->fecha_inicio; 
+        }
+
+        // NUEVA REGLA 2: VALIDACIÓN DE CRUCE DE FECHAS 
+        if ($fechaInicioReal && $fechaFinReal) {
             $cruceFechas = Permiso::where('id_empleado', $empleado->id)
                 ->where('id_tipo_permiso', $tipo->id)
                 ->where('estado', 1) // Solo aplica si choca con uno ya activo
-                ->where(function ($query) use ($request) {
-                    $query->where('fecha_inicio', '<=', $request->fecha_fin)
-                        ->where('fecha_fin', '>=', $request->fecha_inicio);
+                ->where(function ($query) use ($fechaInicioReal, $fechaFinReal) {
+                    $query->where('fecha_inicio', '<=', $fechaFinReal)
+                        ->where('fecha_fin', '>=', $fechaInicioReal);
                 })
                 ->exists();
 
             if ($cruceFechas) {
-                // 🌟 CORRECCIÓN: Disparamos un error de validación oficial de Laravel
-                // Esto hará que el error aparezca en tu recuadro rojo nativo sin necesidad de agregar HTML
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'fecha_inicio' => 'Ya tienes un permiso activo que coincide con estas fechas. Selecciona un rango diferente.',
                 ]);
@@ -77,19 +86,25 @@ class PermisoAppController extends Controller
         $permiso->app_creacion = 2;
         $permiso->estado_solicitud = 1;
 
-        // Campos dinámicos
+        // Campos dinámicos (Distancia y Minutos)
         if ($request->has('cantidad_mts')) {
             $permiso->cantidad_mts = $request->cantidad_mts;
         }
         if ($request->has('valor')) {
             $permiso->valor = $request->valor;
         }
-        if ($request->has('fecha_inicio')) {
-            $permiso->fecha_inicio = $request->fecha_inicio;
+
+        // 3. GUARDADO DE FECHAS Y HORAS
+        $permiso->fecha_inicio = $fechaInicioReal;
+        $permiso->fecha_fin = $fechaFinReal;
+        
+        if ($request->filled('hora_ini')) {
+            $permiso->hora_ini = $request->hora_ini;
         }
-        if ($request->has('fecha_fin')) {
-            $permiso->fecha_fin = $request->fecha_fin;
+        if ($request->filled('hora_fin')) {
+            $permiso->hora_fin = $request->hora_fin;
         }
+
         if ($request->has('dias_activa')) {
             $permiso->dias_activa = $request->dias_activa;
         }
@@ -110,17 +125,17 @@ class PermisoAppController extends Controller
             $correoAdmin = $empleado->sucursal->correo_encargado ?? 'admin@tuempresa.com';
             Mail::to($correoAdmin)->send(new SolicitudPermisoAdminMail($permiso, $empleado));
 
-            // 3. NUEVO: Correos a usuarios Rol 2 Encargados de la misma sucursal, activos y que no sean el Admin
-            $correosRol2 = User::join('empleados', 'users.id_empleado', '=', 'empleados.id')
+            // 3. Correos a usuarios Rol 2 Encargados de la misma sucursal
+            $correosRol2 = \App\Models\User::join('empleados', 'users.id_empleado', '=', 'empleados.id')
                 ->where('users.id_rol', 2)
-                ->where('empleados.estado', 1) // Empleado activo
-                ->where('empleados.id_sucursal', $empleado->id_sucursal) // De la misma sucursal
-                ->where('users.email', '!=', $correoAdmin) // Evitar duplicar el correo del paso 2
-                ->whereNotNull('users.email') // Prevenir errores si hay nulos
+                ->where('empleados.estado', 1) 
+                ->where('empleados.id_sucursal', $empleado->id_sucursal) 
+                ->where('users.email', '!=', $correoAdmin) 
+                ->whereNotNull('users.email') 
                 ->pluck('users.email')
-                ->unique() // Elimina posibles correos duplicados en el array final
+                ->unique() 
                 ->toArray();
-            //dd($correosRol2);
+            
             if (! empty($correosRol2)) {
                 foreach ($correosRol2 as $correo) {
                     Mail::to($correo)->send(new SolicitudPermisoAdminMail($permiso, $empleado));
@@ -128,7 +143,7 @@ class PermisoAppController extends Controller
             }
 
             // 4. Correo a Super Administradores (Rol 1)
-            $correoSuperAdmin = User::where('id_rol', 1)
+            $correoSuperAdmin = \App\Models\User::where('id_rol', 1)
                 ->whereNotNull('email')
                 ->pluck('email')
                 ->toArray();
@@ -140,7 +155,7 @@ class PermisoAppController extends Controller
             }
 
         } catch (\Exception $e) {
-            Log::error('Error al enviar correo de permiso: '.$e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error al enviar correo de permiso: '.$e->getMessage());
         }
 
         return redirect()->route('marcacion.permisos.index')
@@ -160,7 +175,7 @@ class PermisoAppController extends Controller
         // Iniciar la consulta base
         $query = Permiso::with('tipoPermiso')->where('id_empleado', $empleado->id);
 
-        // 🌟 REGLA DE NEGOCIO: Omitir fechas y origen si se filtra por estado
+        // REGLA DE NEGOCIO: Omitir fechas y origen si se filtra por estado
         if ($estado_filtro !== 'todos') {
 
             if ($estado_filtro === 'activos') {

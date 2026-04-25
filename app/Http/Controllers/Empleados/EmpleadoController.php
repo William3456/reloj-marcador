@@ -189,7 +189,9 @@ class EmpleadoController extends Controller
      */
     public function show(string $id)
     {
-        $empleado = Empleado::with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios', 'user.rol'])
+        $empleado = Empleado::with(['puesto', 'departamento', 'sucursal', 'empresa', 'horarios', 'user.rol','trabajo_remoto' => function ($query) {
+                        $query->where('es_actual', true)->whereNull('fecha_fin');
+                    },])
             ->findOrFail($id);
 
         return response()->json($empleado);

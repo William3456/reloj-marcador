@@ -51,8 +51,18 @@
                 
                 {{-- Mostramos los datos condicionales si existen --}}
                 @if($permiso->fecha_inicio)
-                    <p><strong>Vigencia:</strong> {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($permiso->fecha_fin)->format('d/m/Y') }}</p>
+                    <p><strong>Vigencia:</strong> {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d/m/Y') }} 
+                    @if($permiso->fecha_inicio != $permiso->fecha_fin)
+                        al {{ \Carbon\Carbon::parse($permiso->fecha_fin)->format('d/m/Y') }}
+                    @endif
+                    </p>
                 @endif
+
+                {{--  NUEVO: HORARIO DEL PERMISO --}}
+                @if($permiso->hora_ini && $permiso->hora_fin)
+                    <p><strong>Horario:</strong> {{ \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') }}</p>
+                @endif
+
                 @if($permiso->valor)
                     <p><strong>Tiempo:</strong> {{ $permiso->valor }} minutos</p>
                 @endif

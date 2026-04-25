@@ -31,6 +31,8 @@ Schema::create('permiso_trabajador', function (Blueprint $table) {
 
             // Para permisos por X días hábiles
             $table->integer('dias_activa')->nullable();
+            $table->time('hora_ini')->nullable();
+            $table->time('hora_fin')->nullable();
 
             $table->boolean('estado')->default(true);
 

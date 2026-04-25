@@ -59,7 +59,7 @@
                                             <p class="text-[10px] text-gray-500 uppercase">{{ $pendiente->empleado->sucursal->nombre }}</p>
                                         </div>
                                     </div>
-                                    <span class="text-[10px] font-bold text-gray-400">{{ $pendiente->created_at->format('d M') }}</span>
+                                    <span class="text-[10px] font-bold text-gray-400">{{ ucfirst($pendiente->created_at->locale('es')->isoFormat('DD MMM')) }}</span>
                                 </div>
 
                                 {{-- Cuerpo Tarjeta Pendiente --}}
@@ -73,12 +73,31 @@
                                     <div class="flex flex-wrap gap-2 text-[10px] text-gray-500 mb-2">
                                         @if($pendiente->fecha_inicio)
                                             <span class="flex items-center bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
-                                                <i class="fa-regular fa-calendar mr-1"></i> {{ \Carbon\Carbon::parse($pendiente->fecha_inicio)->format('d/m') }} - {{ \Carbon\Carbon::parse($pendiente->fecha_fin)->format('d/m') }}
+                                                <i class="fa-regular fa-calendar mr-1"></i> 
+                                                {{ \Carbon\Carbon::parse($pendiente->fecha_inicio)->format('d/m') }} 
+                                                @if($pendiente->fecha_inicio != $pendiente->fecha_fin)
+                                                    - {{ \Carbon\Carbon::parse($pendiente->fecha_fin)->format('d/m') }}
+                                                @endif
                                             </span>
                                         @endif
+                                        
+                                        {{-- 🌟 NUEVO: HORARIO DEL PERMISO --}}
+                                        @if($pendiente->hora_ini && $pendiente->hora_fin)
+                                            <span class="flex items-center bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100">
+                                                <i class="fa-regular fa-clock mr-1"></i> 
+                                                {{ \Carbon\Carbon::parse($pendiente->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($pendiente->hora_fin)->format('H:i') }}
+                                            </span>
+                                        @endif
+
                                         @if($pendiente->valor)
-                                            <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded">
+                                            <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
                                                 <i class="fa-regular fa-clock mr-1"></i> {{ $pendiente->valor }} min
+                                            </span>
+                                        @endif
+                                        
+                                        @if($pendiente->cantidad_mts)
+                                            <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                                                <i class="fa-solid fa-arrows-left-right mr-1"></i> {{ $pendiente->cantidad_mts }} mts
                                             </span>
                                         @endif
                                     </div>
@@ -238,16 +257,30 @@
                                                                             <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
                                                                                 @if($permiso->fecha_inicio)
                                                                                     <span class="flex items-center bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
-                                                                                        <i class="fa-regular fa-calendar mr-1"></i> {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($permiso->fecha_fin)->format('d/m/Y') }}
+                                                                                        <i class="fa-regular fa-calendar mr-1"></i> 
+                                                                                        {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d/m/Y') }} 
+                                                                                        @if($permiso->fecha_inicio != $permiso->fecha_fin)
+                                                                                            - {{ \Carbon\Carbon::parse($permiso->fecha_fin)->format('d/m/Y') }}
+                                                                                        @endif
                                                                                     </span>
                                                                                 @endif
+
+                                                                                {{-- 🌟 NUEVO: HORARIO DEL PERMISO --}}
+                                                                                @if($permiso->hora_ini && $permiso->hora_fin)
+                                                                                    <span class="flex items-center bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100">
+                                                                                        <i class="fa-regular fa-clock mr-1"></i> 
+                                                                                        {{ \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') }}
+                                                                                    </span>
+                                                                                @endif
+
                                                                                 @if($permiso->valor)
-                                                                                    <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded">
+                                                                                    <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
                                                                                         <i class="fa-regular fa-clock mr-1"></i> {{ $permiso->valor }} mins
                                                                                     </span>
                                                                                 @endif
+
                                                                                 @if($permiso->cantidad_mts)
-                                                                                    <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded">
+                                                                                    <span class="flex items-center bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
                                                                                         <i class="fa-solid fa-arrows-left-right mr-1"></i> {{ $permiso->cantidad_mts }} mts
                                                                                     </span>
                                                                                 @endif

@@ -44,7 +44,10 @@
                         <option value="{{ $tipo->id }}" 
                             data-codigo="{{ $tipo->codigo }}"
                             data-distancia="{{ $tipo->requiere_distancia }}"
-                            data-fechas="{{ $tipo->requiere_fechas }}" 
+                            {{-- Si es por horas, apagamos el rango de fechas normal y encendemos la fecha única y horas --}}
+                            data-fechas="{{ $tipo->codigo === 'PERMISO_POR_HORAS' ? 0 : $tipo->requiere_fechas }}" 
+                            data-fechaunica="{{ $tipo->codigo === 'PERMISO_POR_HORAS' ? 1 : 0 }}"
+                            data-horas="{{ $tipo->codigo === 'PERMISO_POR_HORAS' ? 1 : 0 }}"
                             data-dias="{{ $tipo->requiere_dias }}"
                             data-valor="{{ in_array($tipo->codigo, ['LLEGADA_TARDE', 'SALIDA_TEMPRANA']) ? 1 : 0 }}">
                             {{ $tipo->nombre }}
@@ -100,11 +103,34 @@
                     </div>
                 </div>
 
-                {{-- Fechas (Grid de 2 columnas) --}}
+                {{-- Fecha Única (Para permisos de horas) --}}
+                <div id="campo_fecha_unica" class="hidden">
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Fecha del Permiso</label>
+                    <input type="date" id="fecha_unica" name="fecha_inicio" min="{{ now()->toDateString() }}"
+                        class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
+                </div>
+
+                {{-- Horas (Rango) --}}
+                <div id="campo_horas" class="hidden grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Hora de Salida</label>
+                        <input type="time" id="hora_ini" name="hora_ini" 
+                            class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Hora de Regreso</label>
+                        <input type="time" id="hora_fin" name="hora_fin" 
+                            class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
+                    </div>
+                </div>
+
+                {{-- ========================================== --}}
+                {{-- Fechas Normales (Grid de 2 columnas) --}}
                 <div id="campo_fechas" class="hidden grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Desde</label>
-                        <input type="date" id="fecha_inicio" name="fecha_inicio" min="{{ now()->toDateString() }}" onchange="actualizarMinFechaFin()"
+                        {{-- 🌟 CAMBIAMOS ESTE ID a fecha_inicio_rango --}}
+                        <input type="date" id="fecha_inicio_rango" name="fecha_inicio" min="{{ now()->toDateString() }}" onchange="actualizarMinFechaFin()"
                             class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
                     </div>
                     <div>
@@ -178,19 +204,36 @@
             const reqFechas = (opt.getAttribute('data-fechas') === '1');
             toggleInput('campo_fechas', reqFechas);
             if(reqFechas){
-                document.getElementById('fecha_inicio').setAttribute('required', 'true');
+                document.getElementById('fecha_inicio_rango').setAttribute('required', 'true');
                 document.getElementById('fecha_fin').setAttribute('required', 'true');
             } else {
-                document.getElementById('fecha_inicio').removeAttribute('required');
+                document.getElementById('fecha_inicio_rango').removeAttribute('required');
                 document.getElementById('fecha_fin').removeAttribute('required');
             }
+            
+            const reqFechaUnica = (opt.getAttribute('data-fechaunica') === '1');
+            toggleInput('campo_fecha_unica', reqFechaUnica);
+            if(reqFechaUnica) {
+                document.getElementById('fecha_unica').setAttribute('required', 'true');
+            } else {
+                document.getElementById('fecha_unica').removeAttribute('required');
+            }
 
+            const reqHoras = (opt.getAttribute('data-horas') === '1');
+            toggleInput('campo_horas', reqHoras);
+            if(reqHoras){
+                document.getElementById('hora_ini').setAttribute('required', 'true');
+                document.getElementById('hora_fin').setAttribute('required', 'true');
+            } else {
+                document.getElementById('hora_ini').removeAttribute('required');
+                document.getElementById('hora_fin').removeAttribute('required');
+            }
             toggleInput('campo_dias', opt.getAttribute('data-dias') === '1');
             toggleInput('campo_valor', opt.getAttribute('data-valor') === '1');
         }
 
         function actualizarMinFechaFin() {
-            const fInicio = document.getElementById('fecha_inicio').value;
+            const fInicio = document.getElementById('fecha_inicio_rango').value;
             const fFin = document.getElementById('fecha_fin');
             if (fInicio) {
                 fFin.setAttribute('min', fInicio);

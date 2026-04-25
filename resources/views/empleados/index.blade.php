@@ -157,23 +157,31 @@
 
                     {{-- MODAL --}}
                     <div id="modalEmpleado"
-                        class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 hidden z-50 transition-opacity duration-300">
+                        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50 transition-opacity duration-300">
+                        
                         <div id="modalCaja"
-                            class="bg-white w-full max-w-md rounded-xl shadow-xl p-6 relative transition-all duration-300 opacity-0 -translate-y-5">
-                            <button class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition"
+                            class="bg-white w-full max-w-md rounded-xl shadow-xl p-6 relative transition-all duration-300 opacity-0 -translate-y-5 flex flex-col max-h-[90vh]">
+                            
+                            <button class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition z-10 bg-white rounded-full p-1"
                                 onclick="cerrarModalEmpleado()">
                                 <i class="fa-solid fa-xmark text-xl"></i>
                             </button>
-                            <div class="text-center mb-5">
+                            
+                            {{-- Header fijo --}}
+                            <div class="text-center mb-4 flex-shrink-0">
                                 <h2 class="text-2xl font-semibold flex items-center justify-center gap-2">
                                     <i class="fa-solid fa-user text-blue-600"></i> Detalles del empleado
                                 </h2>
                                 <p class="text-gray-500 text-sm mt-1">Información general del trabajador</p>
                             </div>
-                            <div id="contenidoEmpleado" class="space-y-3"></div>
-                            <div class="text-center mt-6">
+                            
+                            {{-- 🌟 Contenedor con Scroll --}}
+                            <div id="contenidoEmpleado" class="space-y-3 overflow-y-auto pr-2 pb-2 custom-scrollbar"></div>
+                            
+                            {{-- Footer fijo --}}
+                            <div class="text-center mt-4 flex-shrink-0 pt-2 border-t border-gray-100">
                                 <button
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 active:bg-blue-800 transition"
+                                    class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 active:bg-blue-800 transition font-bold"
                                     onclick="cerrarModalEmpleado()">
                                     Cerrar
                                 </button>
@@ -203,6 +211,7 @@
             });
 
             // Lógica del Modal
+            // Lógica del Modal
             function verEmpleado(id) {
                 fetch(`/empleados/${id}/info`)
                     .then(res => res.json())
@@ -211,49 +220,72 @@
                         let estadoTexto = e.estado == 1 ? "Activo" : "Inactivo";
                         let horariosHTML = '';
 
+                        // 1. Llenado de Horarios Presenciales
                         if (e.horarios && e.horarios.length > 0) {
                             horariosHTML = '<div class="space-y-1">';
                             e.horarios.forEach(h => {
                                 horariosHTML += `
-                                                    <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm">
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="font-medium text-gray-800">${h.hora_ini} – ${h.hora_fin}</span>
-                                                            <span class="px-2 py-0.5 rounded-full text-xs bg-blue-200 text-blue-800">${diasUpper(h.dias)}</span>
-                                                        </div>
-                                                    </div>
-                                                `;
+                                    <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-1 text-sm">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-medium text-gray-800">${h.hora_ini} – ${h.hora_fin}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs bg-blue-200 text-blue-800">${diasUpper(h.dias)}</span>
+                                        </div>
+                                    </div>
+                                `;
                             });
                             horariosHTML += '</div>';
                         } else {
-                            horariosHTML = `<span class="text-gray-400 italic text-sm">Sin horarios asignados</span>`;
+                            horariosHTML = `<span class="text-gray-400 italic text-sm block mb-2">Sin horarios asignados</span>`;
                         }
 
+                        // 🌟 2. NUEVO: Lógica de Home Office
+                        let homeOfficeHTML = '';
+                        if (e.trabajo_remoto && e.trabajo_remoto.es_actual == 1 && e.trabajo_remoto.dias) {
+                            homeOfficeHTML = `
+                                <div class="mt-3 pt-3 border-t border-gray-200">
+                                    <p class="text-xs font-bold text-purple-700 uppercase mb-1.5"><i class="fa-solid fa-house-laptop mr-1"></i> Trabajo Remoto (Home Office)</p>
+                                    <span class="px-2.5 py-1 rounded border border-purple-200 text-xs bg-purple-50 text-purple-800 font-medium block w-fit">
+                                        ${diasUpper(e.trabajo_remoto.dias)}
+                                    </span>
+                                </div>
+                            `;
+                        } else {
+                            homeOfficeHTML = `
+                                <div class="mt-3 pt-3 border-t border-gray-200">
+                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1"><i class="fa-solid fa-house-laptop mr-1"></i> Trabajo Remoto (Home Office)</p>
+                                    <span class="text-gray-400 italic text-xs">Sin días asignados actualmente</span>
+                                </div>
+                            `;
+                        }
+
+                        // 3. Ensamblaje del HTML del Modal
                         let html = `
-                                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
-                                                <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
-                                                <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
-                                                <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
-                                                <p><strong>Edad:</strong> ${calcularEdad(e.fecha_nacimiento)}</p>
-                                                <p><strong>DUI:</strong> ${e.documento ?? ''}</p>
-                                                <p><strong>Correo:</strong> ${e.correo ?? ''}</p>
-                                                <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
-                                            </div>
-                                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
-                                                <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
-                                                <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
-                                                <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
-                                                <p><strong>Empresa:</strong> ${e.empresa?.nombre ?? ''}</p>
-                                                <p><strong>Login:</strong> ${e.login == 1 ? "Sí" : "No"}</p>
-                                                <p><strong>Rol:</strong>  ${e.user?.rol?.rol_name ?? "Sin Rol"}</p>
-                                                <p><strong>Estado:</strong> <span class="${estadoColor} font-semibold">${estadoTexto}</span></p>
-                                            </div>
-                                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Horarios asignados</h3>
-                                                ${horariosHTML}
-                                            </div>
-                                        `;
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
+                                <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
+                                <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
+                                <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
+                                <p><strong>Edad:</strong> ${calcularEdad(e.fecha_nacimiento)}</p>
+                                <p><strong>DUI:</strong> ${e.documento ?? ''}</p>
+                                <p><strong>Correo:</strong> ${e.correo ?? ''}</p>
+                                <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
+                                <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
+                                <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
+                                <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
+                                <p><strong>Empresa:</strong> ${e.empresa?.nombre ?? ''}</p>
+                                <p><strong>Login:</strong> ${e.login == 1 ? "Sí" : "No"}</p>
+                                <p><strong>Rol:</strong>  ${e.user?.rol?.rol_name ?? "Sin Rol"}</p>
+                                <p><strong>Estado:</strong> <span class="${estadoColor} font-semibold">${estadoTexto}</span></p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Asignación de Turnos</h3>
+                                ${horariosHTML}
+                                ${homeOfficeHTML}
+                            </div>
+                        `;
 
                         document.getElementById("contenidoEmpleado").innerHTML = html;
                         const modal = document.getElementById("modalEmpleado");
@@ -263,7 +295,6 @@
                         setTimeout(() => caja.classList.add("modal-slide-in"), 10);
                     });
             }
-
             function cerrarModalEmpleado() {
                 const modal = document.getElementById("modalEmpleado");
                 const caja = document.getElementById("modalCaja");

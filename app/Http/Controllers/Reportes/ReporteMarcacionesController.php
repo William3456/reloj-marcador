@@ -301,14 +301,13 @@ class ReporteMarcacionesController extends Controller
         $esOlvidoSalida = false;
         $toleranciaFinal = 0;
 
-        // 1. Obtener Tolerancia Base (Incluso si no vino a trabajar, debemos saber cuál era su tolerancia)
+        // 1. Obtener Tolerancia Base
         if ($horario) {
             $toleranciaFinal = $horario->tolerancia;
             if ($emp->sucursal && $emp->sucursal->horarios && $emp->sucursal->horarios->isNotEmpty()) {
                 $horaTeorica = Carbon::parse($fechaObj->format('Y-m-d').' '.$horario->hora_ini);
                 $horarioSucursal = $emp->sucursal->horarios->sortBy(function ($hs) use ($horaTeorica) {
                     $horaInicioSucursal = Carbon::parse($horaTeorica->format('Y-m-d').' '.$hs->hora_ini);
-
                     return abs($horaTeorica->diffInMinutes($horaInicioSucursal));
                 })->first();
 
@@ -318,30 +317,49 @@ class ReporteMarcacionesController extends Controller
             }
         }
 
-        // 2. Permisos del Día
+        // 2. Permisos del Día (Exoneraciones totales)
         $permisosDelDia = $emp && $emp->relationLoaded('permisos') ? $emp->permisos->filter(fn ($p) => $fechaObj->between(Carbon::parse($p->fecha_inicio), Carbon::parse($p->fecha_fin))) : collect();
         $permisosExoneracion = $permisosDelDia->whereIn('id_tipo_permiso', [5, 6]);
         $tieneExoneracion = $permisosExoneracion->isNotEmpty();
 
         if ($tieneExoneracion) {
             $p = $permisosExoneracion->first();
-            $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio, 'hasta' => $p->fecha_fin];
+            $permisoInfo = [
+                'tipo' => $p->tipoPermiso->nombre, 
+                'motivo' => $p->motivo, 
+                'desde' => $p->fecha_inicio, 
+                'hasta' => $p->fecha_fin,
+                'hora_ini' => $p->hora_ini, // 🌟 AGREGADO
+                'hora_fin' => $p->hora_fin   // 🌟 AGREGADO
+            ];
         }
 
         // 3. Evaluaciones si hay marcación
         if ($marcacion) {
-
             if ($marcacion->permisos->isNotEmpty()) {
                 $p = $marcacion->permisos->first();
-                $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
+                $permisoInfo = [
+                    'tipo' => $p->tipoPermiso->nombre, 
+                    'motivo' => $p->motivo, 
+                    'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 
+                    'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d'),
+                    'hora_ini' => $p->hora_ini, // 🌟 AGREGADO
+                    'hora_fin' => $p->hora_fin   // 🌟 AGREGADO
+                ];
 
-                // Si la marcación tiene un permiso de Llegada Tarde, sumar los minutos a la tolerancia que mostraremos
                 if ($p->tipoPermiso && $p->tipoPermiso->codigo === 'LLEGADA_TARDE') {
                     $toleranciaFinal += (int) $p->valor;
                 }
             } elseif ($marcacion->salida && $marcacion->salida->permisos->isNotEmpty()) {
                 $p = $marcacion->salida->permisos->first();
-                $permisoInfo = ['tipo' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo, 'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d')];
+                $permisoInfo = [
+                    'tipo' => $p->tipoPermiso->nombre, 
+                    'motivo' => $p->motivo, 
+                    'desde' => $p->fecha_inicio ?? $fechaObj->format('Y-m-d'), 
+                    'hasta' => $p->fecha_fin ?? $fechaObj->format('Y-m-d'),
+                    'hora_ini' => $p->hora_ini, // 🌟 AGREGADO
+                    'hora_fin' => $p->hora_fin   // 🌟 AGREGADO
+                ];
             }
 
             if ($marcacion->salida) {
@@ -351,17 +369,11 @@ class ReporteMarcacionesController extends Controller
 
                 if ($horario && ! $esOlvidoSalida) {
                     $finTurno = Carbon::parse($fechaObj->format('Y-m-d').' '.$horario->hora_fin);
-                    if ($horario->hora_fin < $horario->hora_ini) {
-                        $finTurno->addDay();
-                    }
-                    if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) {
-                        $esOlvidoSalida = true;
-                    }
+                    if ($horario->hora_fin < $horario->hora_ini) $finTurno->addDay();
+                    if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) $esOlvidoSalida = true;
                 }
             } else {
-                if (! $marcacion->created_at->isToday()) {
-                    $esOlvidoSalida = true;
-                }
+                if (! $marcacion->created_at->isToday()) $esOlvidoSalida = true;
             }
 
             // Calculo Dinámico de la impuntualidad
@@ -388,9 +400,7 @@ class ReporteMarcacionesController extends Controller
                 $key = 'presente';
             }
 
-            if (! $horario && ! $esOlvidoSalida) {
-                $key = 'extra';
-            }
+            if (! $horario && ! $esOlvidoSalida) $key = 'extra';
 
         } else {
             if ($tieneExoneracion) {
@@ -405,7 +415,12 @@ class ReporteMarcacionesController extends Controller
             }
         }
 
-        // DEVOLVEMOS LA TOLERANCIA FINAL CALCULADA PARA QUE LA VISTA LA MUESTRE CORRECTAMENTE
-        return ['key' => $key, 'minutos_tarde' => $minutosTarde, 'permiso_info' => $permisoInfo, 'es_olvido_salida' => $esOlvidoSalida, 'tolerancia_calculada' => $toleranciaFinal];
+        return [
+            'key' => $key, 
+            'minutos_tarde' => $minutosTarde, 
+            'permiso_info' => $permisoInfo, 
+            'es_olvido_salida' => $esOlvidoSalida, 
+            'tolerancia_calculada' => $toleranciaFinal
+        ];
     }
 }

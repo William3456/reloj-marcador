@@ -147,41 +147,50 @@
                                                     $m = $t->marcacion;
                                                     $h = $t->horario;
                                                     
-                                                    $permisosE = []; $permisosS = [];
-                                                    $horaSalidaStr = '--:--';
-                                                    
-                                                    // Banderas para el Modal
-                                                    $esEntradaTarde = false;
+                                                    // 1. Mapeo ultra-seguro de Permisos (Entrada)
+                                                    $permisosE = $m ? $m->permisos->map(fn($p) => [
+                                                        'nombre' => $p->tipoPermiso->nombre ?? 'Permiso',
+                                                        'motivo' => $p->motivo,
+                                                        'horas'  => ($p->hora_ini && $p->hora_fin) 
+                                                                    ? \Carbon\Carbon::parse($p->hora_ini)->format('H:i') . ' a ' . \Carbon\Carbon::parse($p->hora_fin)->format('H:i') 
+                                                                    : null
+                                                    ])->toArray() : [];
+
+                                                    // 2. Variables de control y Salida
+                                                    $esEntradaTarde = $m && $m->fuera_horario ? true : false;
                                                     $esOlvidoSalida = false;
                                                     $salidaReal = null;
                                                     $esDiaDiferente = false;
-                                                    
-                                                    if ($m) {
-                                                        $esEntradaTarde = $m->fuera_horario ? true : false;
-                                                        $permisosE = $m->permisos->map(fn($p) => ['nombre' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo])->toArray();
-                                                        
-                                                        if ($m->salida) {
-                                                            $salidaReal = $m->salida->created_at;
-                                                            $esDiaDiferente = $m->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
-                                                            $esOlvidoSalida = $m->salida->es_olvido || $esDiaDiferente;
-                                                            
-                                                            if ($h && !$esOlvidoSalida) {
-                                                                $finTurno = \Carbon\Carbon::parse($fechaData['fecha_obj']->format('Y-m-d') . ' ' . $h->hora_fin);
-                                                                if ($h->hora_fin < $h->hora_ini) $finTurno->addDay();
-                                                                
-                                                                if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) {
-                                                                    $esOlvidoSalida = true;
-                                                                }
-                                                            }
+                                                    $horaSalidaStr = '--:--'; // 👈 DEFINICIÓN INICIAL
+                                                    $permisosS = [];
 
-                                                            if ($esDiaDiferente) {
-                                                                $horaSalidaStr = $salidaReal->format('h:i A') . ' (' . $salidaReal->format('d/m') . ')';
-                                                            } else {
-                                                                $horaSalidaStr = $salidaReal->format('h:i A');
+                                                    if ($m && $m->salida) {
+                                                        $salidaReal = $m->salida->created_at;
+                                                        $esDiaDiferente = $m->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
+                                                        $esOlvidoSalida = $m->salida->es_olvido || $esDiaDiferente;
+
+                                                        // Lógica de Olvido por tiempo
+                                                        if ($h && !$esOlvidoSalida) {
+                                                            $finTurno = \Carbon\Carbon::parse($fechaData['fecha_obj']->format('Y-m-d') . ' ' . $h->hora_fin);
+                                                            if ($h->hora_fin < $h->hora_ini) $finTurno->addDay();
+                                                            if ($salidaReal->gt($finTurno) && $salidaReal->diffInMinutes($finTurno) > 60) {
+                                                                $esOlvidoSalida = true;
                                                             }
-                                                            
-                                                            $permisosS = $m->salida->permisos->map(fn($p) => ['nombre' => $p->tipoPermiso->nombre, 'motivo' => $p->motivo])->toArray();
                                                         }
+
+                                                        // 🌟 DEFINICIÓN DE LA VARIABLE QUE DABA ERROR
+                                                        $horaSalidaStr = $esDiaDiferente 
+                                                            ? $salidaReal->format('h:i A') . ' (' . $salidaReal->format('d/m') . ')' 
+                                                            : $salidaReal->format('h:i A');
+
+                                                        // Mapeo seguro de Permisos (Salida)
+                                                        $permisosS = $m->salida->permisos->map(fn($p) => [
+                                                            'nombre' => $p->tipoPermiso->nombre ?? 'Permiso',
+                                                            'motivo' => $p->motivo,
+                                                            'horas'  => ($p->hora_ini && $p->hora_fin) 
+                                                                        ? \Carbon\Carbon::parse($p->hora_ini)->format('H:i') . ' a ' . \Carbon\Carbon::parse($p->hora_fin)->format('H:i') 
+                                                                        : null
+                                                        ])->toArray();
                                                     }
                                                 @endphp
 
@@ -207,6 +216,7 @@
                                                                         <p class="font-black text-gray-800 text-lg leading-none">{{ $m->created_at->format('H:i') }}</p>
                                                                         @if($esEntradaTarde) <span class="text-[8px] text-orange-500 font-bold mb-0.5">TARDE</span> @endif
                                                                     </div>
+                                                                    
                                                                 @else
                                                                     <p class="font-bold text-gray-300 text-lg leading-none">--:--</p>
                                                                 @endif
@@ -439,27 +449,37 @@
 
                 // --- ITERAR PERMISOS EN EL MODAL ---
 
-                // 1. Permisos Entrada
+                // 1. Permisos Entrada (Actualizado)
                 const contP_Entrada = document.getElementById('contenedorPermisosEntrada');
-                contP_Entrada.innerHTML = ''; // Limpiar el contenedor
+                contP_Entrada.innerHTML = ''; 
 
                 if (data.permisosEntrada && data.permisosEntrada.length > 0) {
                     data.permisosEntrada.forEach(p => {
-                        let html = `<div class="w-full"><span class="block w-full bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-1.5 rounded-md border border-purple-200 shadow-sm whitespace-normal leading-tight">${p.nombre}`;
-                        if (p.motivo) html += `<br><span class="font-normal italic opacity-80">${p.motivo}</span>`;
+                        let html = `<div class="w-full">
+                            <span class="block w-full bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-1.5 rounded-md border border-purple-200 shadow-sm whitespace-normal leading-tight">
+                                <div class="flex justify-between items-center mb-0.5">
+                                    <span>${p.nombre}</span>
+                                    ${p.horas ? `<span class="bg-purple-200 text-purple-900 px-1 rounded-sm text-[8px] font-black tracking-tighter"><i class="fa-regular fa-clock mr-0.5"></i>${p.horas}</span>` : ''}
+                                </div>`;
+                        if (p.motivo) html += `<span class="font-normal italic opacity-80">${p.motivo}</span>`;
                         html += `</span></div>`;
                         contP_Entrada.innerHTML += html;
                     });
                 }
 
-                // 2. Permisos Salida
+                // 2. Permisos Salida (Actualizado)
                 const contP_Salida = document.getElementById('contenedorPermisosSalida');
-                contP_Salida.innerHTML = ''; // Limpiar el contenedor
+                contP_Salida.innerHTML = ''; 
 
                 if (data.permisosSalida && data.permisosSalida.length > 0) {
                     data.permisosSalida.forEach(p => {
-                        let html = `<div class="w-full"><span class="block w-full bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-1.5 rounded-md border border-purple-200 shadow-sm whitespace-normal leading-tight">${p.nombre}`;
-                        if (p.motivo) html += `<br><span class="font-normal italic opacity-80">${p.motivo}</span>`;
+                        let html = `<div class="w-full">
+                            <span class="block w-full bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-1.5 rounded-md border border-purple-200 shadow-sm whitespace-normal leading-tight">
+                                <div class="flex justify-between items-center mb-0.5">
+                                    <span>${p.nombre}</span>
+                                    ${p.horas ? `<span class="bg-purple-200 text-purple-900 px-1 rounded-sm text-[8px] font-black tracking-tighter"><i class="fa-regular fa-clock mr-0.5"></i>${p.horas}</span>` : ''}
+                                </div>`;
+                        if (p.motivo) html += `<span class="font-normal italic opacity-80">${p.motivo}</span>`;
                         html += `</span></div>`;
                         contP_Salida.innerHTML += html;
                     });

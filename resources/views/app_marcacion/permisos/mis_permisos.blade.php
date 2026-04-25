@@ -191,9 +191,22 @@
                             <div class="col-span-2">
                                 <span class="text-gray-400 font-bold uppercase block mb-0.5">Vigencia:</span>
                                 <span class="text-gray-700 font-bold">
-                                    {{ $permiso->fecha_inicio ? \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d M, Y') : '---' }} 
-                                    al 
-                                    {{ $permiso->fecha_fin ? \Carbon\Carbon::parse($permiso->fecha_fin)->format('d M, Y') : '---' }}
+                                    {{ $permiso->fecha_inicio ? ucfirst(\Carbon\Carbon::parse($permiso->fecha_inicio)->locale('es')->isoFormat('DD MMM, YYYY')) : '---' }} 
+                                    @if($permiso->fecha_inicio !== $permiso->fecha_fin)
+                                        al 
+                                        {{ $permiso->fecha_fin ? ucfirst(\Carbon\Carbon::parse($permiso->fecha_fin)->locale('es')->isoFormat('DD MMM, YYYY')) : '---' }}
+                                    @endif
+                                </span>
+                            </div>
+                        @endif
+
+                   
+                        @if($permiso->hora_ini && $permiso->hora_fin)
+                            <div class="col-span-2">
+                                <span class="text-gray-400 font-bold uppercase block mb-0.5">Horario Autorizado:</span>
+                                <span class="text-gray-700 font-bold">
+                                    <i class="fa-regular fa-clock mr-1"></i> 
+                                    {{ \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') }}
                                 </span>
                             </div>
                         @endif

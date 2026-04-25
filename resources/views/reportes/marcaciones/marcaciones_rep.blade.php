@@ -259,10 +259,21 @@
                                                         @endif
 
                                                         @if(!empty($turno['permiso_info']))
-                                                            <div class="flex items-start gap-2 bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                                                            <div class="flex items-start gap-2 bg-blue-50/50 p-2 rounded-lg border border-blue-100 shadow-sm">
                                                                 <i class="fa-solid fa-file-contract text-blue-500 text-xs mt-0.5"></i>
                                                                 <div>
-                                                                    <p class="text-[10px] font-bold text-blue-700 leading-none">{{ $turno['permiso_info']['tipo'] }}</p>
+                                                                    <div class="flex items-center gap-2">
+                                                                        <p class="text-[10px] font-bold text-blue-700 leading-none">{{ $turno['permiso_info']['tipo'] }}</p>
+                                                                        
+                                                                        {{-- 🌟 NUEVO: BADGE DE HORAS DEL PERMISO --}}
+                                                                        @if(!empty($turno['permiso_info']['hora_ini']) && !empty($turno['permiso_info']['hora_fin']))
+                                                                            <span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-black border border-indigo-200">
+                                                                                <i class="fa-regular fa-clock"></i>
+                                                                                {{ \Carbon\Carbon::parse($turno['permiso_info']['hora_ini'])->format('H:i') }} a {{ \Carbon\Carbon::parse($turno['permiso_info']['hora_fin'])->format('H:i') }}
+                                                                            </span>
+                                                                        @endif
+                                                                    </div>
+
                                                                     @if($turno['permiso_info']['motivo'])
                                                                         <p class="text-[10px] text-gray-600 italic mt-1 leading-tight line-clamp-2">"{{ $turno['permiso_info']['motivo'] }}"</p>
                                                                     @endif

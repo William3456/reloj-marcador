@@ -157,7 +157,20 @@
 
                                         $badgesEntradaHtml = implode('', array_map(fn($b) => '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>', $badgesEntrada));
                                     @endphp
+                                    @php
+                                        $m = $t->marcacion;
+                                        $h = $t->horario;
 
+                                        // 🌟 EXTRAER HORAS DEL PERMISO PARA ESTA MARCACIÓN
+                                        $horasPermisoTexto = "";
+                                        if($m && isset($m->permisos)) {
+                                            foreach($m->permisos as $p) {
+                                                if($p->hora_ini && $p->hora_fin) {
+                                                    $horasPermisoTexto = \Carbon\Carbon::parse($p->hora_ini)->format('H:i') . ' a ' . \Carbon\Carbon::parse($p->hora_fin)->format('H:i');
+                                                }
+                                            }
+                                        }
+                                    @endphp
                                     <div onclick="abrirDetalle(this)"
                                         class="flex items-center p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-50 transition-colors border-b border-gray-50"
                                         data-tipo="Entrada" 
@@ -168,7 +181,8 @@
                                         data-lat="{{ $m->latitud }}" 
                                         data-lng="{{ $m->longitud }}"
                                         data-badges="{{ $badgesEntradaHtml }}"
-                                        data-permiso-txt="{{ $textosPermisosEntrada }}">
+                                        data-permiso-txt="{{ $textosPermisosEntrada }}"
+                                        data-horas-permiso="{{ $horasPermisoTexto }}">
 
                                         <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $esEntradaTarde ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600' }}">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
@@ -210,6 +224,14 @@
                                             }
 
                                             $badgesSalidaHtml = implode('', array_map(fn($b) => '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>', $badgesSalida));
+                                            $horasPermisoSalida = "";
+                                            if(isset($m->salida->permisos)) {
+                                                foreach($m->salida->permisos as $ps) {
+                                                    if($ps->hora_ini && $ps->hora_fin) {
+                                                        $horasPermisoSalida = \Carbon\Carbon::parse($ps->hora_ini)->format('H:i') . ' a ' . \Carbon\Carbon::parse($ps->hora_fin)->format('H:i');
+                                                    }
+                                                }
+                                            }
                                         @endphp
 
                                         <div onclick="abrirDetalle(this)"
@@ -222,7 +244,8 @@
                                             data-lat="{{ $m->salida->latitud }}" 
                                             data-lng="{{ $m->salida->longitud }}"
                                             data-badges="{{ $badgesSalidaHtml }}"
-                                            data-permiso-txt="{{ $textosPermisosSalida }}">
+                                            data-permiso-txt="{{ $textosPermisosSalida }}"
+                                            data-horas-permiso="{{ $horasPermisoSalida }}">
 
                                             <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ $esOlvidoSalida ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600' }}">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -300,17 +323,22 @@
             </div>
 
             <div class="p-6 pb-10">
-                {{-- Encabezado --}}
                 <div class="flex justify-between items-start mb-6">
                     <div>
+                        {{-- Título, Badges y Horas en la misma línea --}}
                         <div class="flex items-center flex-wrap gap-2 mb-1">
                             <h3 id="modal-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
-                            {{-- Contenedor dinámico para inyectar los MÚLTIPLES badges --}}
                             <div id="modal-badges-container" class="flex items-center flex-wrap gap-1"></div>
+                            
+                            {{-- CAJA DE HORAS --}}
+                            <div id="md-permiso-box-horas" class="hidden inline-flex items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">
+                                <i class="fa-regular fa-clock"></i>
+                                <span id="md-permiso-horas-texto">---</span>
+                            </div>
                         </div>
                         <p id="modal-fecha" class="text-blue-600 font-medium text-sm"></p>
                     </div>
-                    <button onclick="cerrarDetalle()" class="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                    <button onclick="cerrarDetalle()" class="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 flex-shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -378,21 +406,35 @@
             const lat = parseFloat(elemento.getAttribute('data-lat'));
             const lng = parseFloat(elemento.getAttribute('data-lng'));
             const permisoTxt = elemento.getAttribute('data-permiso-txt');
-            
-            // Recibimos el HTML de los badges
             const badgesHtml = elemento.getAttribute('data-badges');
+            
+            // 🌟 NUEVO: Recibimos las horas
+            const horasPermiso = elemento.getAttribute('data-horas-permiso');
 
             document.getElementById('modal-titulo').innerText = tipo;
             document.getElementById('modal-fecha').innerText = fecha + ' • ' + hora;
             document.getElementById('modal-img').src = fotoUrl;
             document.getElementById('modal-sucursal-texto').innerText = sucursal;
-            
-            // Inyectamos los badges
             document.getElementById('modal-badges-container').innerHTML = badgesHtml;
 
             document.getElementById('modal-direccion-gps').innerText = "Cargando dirección exacta...";
             document.getElementById('modal-direccion-gps').classList.add('text-gray-400');
 
+            // 🌟 NUEVO: Lógica de Horas Autorizadas
+            const boxHoras = document.getElementById('md-permiso-box-horas');
+            const txtHoras = document.getElementById('md-permiso-horas-texto');
+            
+            if (horasPermiso && horasPermiso.trim() !== "") {
+                txtHoras.innerText = horasPermiso;
+                boxHoras.classList.remove('hidden');
+                boxHoras.classList.add('inline-flex');
+            } else {
+                boxHoras.classList.add('hidden');
+                boxHoras.classList.remove('inline-flex');
+                txtHoras.innerText = "";
+            }
+
+            // Lógica existente de la Caja de Texto de Permisos (La azul grande)
             const boxPermiso = document.getElementById('modal-permiso-box');
             const txtPermiso = document.getElementById('modal-permiso-texto');
 

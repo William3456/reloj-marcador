@@ -176,9 +176,21 @@
 
                         @if(!empty($row['permiso_info']))
                             <div style="border-left: 2px solid #3b82f6; padding-left: 5px; margin-top: 3px;">
-                                <div style="font-weight: bold; color: #1d4ed8; font-size: 9px;">{{ $row['permiso_info']['tipo'] }}</div>
+                                <div style="font-weight: bold; color: #1d4ed8; font-size: 9px;">
+                                    {{ $row['permiso_info']['tipo'] }}
+                                    
+                                    {{-- NUEVO: HORARIO DEL PERMISO EN EL PDF --}}
+                                    @if(!empty($row['permiso_info']['hora_ini']) && !empty($row['permiso_info']['hora_fin']))
+                                        <span style="background-color: #e0e7ff; color: #4338ca; padding: 1px 4px; border-radius: 3px; font-size: 8px; margin-left: 4px; border: 0.5px solid #c7d2fe;">
+                                            {{ \Carbon\Carbon::parse($row['permiso_info']['hora_ini'])->format('H:i') }} a {{ \Carbon\Carbon::parse($row['permiso_info']['hora_fin'])->format('H:i') }}
+                                        </span>
+                                    @endif
+                                </div>
+                                
                                 @if($row['permiso_info']['motivo'])
-                                    <div style="font-style: italic; color: #475569; font-size: 8px; margin-top: 2px;">"{{ Str::limit($row['permiso_info']['motivo'], 60) }}"</div>
+                                    <div style="font-style: italic; color: #475569; font-size: 8px; margin-top: 2px;">
+                                        "{{ Str::limit($row['permiso_info']['motivo'], 80) }}"
+                                    </div>
                                 @endif
                             </div>
                         @endif
