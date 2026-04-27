@@ -15,25 +15,25 @@
 </head>
 <body>
     @php
-        // LOGICA DE TEXTOS DINÁMICOS SEGÚN EL ESTADO Y ORIGEN
+        // Lógica de textos dinámicos según el estado y origen
         $estado = $permiso->estado_solicitud;
         $origen = $permiso->app_creacion;
 
         if ($origen == 1 || $estado == 0) {
-            $badge = '<span style="background-color: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">Asignado por Admin</span>';
-            $titulo = "Nuevo Permiso Asignado";
+            $badge = '<span style="background-color: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">Asignado por admin</span>';
+            $titulo = "Nuevo permiso asignado";
             $mensaje = "Se te ha asignado un nuevo permiso directamente desde el área de administración.";
         } elseif ($estado == 1) {
-            $badge = '<span style="background-color: #fef08a; color: #854d0e; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">En Revisión</span>';
-            $titulo = "Confirmación de Solicitud";
+            $badge = '<span style="background-color: #fef08a; color: #854d0e; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">En revisión</span>';
+            $titulo = "Confirmación de solicitud";
             $mensaje = "Hemos recibido correctamente tu solicitud de permiso. Actualmente se encuentra en revisión.";
         } elseif ($estado == 2) {
             $badge = '<span style="background-color: #dcfce3; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">Aprobada</span>';
-            $titulo = "Solicitud Aprobada";
+            $titulo = "Solicitud aprobada";
             $mensaje = "Tu solicitud de permiso ha sido revisada y <strong>aprobada</strong> exitosamente.";
         } elseif ($estado == 3) {
             $badge = '<span style="background-color: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">Rechazada</span>';
-            $titulo = "Solicitud Rechazada";
+            $titulo = "Solicitud rechazada";
             $mensaje = "Tu solicitud de permiso ha sido revisada y lamentablemente <strong>no pudo ser aprobada</strong> en esta ocasión.";
         }
     @endphp
@@ -48,7 +48,7 @@
             <p>{!! $mensaje !!} Estado actual: {!! $badge !!}</p>
             
             <div class="details">
-                <p><strong>Tipo de Permiso:</strong> {{ $permiso->tipoPermiso->nombre ?? 'General' }}</p>
+                <p><strong>Tipo de permiso:</strong> {{ $permiso->tipoPermiso->nombre ?? 'General' }}</p>
                 <p><strong>Motivo:</strong> {{ $permiso->motivo }}</p>
                 @if($permiso->fecha_inicio)
                     <p><strong>Fechas:</strong> {{ \Carbon\Carbon::parse($permiso->fecha_inicio)->format('d/m/Y') }} 
@@ -58,16 +58,16 @@
                     </p>
                 @endif
                 
-                {{-- 🌟 NUEVO: HORARIO DEL PERMISO --}}
+                {{-- Horario del permiso --}}
                 @if($permiso->hora_ini && $permiso->hora_fin)
                     <p><strong>Horario:</strong> {{ \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') }}</p>
                 @endif
             </div>
 
-            <p>Puedes consultar todos los detalles y el historial ingresando a la App de Marcaciones.</p>
+            <p>Puedes consultar todos los detalles y el historial ingresando a la App de marcaciones.</p>
         </div>
         <div class="footer">
-            <p>Este es un correo automático del Sistema de Control de Asistencia. Por favor no respondas a este mensaje.</p>
+            <p>Este es un correo automático del sistema de control de asistencia. Por favor no respondas a este mensaje.</p>
         </div>
     </div>
 </body>

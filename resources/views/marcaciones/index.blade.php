@@ -1,7 +1,7 @@
-<x-app-layout title="Historial de Asistencia">
+<x-app-layout title="Historial de asistencia">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Historial de Marcaciones
+            Historial de marcaciones
         </h2>
     </x-slot>
 
@@ -10,7 +10,7 @@
 
             <div class="bg-white shadow rounded-lg p-6">
 
-                {{-- SECCIÓN 1: FILTROS --}}
+                {{-- Sección 1: filtros --}}
                 <form action="{{ route('marcaciones.index') }}" method="GET" class="mb-6 border-b border-gray-100 pb-6">
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                         <div>
@@ -62,7 +62,7 @@
                 </form>
 
                 
-                {{-- SECCIÓN 2: GRID AGRUPADO (EMPLEADO -> FECHA -> TURNOS) --}}
+                {{-- Sección 2: grid agrupado (empleado -> fecha -> turnos) --}}
                 <div class="space-y-8">
                     @forelse ($datosAgrupados as $empData)
                         @php
@@ -72,7 +72,7 @@
 
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                             
-                            {{-- Cabecera del Empleado --}}
+                            {{-- Cabecera del empleado --}}
                             <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <div class="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-lg border-2 border-white shadow-sm">
@@ -81,19 +81,19 @@
                                     <div>
                                         <h2 class="text-lg font-black text-gray-900 leading-tight">{{ $emp->nombres }} {{ $emp->apellidos }}</h2>
                                         <div class="flex items-center text-xs text-gray-500 mt-1">
-                                            <i class="fa-solid fa-briefcase mr-1.5"></i> {{ $emp->puesto->desc_puesto ?? 'Sin Puesto' }}
+                                            <i class="fa-solid fa-briefcase mr-1.5"></i> {{ $emp->puesto->desc_puesto ?? 'Sin puesto' }}
                                             <span class="mx-2">•</span>
-                                            <i class="fa-solid fa-store mr-1.5"></i> {{ $emp->sucursal->nombre ?? 'Sin Sucursal' }}
+                                            <i class="fa-solid fa-store mr-1.5"></i> {{ $emp->sucursal->nombre ?? 'Sin sucursal' }}
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- Días y Turnos --}}
+                            {{-- Días y turnos --}}
                             <div class="p-6 space-y-8">
                                 @foreach ($empData['fechas'] as $fechaStr => $fechaData)
                                     <div>
-                                        {{-- Encabezado de la Fecha --}}
+                                        {{-- Encabezado de la fecha --}}
                                         @php
                                             $esDiaRemoto = false;
                                             $fechaFila = $fechaData['fecha_obj']->startOfDay();
@@ -110,7 +110,7 @@
                                                 $inicio = \Carbon\Carbon::parse($config->fecha_inicio)->startOfDay();
                                                 $fin = $config->fecha_fin ? \Carbon\Carbon::parse($config->fecha_fin)->startOfDay() : null;
 
-                                                // VALIDACIÓN DE RANGO: ¿La fecha de la fila está dentro de la vigencia?
+                                                // Validación de rango
                                                 $estaVigenteEnFecha = $fechaFila->greaterThanOrEqualTo($inicio) && 
                                                                      ($fin === null || $fechaFila->lessThanOrEqualTo($fin));
 
@@ -140,14 +140,14 @@
                                             @endif
                                         </h3>
 
-                                        {{-- Grid de Turnos de ese Día --}}
+                                        {{-- Grid de turnos de ese día --}}
                                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                             @foreach ($fechaData['turnos'] as $t)
                                                 @php
                                                     $m = $t->marcacion;
                                                     $h = $t->horario;
                                                     
-                                                    // 1. Mapeo ultra-seguro de Permisos (Entrada)
+                                                    // Mapeo seguro de permisos (Entrada)
                                                     $permisosE = $m ? $m->permisos->map(fn($p) => [
                                                         'nombre' => $p->tipoPermiso->nombre ?? 'Permiso',
                                                         'motivo' => $p->motivo,
@@ -156,12 +156,12 @@
                                                                     : null
                                                     ])->toArray() : [];
 
-                                                    // 2. Variables de control y Salida
+                                                    // Variables de control y salida
                                                     $esEntradaTarde = $m && $m->fuera_horario ? true : false;
                                                     $esOlvidoSalida = false;
                                                     $salidaReal = null;
                                                     $esDiaDiferente = false;
-                                                    $horaSalidaStr = '--:--'; // 👈 DEFINICIÓN INICIAL
+                                                    $horaSalidaStr = '--:--';
                                                     $permisosS = [];
 
                                                     if ($m && $m->salida) {
@@ -169,7 +169,6 @@
                                                         $esDiaDiferente = $m->created_at->format('Y-m-d') !== $salidaReal->format('Y-m-d');
                                                         $esOlvidoSalida = $m->salida->es_olvido || $esDiaDiferente;
 
-                                                        // Lógica de Olvido por tiempo
                                                         if ($h && !$esOlvidoSalida) {
                                                             $finTurno = \Carbon\Carbon::parse($fechaData['fecha_obj']->format('Y-m-d') . ' ' . $h->hora_fin);
                                                             if ($h->hora_fin < $h->hora_ini) $finTurno->addDay();
@@ -178,12 +177,10 @@
                                                             }
                                                         }
 
-                                                        // 🌟 DEFINICIÓN DE LA VARIABLE QUE DABA ERROR
                                                         $horaSalidaStr = $esDiaDiferente 
                                                             ? $salidaReal->format('h:i A') . ' (' . $salidaReal->format('d/m') . ')' 
                                                             : $salidaReal->format('h:i A');
 
-                                                        // Mapeo seguro de Permisos (Salida)
                                                         $permisosS = $m->salida->permisos->map(fn($p) => [
                                                             'nombre' => $p->tipoPermiso->nombre ?? 'Permiso',
                                                             'motivo' => $p->motivo,
@@ -201,7 +198,7 @@
                                                         <div class="flex justify-between items-center mb-3">
                                                             <span class="text-xs font-bold text-gray-600 flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded">
                                                                 <i class="fa-regular fa-clock"></i>
-                                                                {{ $h ? \Carbon\Carbon::parse($h->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($h->hora_fin)->format('H:i') : 'Turno Extra' }}
+                                                                {{ $h ? \Carbon\Carbon::parse($h->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($h->hora_fin)->format('H:i') : 'Turno extra' }}
                                                             </span>
                                                             <span class="inline-block px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border {{ $t->estado->clase }}">
                                                                 {{ $t->estado->texto }}
@@ -255,8 +252,8 @@
                                                             hasSalida: {{ $m->salida ? 'true' : 'false' }},
                                                             fotoSalida: @json(($m->salida && $m->salida->ubi_foto) ? Storage::url($m->salida->ubi_foto) : null),
                                                             horaSalida: @json($horaSalidaStr),
-                                                            esEntradaTarde: @json($esEntradaTarde), {{-- NUEVO --}}
-                                                            esOlvidoSalida: @json($esOlvidoSalida), {{-- NUEVO --}}
+                                                            esEntradaTarde: @json($esEntradaTarde),
+                                                            esOlvidoSalida: @json($esOlvidoSalida),
                                                             estadoTexto: @json($t->estado->texto),
                                                             estadoClase: @json($t->estado->clase),
                                                             fotoEntradaFull: @json($m->ubi_foto_full ? Storage::url($m->ubi_foto_full) : null),
@@ -269,11 +266,11 @@
                                                     @else
                                                         @if(str_contains($t->estado->clase, 'blue'))
                                                             <div class="w-full bg-blue-50/50 text-blue-600 py-2 px-4 text-[10px] uppercase tracking-wider font-bold text-center border-t border-blue-100">
-                                                                <i class="fa-solid fa-file-shield mr-1"></i> Día Exonerado
+                                                                <i class="fa-solid fa-file-shield mr-1"></i> Día exonerado
                                                             </div>
                                                         @else
                                                             <div class="w-full bg-gray-50/50 text-gray-400 py-2 px-4 text-[10px] uppercase tracking-wider font-bold text-center border-t border-gray-100">
-                                                                <i class="fa-solid fa-ban mr-1"></i> Sin Registros
+                                                                <i class="fa-solid fa-ban mr-1"></i> Sin registros
                                                             </div>
                                                         @endif
                                                     @endif
@@ -299,7 +296,7 @@
         </div>
     </div>
 
-    {{-- MODAL EXPEDIENTE --}}
+    {{-- Modal de expediente --}}
     <div id="modalExpediente" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
         aria-modal="true">
         <div class="fixed inset-0 bg-gray-900 bg-opacity-80 transition-opacity backdrop-blur-sm"
@@ -309,7 +306,7 @@
                 <div
                     class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-gray-200">
 
-                    {{-- Cabecera Modal --}}
+                    {{-- Cabecera del modal --}}
                     <div
                         class="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                         <div>
@@ -328,15 +325,15 @@
                     <div class="px-4 sm:px-6 py-6">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
-                            {{-- Columna 1: Fotos --}}
+                            {{-- Columna 1: fotos --}}
                             <div class="space-y-4">
                                 <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">
-                                    Evidencia Fotográfica</h4>
+                                    Evidencia fotográfica</h4>
                                 <div class="grid grid-cols-2 gap-3">
-                                    {{-- Foto Entrada --}}
+                                    {{-- Foto entrada --}}
                                     <div
                                         class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center relative flex flex-col">
-                                        <span class="text-xs font-bold text-green-700 block mb-1">ENTRADA</span>
+                                        <span class="text-xs font-bold text-green-700 block mb-1">Entrada</span>
                                         <input type="hidden" id="fotoEntradaFull">
                                         <input type="hidden" id="fotoSalidaFull">
 
@@ -352,15 +349,15 @@
                                             <span id="badgeEntradaTarde" class="hidden text-[9px] bg-orange-100 text-orange-600 font-black px-1.5 py-0.5 rounded shadow-sm">TARDE</span>
                                         </div>
 
-                                        {{-- Contenedor dinámico de permisos para ENTRADA --}}
+                                        {{-- Contenedor dinámico de permisos para entrada --}}
                                         <div id="contenedorPermisosEntrada" class="w-full flex flex-col gap-1 mt-1">
                                         </div>
                                     </div>
 
-                                    {{-- Foto Salida --}}
+                                    {{-- Foto salida --}}
                                     <div
                                         class="bg-gray-50 rounded-xl p-2 border border-gray-200 text-center relative flex flex-col">
-                                        <span class="text-xs font-bold text-red-700 block mb-1">SALIDA</span>
+                                        <span class="text-xs font-bold text-red-700 block mb-1">Salida</span>
                                         <div
                                             class="aspect-square bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative group mb-1">
                                             <img id="imgSalida" src=""
@@ -373,24 +370,24 @@
                                             <span id="badgeSalidaOlvido" class="hidden text-[9px] bg-red-100 text-red-600 font-black px-1.5 py-0.5 rounded shadow-sm">OLVIDO</span>
                                         </div>
 
-                                        {{-- Contenedor dinámico de permisos para SALIDA --}}
+                                        {{-- Contenedor dinámico de permisos para salida --}}
                                         <div id="contenedorPermisosSalida" class="w-full flex flex-col gap-1 mt-1">
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {{-- Columna 2: Mapa --}}
+                            {{-- Columna 2: mapa --}}
                             <div class="flex flex-col h-full">
                                 <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-1 mb-2">
                                     Ubicación</h4>
                                 <div class="flex gap-2 mb-3" id="mapToggles">
                                     <button onclick="cambiarMapa('entrada')" id="btnMapEntrada"
                                         class="flex-1 text-xs py-1.5 rounded-md font-bold bg-green-100 text-green-800 border border-green-200 transition">Ver
-                                        Entrada</button>
+                                        entrada</button>
                                     <button onclick="cambiarMapa('salida')" id="btnMapSalida"
                                         class="flex-1 text-xs py-1.5 rounded-md font-bold bg-white text-gray-500 border border-gray-200 transition">Ver
-                                        Salida</button>
+                                        salida</button>
                                 </div>
                                 <div
                                     class="flex-grow bg-gray-100 rounded-xl overflow-hidden border border-gray-300 relative min-h-[250px]">
@@ -400,8 +397,7 @@
                                     class="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-start gap-3">
                                     <i class="fa-solid fa-map-location-dot text-blue-500 mt-0.5"></i>
                                     <div>
-                                        <p class="text-[10px] font-bold text-blue-400 uppercase">Dirección Detectada
-                                            (API)</p>
+                                        <p class="text-[10px] font-bold text-blue-400 uppercase">Dirección detectada (API)</p>
                                         <p id="txtDireccion" class="text-xs text-blue-900 font-medium leading-snug">
                                             Cargando...</p>
                                     </div>
@@ -447,9 +443,9 @@
                 setupFoto('imgEntrada', 'noImgEntrada', data.fotoEntrada);
                 setupFoto('imgSalida', 'noImgSalida', data.fotoSalida);
 
-                // --- ITERAR PERMISOS EN EL MODAL ---
+                // Iterar permisos en el modal
 
-                // 1. Permisos Entrada (Actualizado)
+                // 1. Permisos entrada
                 const contP_Entrada = document.getElementById('contenedorPermisosEntrada');
                 contP_Entrada.innerHTML = ''; 
 
@@ -467,7 +463,7 @@
                     });
                 }
 
-                // 2. Permisos Salida (Actualizado)
+                // 2. Permisos salida
                 const contP_Salida = document.getElementById('contenedorPermisosSalida');
                 contP_Salida.innerHTML = ''; 
 
@@ -485,7 +481,7 @@
                     });
                 }
 
-                // --- MAPA Y VISTA ---
+                // Mapa y vista
                 const btnSalida = document.getElementById('btnMapSalida');
                 if (!data.hasSalida) {
                     btnSalida.classList.add('hidden');
@@ -495,7 +491,7 @@
 
                 document.getElementById('modalExpediente').classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
-                // Toggle Badges de Observaciones
+                
                 if (data.esEntradaTarde) {
                     document.getElementById('badgeEntradaTarde').classList.remove('hidden');
                 } else {

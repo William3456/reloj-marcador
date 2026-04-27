@@ -1,4 +1,4 @@
-<x-app-layout title="Perfil de Usuario">
+<x-app-layout title="Perfil de usuario">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight flex items-center gap-2">
             <i class="fa-solid fa-id-badge text-blue-600"></i>
@@ -10,32 +10,32 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
             @php
-                // 1. PREPARACIÓN DE DATOS (Lógica Unificada)
+                // Preparación de datos
                 $usuario = Auth::user();
                 $datosEmpleado = $usuario->empleado; // Relación
                 $esAdmin = $usuario->id_rol == 1;
 
-                // Nombres y Apellidos
+                // Nombres y apellidos
                 if ($datosEmpleado) {
                     $nombrePrincipal = $datosEmpleado->nombres;
                     $subTexto = $datosEmpleado->apellidos;
                 } else {
-                    $nombrePrincipal = !empty($usuario->name) ? $usuario->name : 'Usuario Administrador';
+                    $nombrePrincipal = !empty($usuario->name) ? $usuario->name : 'Usuario administrador';
                     $subTexto = '';
                 }
             @endphp
 
-            {{-- 2. VERIFICACIÓN DE PERMISO --}}
+            {{-- Verificación de permiso --}}
             @if($datosEmpleado || $esAdmin)
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {{-- COLUMNA 1: IDENTIDAD Y DATOS CORPORATIVOS --}}
+                    {{-- Identidad y datos corporativos --}}
                     <div class="lg:col-span-1 space-y-6">
 
-                        {{-- TARJETA DE PERFIL (DISEÑO FLEX - AVATAR A LA IZQUIERDA) --}}
+                        {{-- Tarjeta de perfil (avatar a la izquierda) --}}
                         <div class="bg-white shadow-lg rounded-2xl p-6 border border-gray-100">
                             <div class="flex items-center gap-5">
-                                {{-- Avatar Pequeño a la Izquierda (Sin position absolute) --}}
+                                {{-- Avatar --}}
                                 <div class="shrink-0">
                                     <div
                                         class="w-20 h-20 rounded-full {{ $esAdmin && !$datosEmpleado ? 'bg-gray-800 text-white' : 'bg-blue-100 text-blue-600' }} flex items-center justify-center text-3xl shadow-sm">
@@ -47,7 +47,7 @@
                                     </div>
                                 </div>
 
-                                {{-- Información del Usuario --}}
+                                {{-- Información del usuario --}}
                                 <div class="overflow-hidden">
                                     <h3 class="text-lg font-bold text-gray-800 leading-tight truncate">
                                         {{ $nombrePrincipal }}
@@ -56,7 +56,7 @@
                                         <p class="text-sm text-gray-500 font-medium truncate">{{ $subTexto }}</p>
                                     @endif
 
-                                    {{-- Badges --}}
+                                    {{-- Etiquetas de estado --}}
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         @if($datosEmpleado)
                                             <span
@@ -89,7 +89,7 @@
 
                             <hr class="my-5 border-gray-100">
 
-                            {{-- Datos Personales Básicos --}}
+                            {{-- Datos personales --}}
                             <div class="space-y-4">
                                 @if($datosEmpleado)
                                     <div class="flex items-center gap-3">
@@ -109,7 +109,7 @@
                                             <i class="fa-solid fa-cake-candles"></i>
                                         </div>
                                         <div>
-                                            <p class="text-xs font-bold text-gray-400 uppercase">Fecha Nacimiento</p>
+                                            <p class="text-xs font-bold text-gray-400 uppercase">Fecha de nacimiento</p>
                                             <p class="text-sm font-semibold text-gray-700">
                                                 {{ \Carbon\Carbon::parse($datosEmpleado->fecha_nacimiento)->locale('es')->isoFormat('D [de] MMMM YYYY') }}</p>
                                         </div>
@@ -122,7 +122,7 @@
                                         <i class="fa-solid fa-envelope"></i>
                                     </div>
                                     <div class="overflow-hidden">
-                                        <p class="text-xs font-bold text-gray-400 uppercase">Correo Acceso</p>
+                                        <p class="text-xs font-bold text-gray-400 uppercase">Correo de acceso</p>
                                         <p class="text-sm font-semibold text-gray-700 truncate"
                                             title="{{ $usuario->email }}">{{ $usuario->email }}</p>
                                     </div>
@@ -130,12 +130,12 @@
                             </div>
                         </div>
 
-                        {{-- FICHA CORPORATIVA (Movida aquí para mejor estructura vertical en móvil) --}}
+                        {{-- Ficha corporativa --}}
                         @if($datosEmpleado)
                             <div class="bg-white shadow-sm rounded-2xl border border-gray-200 p-5">
                                 <h4
                                     class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
-                                    Asignación Corporativa
+                                    Asignación corporativa
                                 </h4>
                                 <div class="grid grid-cols-2 gap-4">
                                     {{-- Empresa --}}
@@ -168,23 +168,22 @@
 
                     </div>
 
-                    {{-- COLUMNA 2 y 3: FORMULARIOS DE EDICIÓN --}}
+                    {{-- Formularios de edición --}}
                     <div class="lg:col-span-2 space-y-6">
 
-                        {{-- FORMULARIO DE CONTACTO --}}
-                        {{-- FORMULARIO DE CONTACTO --}}
+                        {{-- Formulario de contacto --}}
                         @if($datosEmpleado)
                             <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
                                 <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                                     <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                                        <i class="fa-solid fa-address-book text-blue-500"></i> Información de Contacto
+                                        <i class="fa-solid fa-address-book text-blue-500"></i> Información de contacto
                                     </h3>
                                     <span
                                         class="text-xs font-semibold bg-green-100 text-green-700 px-2 py-1 rounded">Editable</span>
                                 </div>
 
                                 <div class="p-6">
-                                    {{-- MUESTRA ERRORES SI LOS HAY --}}
+                                    {{-- Errores de validación --}}
                                     @if ($errors->any())
                                         <div class="mb-4 bg-red-50 text-red-600 p-3 rounded-lg text-sm">
                                             <ul>
@@ -199,17 +198,10 @@
                                         @csrf
                                         @method('patch')
 
-                                        {{-- TRUCO: Si tu Request original es muy estricto y no quieres cambiar el controlador a
-                                        fondo,
-                                        puedes descomentar esto para enviar los datos viejos y "engañar" al validador,
-                                        pero la solución del Paso 1 es más limpia. --}}
-                                        {{-- <input type="hidden" name="name" value="{{ $usuario->name }}"> --}}
-                                        {{-- <input type="hidden" name="email" value="{{ $usuario->email }}"> --}}
-
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                             {{-- Teléfono --}}
                                             <div>
-                                                <x-input-label for="telefono" :value="__('Teléfono Móvil')"
+                                                <x-input-label for="telefono" :value="__('Teléfono móvil')"
                                                     class="mb-1 text-xs uppercase text-gray-500" />
                                                 <div class="relative">
                                                     <div
@@ -225,7 +217,7 @@
 
                                             {{-- Dirección --}}
                                             <div class="md:col-span-2">
-                                                <x-input-label for="direccion" :value="__('Dirección Domiciliar')"
+                                                <x-input-label for="direccion" :value="__('Dirección domiciliar')"
                                                     class="mb-1 text-xs uppercase text-gray-500" />
                                                 <div class="relative">
                                                     <div class="absolute top-3 left-3 text-gray-400 pointer-events-none">
@@ -248,7 +240,7 @@
                                             @endif
                                             <button type="submit"
                                                 class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-sm shadow transition transform hover:-translate-y-0.5">
-                                                Actualizar Datos
+                                                Actualizar datos
                                             </button>
                                         </div>
                                     </form>
@@ -256,11 +248,11 @@
                             </div>
                         @endif
 
-                        {{-- SEGURIDAD (PASSWORD) --}}
+                        {{-- Seguridad --}}
                         <div class="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
                             <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
                                 <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                                    <i class="fa-solid fa-lock text-red-500"></i> Seguridad de la Cuenta
+                                    <i class="fa-solid fa-lock text-red-500"></i> Seguridad de la cuenta
                                 </h3>
                             </div>
 
@@ -270,7 +262,7 @@
                                     @method('put')
 
                                     <div>
-                                        <x-input-label for="current_password" :value="__('Contraseña Actual')"
+                                        <x-input-label for="current_password" :value="__('Contraseña actual')"
                                             class="mb-1 text-xs uppercase text-gray-500" />
                                         <input type="password" name="current_password" id="current_password"
                                             autocomplete="current-password"
@@ -281,7 +273,7 @@
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <x-input-label for="password" :value="__('Nueva Contraseña')"
+                                            <x-input-label for="password" :value="__('Nueva contraseña')"
                                                 class="mb-1 text-xs uppercase text-gray-500" />
                                             <input type="password" name="password" id="password" autocomplete="new-password"
                                                 class="block w-full rounded-lg border-gray-300 focus:ring-red-500 focus:border-red-500 sm:text-sm">
@@ -290,7 +282,7 @@
                                         </div>
 
                                         <div>
-                                            <x-input-label for="password_confirmation" :value="__('Confirmar Contraseña')"
+                                            <x-input-label for="password_confirmation" :value="__('Confirmar contraseña')"
                                                 class="mb-1 text-xs uppercase text-gray-500" />
                                             <input type="password" name="password_confirmation" id="password_confirmation"
                                                 autocomplete="new-password"
@@ -310,7 +302,7 @@
                                         @endif
                                         <button type="submit"
                                             class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg text-sm shadow transition transform hover:-translate-y-0.5">
-                                            Cambiar Contraseña
+                                            Cambiar contraseña
                                         </button>
                                     </div>
                                 </form>
@@ -320,12 +312,12 @@
                     </div>
                 </div>
             @else
-                {{-- ESTADO DE ERROR (Sin empleado ni admin) --}}
+                {{-- Error de perfil (Sin empleado ni admin) --}}
                 <div class="max-w-3xl mx-auto mt-10">
                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm flex items-start">
                         <i class="fa-solid fa-triangle-exclamation text-yellow-400 text-xl mr-3"></i>
                         <div>
-                            <h3 class="text-sm font-medium text-yellow-800">Perfil Incompleto</h3>
+                            <h3 class="text-sm font-medium text-yellow-800">Perfil incompleto</h3>
                             <p class="mt-1 text-sm text-yellow-700">Usuario colaborador sin expediente asociado.</p>
                         </div>
                     </div>
@@ -337,7 +329,7 @@
 
 <script>
     document.getElementById('telefono').addEventListener('input', function (e) {
-        let valor = e.target.value.replace(/\D/g, ''); // solo números
+        let valor = e.target.value.replace(/\D/g, ''); // Solo números
         if (valor.length > 4) {
             valor = valor.slice(0, 4) + ' ' + valor.slice(4, 8);
         }

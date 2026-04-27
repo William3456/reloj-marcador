@@ -1,11 +1,11 @@
-<x-app-layout title="Reporte de Asistencia">
+<x-app-layout title="Reporte de asistencia">
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-2xl text-gray-800 leading-tight tracking-tight">
-                Reporte de Asistencia
+                Reporte de asistencia
             </h2>
             <div class="flex items-center gap-2 text-sm text-gray-500">
-                <i class="fa-solid fa-chart-line"></i> Auditoría Histórica
+                <i class="fa-solid fa-chart-line"></i> Auditoría histórica
             </div>
         </div>
     </x-slot>
@@ -13,11 +13,11 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
-            {{-- PANEL DE FILTROS AVANZADOS --}}
+            {{-- Panel de filtros avanzados --}}
             <div class="bg-white shadow-sm border border-gray-200 rounded-2xl overflow-hidden">
                 <div class="bg-gray-50/50 border-b border-gray-200 px-6 py-4">
                     <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-blue-500"></i> Filtros del Reporte
+                        <i class="fa-solid fa-sliders text-blue-500"></i> Filtros del reporte
                     </h3>
                 </div>
                 <div class="p-6">
@@ -34,7 +34,7 @@
                                 <input type="date" name="hasta" value="{{ request('hasta') ?? date('Y-m-d') }}" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm transition-colors">
                             </div>
 
-                            {{-- Empleado y Sucursal --}}
+                            {{-- Empleado y sucursal --}}
                             <div>
                                 <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Sucursal</label>
                                 <select name="sucursal" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-white transition-colors">
@@ -54,23 +54,23 @@
                                 </select>
                             </div>
 
-                            {{-- FILTRO AVANZADO DE INCIDENCIAS --}}
+                            {{-- Filtro de incidencias --}}
                             <div class="md:col-span-2 lg:col-span-3">
-                                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Filtrar por Estado / Incidencia</label>
+                                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Filtrar por estado / incidencia</label>
                                 <select name="incidencia" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer hover:bg-white transition-colors">
-                                    <option value="">📋 Mostrar Todos los Registros</option>
-                                    <optgroup label="✅ Asistencias">
-                                        <option value="presente" {{ request('incidencia') == 'presente' ? 'selected' : '' }}>Asistencia Perfecta (Puntual)</option>
-                                        <option value="extra" {{ request('incidencia') == 'extra' ? 'selected' : '' }}>Turnos Extras</option>
+                                    <option value="">Mostrar todos los registros</option>
+                                    <optgroup label="Asistencias">
+                                        <option value="presente" {{ request('incidencia') == 'presente' ? 'selected' : '' }}>Asistencia (puntual)</option>
+                                        <option value="extra" {{ request('incidencia') == 'extra' ? 'selected' : '' }}>Turnos extras</option>
                                     </optgroup>
-                                    <optgroup label="⚠️ Impuntualidad y Faltas">
-                                        <option value="tarde_total" {{ request('incidencia') == 'tarde_total' ? 'selected' : '' }}>Llegadas Tarde (Todas)</option>
-                                        <option value="tarde_sin_permiso" {{ request('incidencia') == 'tarde_sin_permiso' ? 'selected' : '' }}>Llegadas Tarde Injustificadas</option>
-                                        <option value="ausente" {{ request('incidencia') == 'ausente' ? 'selected' : '' }}>Ausencias Injustificadas</option>
+                                    <optgroup label="Impuntualidad y faltas">
+                                        <option value="tarde_total" {{ request('incidencia') == 'tarde_total' ? 'selected' : '' }}>Llegadas tarde (todas)</option>
+                                        <option value="tarde_sin_permiso" {{ request('incidencia') == 'tarde_sin_permiso' ? 'selected' : '' }}>Llegadas tarde injustificadas</option>
+                                        <option value="ausente" {{ request('incidencia') == 'ausente' ? 'selected' : '' }}>Ausencias injustificadas</option>
                                     </optgroup>
-                                    <optgroup label="📝 Observaciones y Permisos">
-                                        <option value="con_permiso" {{ request('incidencia') == 'con_permiso' ? 'selected' : '' }}>Justificados (Con Permisos Aplicados)</option>
-                                        <option value="sin_cierre" {{ request('incidencia') == 'sin_cierre' ? 'selected' : '' }}>Olvidos de Salida / Cierres Atrasados</option>
+                                    <optgroup label="Observaciones y permisos">
+                                        <option value="con_permiso" {{ request('incidencia') == 'con_permiso' ? 'selected' : '' }}>Justificados (con permisos aplicados)</option>
+                                        <option value="sin_cierre" {{ request('incidencia') == 'sin_cierre' ? 'selected' : '' }}>Olvidos de salida / cierres atrasados</option>
                                     </optgroup>
                                 </select>
                             </div>
@@ -89,7 +89,7 @@
                 </div>
             </div>
 
-            {{-- SECCIÓN 2: RESULTADOS AGRUPADOS --}}
+            {{-- Resultados agrupados --}}
             <div class="space-y-8">
                 @if(isset($marcaciones) && $marcaciones->isNotEmpty())
                     @php
@@ -99,10 +99,10 @@
                     @foreach($empleadosGroup as $empId => $turnos)
                         @php $empleado = $turnos->first()['empleado']; @endphp
 
-                        {{-- TARJETA DE EMPLEADO PRO --}}
+                        {{-- Tarjeta de empleado --}}
                         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                             
-                            {{-- Cabecera Empleado con Mini-Stats --}}
+                            {{-- Cabecera empleado con mini-stats --}}
                             <div class="bg-gradient-to-r from-gray-50 to-white px-6 py-5 border-b border-gray-200">
                                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                     
@@ -115,12 +115,12 @@
                                             <div class="text-xs text-gray-500 mt-1 flex items-center gap-3">
                                                 <span class="flex items-center gap-1"><i class="fa-solid fa-id-badge text-gray-400"></i> {{ $empleado->cod_trabajador }}</span>
                                                 <span class="text-gray-300">|</span>
-                                                <span class="flex items-center gap-1"><i class="fa-solid fa-store text-gray-400"></i> {{ $empleado->sucursal->nombre ?? 'Sin Sucursal' }}</span>
+                                                <span class="flex items-center gap-1"><i class="fa-solid fa-store text-gray-400"></i> {{ $empleado->sucursal->nombre ?? 'Sin sucursal' }}</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {{-- Mini Stats --}}
+                                    {{-- Mini stats --}}
                                     <div class="flex flex-wrap gap-2">
                                         <div class="bg-white border border-gray-100 px-3 py-1.5 rounded-lg shadow-sm text-center">
                                             <p class="text-[10px] uppercase font-bold text-gray-400">Turnos</p>
@@ -143,18 +143,17 @@
                                 </div>
                             </div>
 
-                            {{-- Tabla Limpia --}}
+                            {{-- Tabla de asistencia --}}
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-white">
                                         <tr>
                                             <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Fecha</th>
-                                            <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Turno Asignado</th>
-                                            {{-- NUEVA COLUMNA TOLERANCIA --}}
+                                            <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Turno asignado</th>
                                             <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Tolerancia</th>
-                                            <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Marcaciones Reales</th>
+                                            <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Marcaciones reales</th>
                                             <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Estado</th>
-                                            <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider w-1/4">Observaciones / Notas</th>
+                                            <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider w-1/4">Observaciones / notas</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100 bg-white">
@@ -194,7 +193,6 @@
                                                     <div class="flex items-center gap-1.5 mt-0.5">
                                                         <span class="text-[11px] text-gray-400 font-medium uppercase">{{ $turno['fecha']->locale('es')->isoFormat('dddd') }}</span>
                                                         
-                                                        
                                                         @if($turno['es_dia_remoto'])
                                                             <span class="text-[8px] bg-purple-100 text-purple-700 font-black px-1.5 py-0.5 rounded border border-purple-200 uppercase flex items-center gap-1">
                                                                 <i class="fa-solid fa-house-laptop"></i> Remoto
@@ -206,7 +204,6 @@
                                                     <span class="px-3 py-1 bg-gray-100 rounded-md text-xs font-mono font-medium text-gray-600 border border-gray-200">{{ $turno['horario_programado'] }}</span>
                                                 </td>
                                                 
-                                                {{-- NUEVA CELDA TOLERANCIA --}}
                                                 <td class="px-6 py-4 text-center">
                                                     <span class="text-xs font-bold text-gray-500">{{ $turno['tolerancia'] > 0 ? $turno['tolerancia'] . ' min' : '-' }}</span>
                                                 </td>
@@ -265,7 +262,6 @@
                                                                     <div class="flex items-center gap-2">
                                                                         <p class="text-[10px] font-bold text-blue-700 leading-none">{{ $turno['permiso_info']['tipo'] }}</p>
                                                                         
-                                                                        {{-- 🌟 NUEVO: BADGE DE HORAS DEL PERMISO --}}
                                                                         @if(!empty($turno['permiso_info']['hora_ini']) && !empty($turno['permiso_info']['hora_fin']))
                                                                             <span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-black border border-indigo-200">
                                                                                 <i class="fa-regular fa-clock"></i>
@@ -306,7 +302,7 @@
         </div>
     </div>
 
-    {{-- MODAL DE CONFIRMACIÓN --}}
+    {{-- Modal de confirmación --}}
     <div id="pdfModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closePdfModal()"></div>
@@ -326,7 +322,7 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
-                    <button type="button" id="btnConfirmarPdf" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 sm:w-auto sm:text-sm transition-colors">Generar Documento</button>
+                    <button type="button" id="btnConfirmarPdf" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 sm:w-auto sm:text-sm transition-colors">Generar documento</button>
                     <button type="button" onclick="closePdfModal()" class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm transition-colors">Cancelar</button>
                 </div>
             </div>

@@ -22,7 +22,7 @@
 
     {{-- Edad --}}
     <div>
-        <x-input-label value="Fecha de Nacimiento" />
+        <x-input-label value="Fecha de nacimiento" />
         <x-text-input type="date" name="fecha_nacimiento"
             value="{{ old('fecha_nacimiento', $empleado->fecha_nacimiento ?? '') }}" class="w-full" required />
     </div>
@@ -54,7 +54,7 @@
     <div>
         <x-input-label value="Sucursal" />
         <select id="sucursal" name="id_sucursal" class="w-full border-gray-300 rounded-md" required>
-            <option value="">Seleccione…</option>
+            <option value="">Selecciona...</option>
             @foreach ($sucursales as $s)
                 <option value="{{ $s->id }}" {{ old('id_sucursal', $empleado->id_sucursal ?? '') == $s->id ? 'selected' : '' }}>
                     {{ $s->nombre }}
@@ -68,7 +68,7 @@
     <div>
         <x-input-label value="Departamento" />
         <select id="departamento" name="id_depto" class="w-full border-gray-300 rounded-md" required>
-            <option value="">Seleccione…</option>
+            <option value="">Selecciona...</option>
         </select>
         @error('id_depto') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
     </div>
@@ -77,7 +77,7 @@
     <div>
         <x-input-label value="Puesto" />
         <select id="puesto" name="id_puesto" class="w-full border-gray-300 rounded-md" required>
-            <option value="">Seleccione…</option>
+            <option value="">Selecciona...</option>
         </select>
         @error('id_puesto') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
     </div>
@@ -104,11 +104,11 @@
         </select>
         @error('login') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
     </div>
-    {{-- rol --}}
+    {{-- Rol --}}
     <div>
         <x-input-label value="Rol del usuario en el sistema" />
         <select name="id_rol" class="w-full border-gray-300 rounded-md" required>
-            <option value="2" {{ old('login', $empleado->user?->rol?->id ?? '') == 2 ? 'selected' : '' }}>Admin. Sucursal
+            <option value="2" {{ old('login', $empleado->user?->rol?->id ?? '') == 2 ? 'selected' : '' }}>Admin. sucursal
             </option>
             <option value="3" {{ old('login', $empleado->user?->rol?->id ?? '') == 3 ? 'selected' : '' }}>Empleado
             </option>
@@ -174,14 +174,14 @@
                         const empleadoDepto = {{ old('id_depto', $empleado->id_depto ?? 'null') }};
                         const empleadoPuesto = {{ old('id_puesto', $empleado->id_puesto ?? 'null') }};
                         // Departamentos
-                        let dep = '<option value="">Seleccione</option>';
+                        let dep = '<option value="">Selecciona...</option>';
                         data.departamentos.forEach(d => {
                             dep += `<option value="${d.id}" ${d.id == empleadoDepto ? 'selected' : ''}>${d.nombre_depto} - ${d.cod_depto}</option>`;
                         });
                         $('#departamento').html(dep);
 
                         // Puestos
-                        let pst = '<option value="">Seleccione</option>';
+                        let pst = '<option value="">Selecciona...</option>';
                         data.puestos.forEach(p => {
                             pst += `<option value="${p.id}" ${p.id == empleadoPuesto ? 'selected' : ''}>${p.desc_puesto}</option>`;
                         });
@@ -206,8 +206,8 @@
                 });
             } else {
                 // Reset y bloquear
-                $('#departamento').html('<option value="">Seleccione...</option>');
-                $('#puesto').html('<option value="">Seleccione...</option>');
+                $('#departamento').html('<option value="">Selecciona...</option>');
+                $('#puesto').html('<option value="">Selecciona...</option>');
 
                 $('#departamento').prop('disabled', true);
                 $('#puesto').prop('disabled', true);
@@ -220,7 +220,7 @@
         $('#departamento').trigger('change');
 
         document.getElementById('telefono').addEventListener('input', function (e) {
-            let valor = e.target.value.replace(/\D/g, ''); // solo números
+            let valor = e.target.value.replace(/\D/g, ''); // Solo números
             if (valor.length > 4) {
                 valor = valor.slice(0, 4) + ' ' + valor.slice(4, 8);
             }

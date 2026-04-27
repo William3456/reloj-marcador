@@ -1,4 +1,4 @@
-<x-app-layout title="Solicitar Permiso">
+<x-app-layout title="Solicitar permiso">
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight tracking-tight">Solicitar permiso</h2>
@@ -7,7 +7,7 @@
 
     <div class="py-6 px-4 max-w-md mx-auto mb-20">
         
-        {{-- Tarjeta de Instrucciones --}}
+        {{-- Tarjeta de instrucciones --}}
         <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 flex items-start gap-3 shadow-sm">
             <div class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-circle-info"></i>
@@ -19,7 +19,7 @@
                 </p>
             </div>
         </div>
-        {{-- BLOQUE PARA MOSTRAR ERRORES OCULTOS --}}
+        {{-- Bloque para mostrar errores ocultos --}}
         @if ($errors->any())
             <div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
                 <ul class="list-disc pl-4">
@@ -30,13 +30,13 @@
             </div>
         @endif
 
-        {{-- Formulario Principal --}}
+        {{-- Formulario principal --}}
         <form action="{{ route('marcacion.permisos.store') }}" method="POST" class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-5">
             @csrf
 
-            {{-- Tipo de Permiso --}}
+            {{-- Tipo de permiso --}}
             <div>
-                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tipo de Permiso</label>
+                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tipo de permiso</label>
                 <select id="tipo_permiso" name="id_tipo_permiso" required onchange="actualizarCampos()"
                     class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-gray-50">
                     <option value="" disabled selected>Selecciona una opción...</option>
@@ -66,12 +66,12 @@
                 @error('motivo') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
             </div>
 
-            {{-- CAMPOS DINÁMICOS --}}
+            {{-- Campos dinámicos --}}
             <div id="contenedor_dinamico" class="space-y-5 border-t border-gray-100 pt-4 hidden">
                 
-                {{-- Ubicación Libre (Solo GPS) --}}
+                {{-- Ubicación libre (solo GPS) --}}
                 <div id="campo_ubicacion_libre" class="hidden bg-orange-50 p-3 rounded-xl border border-orange-100">
-                    <label class="block text-[11px] font-bold text-orange-700 uppercase tracking-wider mb-1.5">¿Ubicación Libre?</label>
+                    <label class="block text-[11px] font-bold text-orange-700 uppercase tracking-wider mb-1.5">¿Ubicación libre?</label>
                     <select id="ubicacion_libre" name="ubicacion_libre" onchange="actualizarCampos()"
                         class="w-full text-sm border-orange-200 rounded-lg focus:ring-orange-500 bg-white shadow-sm">
                         <option value="0">No, especificar rango en metros</option>
@@ -91,7 +91,7 @@
                     </div>
                 </div>
 
-                {{-- Valor (Minutos) --}}
+                {{-- Valor (minutos) --}}
                 <div id="campo_valor" class="hidden">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tiempo a solicitar</label>
                     <div class="relative">
@@ -103,33 +103,33 @@
                     </div>
                 </div>
 
-                {{-- Fecha Única (Para permisos de horas) --}}
+                {{-- Fecha única (para permisos de horas) --}}
                 <div id="campo_fecha_unica" class="hidden">
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Fecha del Permiso</label>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Fecha del permiso</label>
                     <input type="date" id="fecha_unica" name="fecha_inicio" min="{{ now()->toDateString() }}"
                         class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
                 </div>
 
-                {{-- Horas (Rango) --}}
+                {{-- Horas (rango) --}}
                 <div id="campo_horas" class="hidden grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Hora de Salida</label>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Hora de salida</label>
                         <input type="time" id="hora_ini" name="hora_ini" 
                             class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Hora de Regreso</label>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Hora de regreso</label>
                         <input type="time" id="hora_fin" name="hora_fin" 
                             class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
                     </div>
                 </div>
 
                 {{-- ========================================== --}}
-                {{-- Fechas Normales (Grid de 2 columnas) --}}
+                {{-- Fechas normales (grid de 2 columnas) --}}
                 <div id="campo_fechas" class="hidden grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Desde</label>
-                        {{-- 🌟 CAMBIAMOS ESTE ID a fecha_inicio_rango --}}
+                        {{-- Cambiamos este ID a fecha_inicio_rango --}}
                         <input type="date" id="fecha_inicio_rango" name="fecha_inicio" min="{{ now()->toDateString() }}" onchange="actualizarMinFechaFin()"
                             class="w-full text-sm border-gray-200 rounded-xl focus:ring-blue-500 shadow-sm bg-gray-50">
                     </div>
@@ -140,7 +140,7 @@
                     </div>
                 </div>
 
-                {{-- Días Activos --}}
+                {{-- Días activos --}}
                 <div id="campo_dias" class="hidden">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Cantidad de días hábiles</label>
                     <input type="number" id="dias_activa" name="dias_activa" min="1" placeholder="Ej: 3"
@@ -148,10 +148,10 @@
                 </div>
             </div>
 
-            {{-- Botón Submit --}}
+            {{-- Botón submit --}}
             <div class="pt-4">
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-paper-plane"></i> Enviar Solicitud
+                    <i class="fa-solid fa-paper-plane"></i> Enviar solicitud
                 </button>
             </div>
         </form>

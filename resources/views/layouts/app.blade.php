@@ -71,7 +71,7 @@
         </div>
     </div>
     {{-- ========================================================= --}}
-    {{-- MARCA DE AGUA FLOTANTE: MODO DEMO --}}
+    {{-- Marca de agua flotante: modo demo --}}
     {{-- ========================================================= --}}
     @if(isset($empresaGlobal) && $empresaGlobal->tipo_licencia == 0)
         @php
@@ -90,13 +90,13 @@
                 $textoTiempo = 'Solo ' . $diasRestantes . ' días restantes';
                 $iconoAnimacion = 'animate-pulse';
             } elseif ($diasRestantes === 0) {
-                // 🌟 CORRECCIÓN: Hoy es el último día, aún está activa
+                // Hoy es el último día, aún está activa
                 $bgGradient = 'from-red-600 to-red-800 ring-4 ring-red-500/50';
                 $textoTiempo = '¡Último día de prueba!';
                 $iconoAnimacion = 'animate-bounce';
             } else {
                 $bgGradient = 'from-gray-700 to-gray-900';
-                $textoTiempo = 'Prueba Finalizada';
+                $textoTiempo = 'Prueba finalizada';
                 $iconoAnimacion = '';
             }
         @endphp
@@ -108,7 +108,7 @@
                     <i class="fa-solid fa-stopwatch {{ $iconoAnimacion }} text-xs"></i>
                 </div>
                 <div class="flex flex-col">
-                    <span class="font-black tracking-widest text-[10px] uppercase leading-none">Modo Demo</span>
+                    <span class="font-black tracking-widest text-[10px] uppercase leading-none">Modo demo</span>
                     <span class="text-[11px] font-medium leading-tight text-white/90">{{ $textoTiempo }}</span>
                 </div>
             </div>

@@ -448,7 +448,7 @@ class MarcacionController extends Controller
         // Foto
         $this->procesarImagen($request->file('ubi_foto'), $marcacion, $empleado, $validated['tipo_marcacion']);
 
-        $msj = $validacionTiempo['es_olvido'] ? 'Salida registrada (Regularización).' : ($validated['tipo_marcacion'] == 1 ? 'Entrada registrada.' : 'Salida registrada.');
+        $msj = $validacionTiempo['es_olvido'] ? 'Salida registrada (Tarde).' : ($validated['tipo_marcacion'] == 1 ? 'Entrada registrada.' : 'Salida registrada.');
 
         return back()->with('success', $msj);
     }

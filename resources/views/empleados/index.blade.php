@@ -38,8 +38,7 @@
                     <table id="tablaEmpleados" class="min-w-full divide-y divide-gray-200 w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                {{-- TRUCO: w-[1%] whitespace-nowrap hace que la columna sea del ancho mínimo posible
-                                --}}
+                                {{-- Truco: w-[1%] whitespace-nowrap hace que la columna sea del ancho mínimo posible --}}
                                 <th
                                     class="px-2 py-2 text-center text-xs font-bold text-gray-500 uppercase w-[1%] whitespace-nowrap">
                                     ID</th>
@@ -133,11 +132,11 @@
                                                 @csrf @method('DELETE')
                                                 @if(auth()->user()?->empleado?->id !== $e->id)
                                                     <button type="button" @click="$dispatch('open-confirm-modal', { 
-                                                                                    url: '{{ route('empleados.delete', $e->id) }}',
-                                                                                    title: '¿Inactivar empleado?',
-                                                                                    message: 'El empleado perderá acceso al sistema, pero sus datos se conservarán.',
-                                                                                    buttonText: 'Inactivar'
-                                                                                })" class="text-red-500 hover:text-red-700 p-1"
+                                                                                                        url: '{{ route('empleados.delete', $e->id) }}',
+                                                                                                        title: '¿Inactivar empleado?',
+                                                                                                        message: 'El empleado perderá acceso al sistema, pero sus datos se conservarán.',
+                                                                                                        buttonText: 'Inactivar'
+                                                                                                    })" class="text-red-500 hover:text-red-700 p-1"
                                                         title="Inactivar">
                                                         <i class="fa-solid fa-user-slash"></i>
                                                     </button>
@@ -155,7 +154,7 @@
                         </tbody>
                     </table>
 
-                    {{-- MODAL --}}
+                    {{-- Modal --}}
                     <div id="modalEmpleado"
                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50 transition-opacity duration-300">
                         
@@ -175,7 +174,7 @@
                                 <p class="text-gray-500 text-sm mt-1">Información general del trabajador</p>
                             </div>
                             
-                            {{-- 🌟 Contenedor con Scroll --}}
+                            {{-- Contenedor con scroll --}}
                             <div id="contenidoEmpleado" class="space-y-3 overflow-y-auto pr-2 pb-2 custom-scrollbar"></div>
                             
                             {{-- Footer fijo --}}
@@ -211,7 +210,6 @@
             });
 
             // Lógica del Modal
-            // Lógica del Modal
             function verEmpleado(id) {
                 fetch(`/empleados/${id}/info`)
                     .then(res => res.json())
@@ -238,12 +236,12 @@
                             horariosHTML = `<span class="text-gray-400 italic text-sm block mb-2">Sin horarios asignados</span>`;
                         }
 
-                        // 🌟 2. NUEVO: Lógica de Home Office
+                        // Lógica de home office
                         let homeOfficeHTML = '';
                         if (e.trabajo_remoto && e.trabajo_remoto.es_actual == 1 && e.trabajo_remoto.dias) {
                             homeOfficeHTML = `
                                 <div class="mt-3 pt-3 border-t border-gray-200">
-                                    <p class="text-xs font-bold text-purple-700 uppercase mb-1.5"><i class="fa-solid fa-house-laptop mr-1"></i> Trabajo Remoto (Home Office)</p>
+                                    <p class="text-xs font-bold text-purple-700 uppercase mb-1.5"><i class="fa-solid fa-house-laptop mr-1"></i> Trabajo remoto (home office)</p>
                                     <span class="px-2.5 py-1 rounded border border-purple-200 text-xs bg-purple-50 text-purple-800 font-medium block w-fit">
                                         ${diasUpper(e.trabajo_remoto.dias)}
                                     </span>
@@ -252,7 +250,7 @@
                         } else {
                             homeOfficeHTML = `
                                 <div class="mt-3 pt-3 border-t border-gray-200">
-                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1"><i class="fa-solid fa-house-laptop mr-1"></i> Trabajo Remoto (Home Office)</p>
+                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1"><i class="fa-solid fa-house-laptop mr-1"></i> Trabajo remoto (home office)</p>
                                     <span class="text-gray-400 italic text-xs">Sin días asignados actualmente</span>
                                 </div>
                             `;
@@ -261,7 +259,7 @@
                         // 3. Ensamblaje del HTML del Modal
                         let html = `
                             <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos Personales</h3>
+                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Datos personales</h3>
                                 <p><strong>Código:</strong> ${e.cod_trabajador ?? ''}</p>
                                 <p><strong>Nombres:</strong> ${e.nombres ?? ''}</p>
                                 <p><strong>Apellidos:</strong> ${e.apellidos ?? ''}</p>
@@ -271,7 +269,7 @@
                                 <p><strong>Dirección:</strong> ${e.direccion ?? ''}</p>
                             </div>
                             <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información Laboral</h3>
+                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Información laboral</h3>
                                 <p><strong>Puesto:</strong> ${e.puesto?.desc_puesto ?? ''}</p>
                                 <p><strong>Departamento:</strong> ${e.departamento?.nombre_depto ?? ''}</p>
                                 <p><strong>Sucursal:</strong> ${e.sucursal?.nombre ?? ''}</p>
@@ -281,7 +279,7 @@
                                 <p><strong>Estado:</strong> <span class="${estadoColor} font-semibold">${estadoTexto}</span></p>
                             </div>
                             <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Asignación de Turnos</h3>
+                                <h3 class="font-semibold text-gray-700 mb-2 text-sm">Asignación de turnos</h3>
                                 ${horariosHTML}
                                 ${homeOfficeHTML}
                             </div>

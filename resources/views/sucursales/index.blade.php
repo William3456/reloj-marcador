@@ -19,7 +19,7 @@
                 </div>
                 @endif
 
-                {{-- Tabla --}}
+                {{-- Tabla de sucursales --}}
                 <div class="overflow-x-auto">
                     <table id="tablaSucursales" class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -35,7 +35,6 @@
 
                         <tbody class="divide-y divide-gray-200">
                             @foreach ($sucursales as $s)
-                                {{-- CAMBIO 1 y 2: Onclick en la fila completa y estilos de cursor --}}
                                 <tr onclick="verSucursal({{ $s->id }})" 
                                     class="cursor-pointer hover:bg-blue-50 transition-colors duration-200 group">
                                     
@@ -45,15 +44,13 @@
                                     <td class="px-4 py-2">{{ $s->telefono }}</td>
                                     <td class="px-4 py-2">
                                         <span class="px-2 py-1 text-xs rounded {{ $s->estado == 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                                            {{ $s->estado == 1 ? 'Activo' : 'Inactivo' }}
+                                            {{ $s->estado == 1 ? 'Activa' : 'Inactiva' }}
                                         </span>
                                     </td>
                                     
-                                    {{-- CAMBIO 3: Stop Propagation para que Editar/Eliminar no abran el modal --}}
+                                    {{-- Evitar que las acciones abran el modal --}}
                                     <td class="px-4 py-2 text-center whitespace-nowrap" onclick="event.stopPropagation()">
                                         <div class="inline-flex items-center gap-3">
-                                            {{-- Botón "Ver" ELIMINADO --}}
-
                                             <a href="{{ route('sucursales.edit', $s->id) }}"
                                                 class="text-blue-600 hover:text-blue-800 p-1" title="Editar">
                                                 <i class="fa-solid fa-pen-to-square"></i>
@@ -62,7 +59,7 @@
                                             <button type="button"
                                                 @click="$dispatch('open-confirm-modal', { 
                                                     url: '{{ route('sucursales.delete', $s->id) }}',
-                                                    title: 'Inactivar sucursal?',
+                                                    title: '¿Inactivar sucursal?',
                                                     message: 'La sucursal será inactivada',
                                                     buttonText: 'Inactivar'
                                                 })"
@@ -80,7 +77,7 @@
         </div>
     </div>
 
-    {{-- MODAL DE SUCURSAL (Igual que antes) --}}
+    {{-- Modal de detalles --}}
     <div id="modalSucursal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 hidden z-50 transition-opacity duration-300">
         <div id="modalCajaSucursal" class="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 relative transition-all duration-300 opacity-0 -translate-y-5">
             <button class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition" onclick="cerrarModalSucursal()">
@@ -91,7 +88,7 @@
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-2">
                     <i class="fa-solid fa-store text-blue-600 text-xl"></i>
                 </div>
-                <h2 class="text-2xl font-semibold text-gray-800">Detalles de Sucursal</h2>
+                <h2 class="text-2xl font-semibold text-gray-800">Detalles de sucursal</h2>
                 <p class="text-gray-500 text-sm">Información general y operativa</p>
             </div>
 
@@ -117,7 +114,7 @@
                         let estadoColor = s.estado == 1 ? "text-green-600" : "text-red-600";
                         let estadoTexto = s.estado == 1 ? "Activa" : "Inactiva";
 
-                        // 1. Renderizar Horarios
+                        // Renderizar horarios
                         let horariosHTML = '';
                         if (s.horarios && s.horarios.length > 0) {
                             horariosHTML = '<div class="grid grid-cols-1 gap-2">';
@@ -143,7 +140,7 @@
                             horariosHTML = `<div class="p-3 bg-gray-50 rounded border border-gray-200 text-center text-gray-400 text-sm italic">Sin horarios asignados</div>`;
                         }
 
-                        // 2. Renderizar Días Laborales
+                        // Renderizar días laborales
                         let diasSucursalHTML = '';
                         let diasArray = [];
                         try { diasArray = typeof s.dias_laborales === 'string' ? JSON.parse(s.dias_laborales) : s.dias_laborales; } catch (e) { diasArray = []; }
@@ -156,7 +153,7 @@
                         
                         let mapsLink = '#';
                         if(s.latitud && s.longitud) {
-                            mapsLink = `https://www.google.com/maps/search/?api=1&query=${s.latitud},${s.longitud}`;
+                            mapsLink = `https://www.google.com/maps?q=${s.latitud},${s.longitud}`;
                         }
 
                         let html = `
@@ -167,11 +164,11 @@
                                 <div class="grid grid-cols-2 gap-4 text-sm mt-3">
                                     <div><p class="text-xs text-gray-400 uppercase font-bold">Estado</p><p class="${estadoColor} font-bold">${estadoTexto}</p></div>
                                     <div><p class="text-xs text-gray-400 uppercase font-bold">Teléfono</p><p class="text-gray-700">${s.telefono ?? 'N/A'}</p></div>
-                                    <div class="col-span-2"><p class="text-xs text-gray-400 uppercase font-bold">Encargado / Correo</p><p class="text-gray-700 truncate">${s.correo_encargado ?? 'N/A'}</p></div>
+                                    <div class="col-span-2"><p class="text-xs text-gray-400 uppercase font-bold">Encargado / correo</p><p class="text-gray-700 truncate">${s.correo_encargado ?? 'N/A'}</p></div>
                                 </div>
                                 <div class="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
-                                    <div><p class="text-xs text-gray-400 uppercase font-bold mb-1">Días Laborales</p><div class="flex flex-wrap gap-1">${diasSucursalHTML}</div></div>
-                                    ${s.latitud ? `<a href="${mapsLink}" target="_blank" class="flex flex-col items-center text-blue-600 hover:text-blue-800 text-xs"><i class="fas fa-map-marked-alt text-2xl mb-1"></i><span>Ver Mapa</span></a>` : ''}
+                                    <div><p class="text-xs text-gray-400 uppercase font-bold mb-1">Días laborales</p><div class="flex flex-wrap gap-1">${diasSucursalHTML}</div></div>
+                                    ${s.latitud ? `<a href="${mapsLink}" target="_blank" class="flex flex-col items-center text-blue-600 hover:text-blue-800 text-xs"><i class="fas fa-map-marked-alt text-2xl mb-1"></i><span>Ver mapa</span></a>` : ''}
                                 </div>
                             </div>
                             <div class="grid grid-cols-3 gap-3">
@@ -180,7 +177,7 @@
                                 <div class="bg-purple-50 p-2 rounded border border-purple-100 text-center"><p class="text-xl font-bold text-purple-600">${s.margen_error_gps_mts ?? 0}m</p><p class="text-[10px] uppercase text-purple-400 font-bold">Margen error GPS</p></div>
                             </div>
                             <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <h3 class="font-semibold text-gray-700 mb-3 text-sm flex items-center"><i class="fas fa-calendar-alt mr-2 text-gray-400"></i> Horarios Asignados</h3>
+                                <h3 class="font-semibold text-gray-700 mb-3 text-sm flex items-center"><i class="fas fa-calendar-alt mr-2 text-gray-400"></i> Horarios asignados</h3>
                                 ${horariosHTML}
                             </div>
                         `;
@@ -212,14 +209,12 @@
                 language: { url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/es-ES.json' }
             });
 
-            // 1. Evento Clic fuera del modal
             document.getElementById('modalSucursal').addEventListener('click', function(e) {
                 if (e.target === this) {
                     cerrarModalSucursal();
                 }
             });
 
-            // 2. Evento Tecla Escape
             document.addEventListener('keydown', function(e) {
                 const modal = document.getElementById('modalSucursal');
                 if (e.key === 'Escape' && !modal.classList.contains('hidden')) {

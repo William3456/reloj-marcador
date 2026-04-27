@@ -1,6 +1,6 @@
 @extends('layouts.pdf_layout')
 
-@section('title', 'Reporte de Asistencia')
+@section('title', 'Reporte de asistencia')
 
 @section('content')
     <style>
@@ -29,24 +29,23 @@
         .val-col { text-align: right; font-weight: bold; font-size: 12px;}
     </style>
 
-    {{-- Encabezado Formal --}}
+    {{-- Encabezado formal --}}
     <table class="header-table">
         <tr>
             <td style="width: 50%;">
-                <h2 class="title">Auditoría de Asistencia</h2>
+                <h2 class="title">Auditoría de asistencia</h2>
                 <div class="meta-data">
-                    <strong>Fecha Generación:</strong> {{ now()->format('d/m/Y H:i A') }}<br>
-                    <strong>Filtro Aplicado:</strong> {{ $filtros['incidencia'] }}
+                    <strong>Fecha de generación:</strong> {{ now()->format('d/m/Y H:i A') }}<br>
+                    <strong>Filtro aplicado:</strong> {{ $filtros['incidencia'] }}
                 </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
-                <div style="font-size: 12px; color: #0f172a; font-weight: bold;">Rango Evaluado:</div>
+                <div style="font-size: 12px; color: #0f172a; font-weight: bold;">Rango evaluado:</div>
                 <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">
                     {{ \Carbon\Carbon::parse($filtros['desde'])->format('d M, Y') }} - {{ \Carbon\Carbon::parse($filtros['hasta'])->format('d M, Y') }}
                 </div>
                 
-                {{-- NUEVO: INFO ESPECÍFICA DE SUCURSAL SI FUE FILTRADA --}}
-                {{-- INFO ESPECÍFICA DE SUCURSAL SI FUE FILTRADA --}}
+                {{-- Información de sucursal --}}
                 @if($filtros['sucursal_obj'])
                     <div style="font-size: 10px; color: #475569; line-height: 1.4;">
                         <strong style="font-size: 11px; color: #0f172a;">Sucursal: {{ $filtros['sucursal_obj']->nombre }}</strong><br>
@@ -55,20 +54,20 @@
                         @if($filtros['sucursal_obj']->correo ?? $filtros['sucursal_obj']->encargado) 
                             {{ $filtros['sucursal_obj']->correo ?? $filtros['sucursal_obj']->encargado }} <br> 
                         @endif
-                        Rango GPS: {{ $filtros['sucursal_obj']->rango_marcacion_mts }}m | Margen Error: {{ $filtros['sucursal_obj']->margen_error_gps_mts }}m
+                        Rango GPS: {{ $filtros['sucursal_obj']->rango_marcacion_mts }}m | Margen error: {{ $filtros['sucursal_obj']->margen_error_gps_mts }}m
                         
-                        {{-- 🌟 NUEVO: DÍAS Y HORARIOS DE OPERACIÓN --}}
+                        {{-- Días y horarios de operación --}}
                         <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dotted #cbd5e1;">
                             @if(!empty($filtros['sucursal_obj']->dias_laborales))
                                 @php 
                                     $diasL = is_array($filtros['sucursal_obj']->dias_laborales) ? $filtros['sucursal_obj']->dias_laborales : json_decode($filtros['sucursal_obj']->dias_laborales, true);
                                 @endphp
-                                <strong style="color: #0f172a;">Días de Operación (Actuales):</strong> 
+                                <strong style="color: #0f172a;">Días de operación (actuales):</strong> 
                                 {{ implode(', ', array_map('ucfirst', $diasL ?? [])) }}<br>
                             @endif
                             
                             @if($filtros['sucursal_obj']->horarios && $filtros['sucursal_obj']->horarios->isNotEmpty())
-                                <strong style="color: #0f172a;">Horarios de Atención (Actuales):</strong><br>
+                                <strong style="color: #0f172a;">Horarios de atención (actuales):</strong><br>
                                 @foreach($filtros['sucursal_obj']->horarios as $hs)
                                     @php
                                         $diasH = is_array($hs->dias) ? $hs->dias : json_decode($hs->dias, true);
@@ -84,44 +83,43 @@
                     </div>
                 @else
                     <div style="font-size: 11px; color: #64748b;">
-                        <strong>Sucursal:</strong> Consolidado General (Todas)
+                        <strong>Sucursal:</strong> Consolidado general (todas)
                     </div>
                 @endif
             </td>
         </tr>
     </table>
 
-    {{-- Tabla Principal --}}
+    {{-- Tabla principal --}}
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 10%;">Fecha</th>
-                <th style="width: 20%;">Empleado / Sucursal</th>
+                <th style="width: 20%;">Empleado / sucursal</th>
                 <th style="width: 10%; text-align: center;">Horario</th>
-                {{-- NUEVA COLUMNA DE TOLERANCIA --}}
                 <th style="width: 8%; text-align: center;">Tolerancia</th>
-                <th style="width: 12%; text-align: center;">Marcación Real</th>
+                <th style="width: 12%; text-align: center;">Marcación real</th>
                 <th style="width: 14%; text-align: center;">Estado</th>
-                <th style="width: 26%;">Observaciones / Permisos</th>
+                <th style="width: 26%;">Observaciones / permisos</th>
             </tr>
         </thead>
         <tbody>
             @forelse($registros as $row)
                 @php
                     $badgeClass = 'badge-green';
-                    $estadoLabel = 'PUNTUAL';
+                    $estadoLabel = 'Puntual';
 
                     switch ($row['estado_key']) {
-                        case 'ausente': $badgeClass = 'badge-red'; $estadoLabel = 'AUSENTE'; break;
-                        case 'tarde': $badgeClass = 'badge-orange'; $estadoLabel = 'RETARDO'; break;
-                        case 'tarde_con_permiso': $badgeClass = 'badge-orange'; $estadoLabel = 'RETARDO C/PERMISO'; break;
+                        case 'ausente': $badgeClass = 'badge-red'; $estadoLabel = 'Ausente'; break;
+                        case 'tarde': $badgeClass = 'badge-orange'; $estadoLabel = 'Retardo'; break;
+                        case 'tarde_con_permiso': $badgeClass = 'badge-orange'; $estadoLabel = 'Retardo c/permiso'; break;
                         case 'sin_cierre': 
-                            if ($row['salida_real']) { $badgeClass = 'badge-red'; $estadoLabel = 'CIERRE ATRASADO'; } 
-                            else { $badgeClass = 'badge-yellow'; $estadoLabel = 'SIN SALIDA'; }
+                            if ($row['salida_real']) { $badgeClass = 'badge-red'; $estadoLabel = 'Cierre atrasado'; } 
+                            else { $badgeClass = 'badge-yellow'; $estadoLabel = 'Sin salida'; }
                             break;
-                        case 'permiso': $badgeClass = 'badge-blue'; $estadoLabel = 'PERMISO APLICADO'; break;
-                        case 'extra': $badgeClass = 'badge-purple'; $estadoLabel = 'TURNO EXTRA'; break;
-                        case 'presente': $badgeClass = 'badge-green'; $estadoLabel = 'ASISTENCIA'; break;
+                        case 'permiso': $badgeClass = 'badge-blue'; $estadoLabel = 'Permiso aplicado'; break;
+                        case 'extra': $badgeClass = 'badge-purple'; $estadoLabel = 'Turno extra'; break;
+                        case 'presente': $badgeClass = 'badge-green'; $estadoLabel = 'Asistencia'; break;
                     }
                 @endphp
 
@@ -132,10 +130,9 @@
                             {{ $row['fecha']->locale('es')->isoFormat('dddd') }}
                         </div>
 
-                        
                         @if($row['es_dia_remoto'])
                             <div style="font-size: 7px; font-weight: bold; color: #6b21a8; background-color: #f3e8ff; border: 1px solid #e9d5ff; padding: 2px 4px; border-radius: 3px; display: inline-block;">
-                                REMOTO
+                                Remoto
                             </div>
                         @endif
                     </td>
@@ -147,7 +144,6 @@
                         {{ $row['horario_programado'] }}
                     </td>
 
-                    {{-- NUEVO: DATO DE TOLERANCIA --}}
                     <td style="text-align: center; color: #475569; font-weight: bold;">
                         {{ $row['tolerancia'] > 0 ? $row['tolerancia'] . ' min' : '-' }}
                     </td>
@@ -179,7 +175,6 @@
                                 <div style="font-weight: bold; color: #1d4ed8; font-size: 9px;">
                                     {{ $row['permiso_info']['tipo'] }}
                                     
-                                    {{-- NUEVO: HORARIO DEL PERMISO EN EL PDF --}}
                                     @if(!empty($row['permiso_info']['hora_ini']) && !empty($row['permiso_info']['hora_fin']))
                                         <span style="background-color: #e0e7ff; color: #4338ca; padding: 1px 4px; border-radius: 3px; font-size: 8px; margin-left: 4px; border: 0.5px solid #c7d2fe;">
                                             {{ \Carbon\Carbon::parse($row['permiso_info']['hora_ini'])->format('H:i') }} a {{ \Carbon\Carbon::parse($row['permiso_info']['hora_fin'])->format('H:i') }}
@@ -212,32 +207,32 @@
         <table class="summary-table">
             <thead>
                 <tr>
-                    <th colspan="2">RESUMEN DEL PERIODO</th>
+                    <th colspan="2">Resumen del periodo</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>Total Registros Evaluados</td>
+                    <td>Total registros evaluados</td>
                     <td class="val-col">{{ $registros->count() }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #166534;">Asistencias Perfectas</td>
+                    <td style="color: #166534;">Asistencias</td>
                     <td class="val-col" style="color: #166534;">{{ $registros->where('estado_key', 'presente')->count() }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #991b1b;">Ausencias Injustificadas</td>
+                    <td style="color: #991b1b;">Ausencias injustificadas</td>
                     <td class="val-col" style="color: #991b1b;">{{ $registros->where('estado_key', 'ausente')->count() }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #9a3412;">Llegadas Tarde</td>
+                    <td style="color: #9a3412;">Llegadas tarde</td>
                     <td class="val-col" style="color: #9a3412;">{{ $registros->whereIn('estado_key', ['tarde', 'tarde_con_permiso'])->count() }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #ef4444;">Faltas de Cierre (Olvidos)</td>
+                    <td style="color: #ef4444;">Faltas de cierre (olvidos)</td>
                     <td class="val-col" style="color: #ef4444;">{{ $registros->where('estado_key', 'sin_cierre')->count() }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #1d4ed8;">Permisos y Justificaciones</td>
+                    <td style="color: #1d4ed8;">Permisos y justificaciones</td>
                     <td class="val-col" style="color: #1d4ed8;">{{ $registros->filter(fn($r) => !empty($r['permiso_info']))->count() }}</td>
                 </tr>
             </tbody>

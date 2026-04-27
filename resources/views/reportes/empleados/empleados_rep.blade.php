@@ -1,11 +1,11 @@
-<x-app-layout title="Reporte de Empleados">
+<x-app-layout title="Reporte de empleados">
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-2xl text-gray-800 leading-tight tracking-tight">
-                Reporte de Empleados
+                Reporte de empleados
             </h2>
             <div class="flex items-center gap-2 text-sm text-gray-500">
-                <i class="fa-solid fa-users"></i> Directorio y Accesos
+                <i class="fa-solid fa-users"></i> Directorio y accesos
             </div>
         </div>
     </x-slot>
@@ -13,11 +13,11 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
-            {{-- PANEL DE FILTROS AVANZADOS --}}
+            {{-- Panel de filtros avanzados --}}
             <div class="bg-white shadow-sm border border-gray-200 rounded-2xl overflow-hidden">
                 <div class="bg-gray-50/50 border-b border-gray-200 px-6 py-4">
                     <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-blue-500"></i> Filtros del Reporte
+                        <i class="fa-solid fa-sliders text-blue-500"></i> Filtros del reporte
                     </h3>
                 </div>
                 <div class="p-6">
@@ -67,7 +67,7 @@
 
                             {{-- Estado --}}
                             <div>
-                                <label for="estado" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Estado del Empleado</label>
+                                <label for="estado" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Estado del empleado</label>
                                 <select name="estado" id="estado" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-white transition-colors">
                                     <option value="">Todos</option>
                                     <option value="1" {{ request('estado') === '1' ? 'selected' : '' }}>Activos</option>
@@ -77,17 +77,17 @@
 
                             {{-- Login --}}
                             <div>
-                                <label for="login" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Acceso al Sistema</label>
+                                <label for="login" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Acceso al sistema</label>
                                 <select name="login" id="login" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-white transition-colors">
                                     <option value="">Todos</option>
-                                    <option value="1" {{ request('login') === '1' ? 'selected' : '' }}>Sí (Tienen Login)</option>
-                                    <option value="0" {{ request('login') === '0' ? 'selected' : '' }}>No (Sin Login)</option>
+                                    <option value="1" {{ request('login') === '1' ? 'selected' : '' }}>Sí (tienen login)</option>
+                                    <option value="0" {{ request('login') === '0' ? 'selected' : '' }}>No (sin login)</option>
                                 </select>
                             </div>
 
                             {{-- Rol --}}
                             <div>
-                                <label for="rol" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Rol de Sistema</label>
+                                <label for="rol" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Rol de sistema</label>
                                 <select name="rol" id="rol" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-white transition-colors">
                                     <option value="">Todos</option>
                                     @foreach($roles as $rol)
@@ -103,7 +103,7 @@
                         {{-- Botones --}}
                         <div class="mt-6 pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
                             <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-sm text-sm flex items-center justify-center transition-all active:scale-95">
-                                <i class="fa-solid fa-magnifying-glass mr-2"></i> Filtrar Resultados
+                                <i class="fa-solid fa-magnifying-glass mr-2"></i> Filtrar resultados
                             </button>
                             <button type="button" onclick="openPdfModal()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-sm text-sm flex items-center justify-center transition-all active:scale-95">
                                 <i class="fa-solid fa-file-pdf mr-2"></i> Exportar a PDF
@@ -113,13 +113,13 @@
                 </div>
             </div>
 
-            {{-- SECCIÓN 2: TABLA DE RESULTADOS --}}
+            {{-- Tabla de resultados --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                 
                 <div class="bg-gradient-to-r from-gray-50 to-white px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-                    <h3 class="font-black text-gray-900 text-lg leading-tight">Directorio de Empleados</h3>
+                    <h3 class="font-black text-gray-900 text-lg leading-tight">Directorio de empleados</h3>
                     <div class="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
-                        {{ isset($empleados) ? count($empleados) : 0 }} Registros
+                        {{ isset($empleados) ? count($empleados) : 0 }} registros
                     </div>
                 </div>
 
@@ -128,12 +128,12 @@
                         <thead class="bg-gray-50/50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Cód.</th>
-                                <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Nombre Completo</th>
+                                <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Nombre completo</th>
                                 <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Sucursal</th>
-                                <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Área / Puesto</th>
-                                {{-- NUEVA COLUMNA DE HORARIOS --}}
-                                <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Horarios Asignados</th>
-                                <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Rol de Sistema</th>
+                                <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Área / puesto</th>
+                                {{-- Horarios --}}
+                                <th class="px-4 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider">Horarios asignados</th>
+                                <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Rol de sistema</th>
                                 <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Acceso</th>
                                 <th class="px-4 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-wider">Estado</th>
                             </tr>
@@ -161,10 +161,9 @@
                                         <div class="text-[10px] text-gray-500 uppercase">{{ $empleado->departamento->nombre_depto ?? 'N/A' }}</div>
                                     </td>
 
-                                    {{-- CELDA DE HORARIOS --}}
-                                    {{-- CELDA DE HORARIOS --}}
+                                    {{-- Horarios --}}
                                     <td class="px-4 py-3 whitespace-normal min-w-[160px]">
-                                        {{-- 1. Horarios Presenciales --}}
+                                        {{-- 1. Horarios presenciales --}}
                                         @if($empleado->horarios && $empleado->horarios->isNotEmpty())
                                             @php
                                                 $horariosUnicos = $empleado->horarios->unique('id');
@@ -189,7 +188,7 @@
                                             <span class="text-xs text-gray-400 italic">No asignado</span>
                                         @endif
 
-                                        {{-- 2. TRABAJO REMOTO (Lógica de Vigencia Actual) --}}
+                                        {{-- 2. Trabajo remoto --}}
                                         @php
                                             $esRemotoActivo = false;
                                             $diasRemotoStr = '';
@@ -200,7 +199,6 @@
                                                 $inicio = \Carbon\Carbon::parse($configRemoto->fecha_inicio)->startOfDay();
                                                 $fin = $configRemoto->fecha_fin ? \Carbon\Carbon::parse($configRemoto->fecha_fin)->startOfDay() : null;
 
-                                                // Si el día de hoy cae dentro de la vigencia del permiso remoto
                                                 if ($hoy->greaterThanOrEqualTo($inicio) && ($fin === null || $hoy->lessThanOrEqualTo($fin))) {
                                                     $esRemotoActivo = true;
                                                     $diasArr = is_array($configRemoto->dias) ? $configRemoto->dias : json_decode($configRemoto->dias, true);
@@ -257,7 +255,7 @@
         </div>
     </div>
 
-    {{-- MODAL DE CONFIRMACIÓN DE PDF --}}
+    {{-- Modal de confirmación de PDF --}}
     <div id="pdfModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="closePdfModal()"></div>
@@ -277,7 +275,7 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
-                    <button type="button" id="btnConfirmarPdf" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 sm:w-auto sm:text-sm transition-colors">Generar Documento</button>
+                    <button type="button" id="btnConfirmarPdf" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 sm:w-auto sm:text-sm transition-colors">Generar documento</button>
                     <button type="button" onclick="closePdfModal()" class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm transition-colors">Cancelar</button>
                 </div>
             </div>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\DeptosPuestosController;
 use App\Http\Controllers\Departamentos\DepartamentosController;
+use App\Http\Controllers\DeployController;
 use App\Http\Controllers\Empleados\EmpleadoController; // Para el test de correo
 // Importación de Controladores
 use App\Http\Controllers\Empresa\EmpresaController;
@@ -337,6 +338,8 @@ Route::get('/sumar-hora-global', function () {
 
     return '¡Éxito! Se sumó 1 hora a los timestamps de las siguientes tablas: <br><br>'.implode('<br>', $tablasAfectadas);
 });
+Route::get('/sistema-deploy-x89s', [DeployController::class, 'procesarActualizacion'])
+    ->middleware(['auth','check.role:1']); // <-- Si tienes un rol admin, agrégalo aquí
 
 
 require __DIR__.'/auth.php';

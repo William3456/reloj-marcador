@@ -7,21 +7,20 @@
 
     <div class="py-8 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-{{-- ========================================================= --}}
-            {{-- HEADER GLOBAL DE LA EMPRESA (VISIBLE PARA TODOS LOS ROLES) --}}
-            {{-- ========================================================= --}}
+
+            {{-- Encabezado global de la empresa --}}
             @php
                 // Buscamos el nombre en la BD del Tenant (local)
                 $empresaLocal = \Illuminate\Support\Facades\DB::table('empresas')->first();
                 
-                // Si la local tiene nombre, usamos ese. Si no, usamos el de la master, o un por defecto.
-                $nombreEmpresa = $empresaLocal ? $empresaLocal->nombre : ($empresaGlobal->nombre ?? 'Nuestra Empresa');
+                // Si la local tiene nombre, usamos ese. Si no, usamos el de la master o uno por defecto.
+                $nombreEmpresa = $empresaLocal ? $empresaLocal->nombre : ($empresaGlobal->nombre ?? 'Nuestra empresa');
             @endphp
 
             <div class="bg-white overflow-hidden shadow-md sm:rounded-2xl mb-8 border border-gray-100">
                 <div class="p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
                     
-                    {{-- Logo Principal --}}
+                    {{-- Logo principal --}}
                     @if(isset($empresaGlobal) && $empresaGlobal->logo)
                         <div class="w-24 h-24 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex shrink-0 items-center justify-center transform hover:scale-105 transition-transform duration-300">
                             <img src="{{ Storage::url($empresaGlobal->logo) }}" alt="Logo" class="w-full h-full object-contain">
@@ -32,12 +31,12 @@
                         </div>
                     @endif
 
-                    {{-- Textos de Bienvenida --}}
+                    {{-- Mensajes de bienvenida --}}
                     <div class="text-center md:text-left flex-grow">
                         <p class="text-xs font-bold tracking-widest uppercase text-blue-600 mb-1">Panel de control</p>
                         <h2 class="text-3xl md:text-4xl font-black text-gray-800 leading-tight">{{ $nombreEmpresa }}</h2>
                         
-                        {{-- Detalles extra opcionales (Solo si la empresa ya llenó sus datos locales) --}}
+                        {{-- Detalles adicionales --}}
                         @if($empresaLocal)
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-sm text-gray-500 font-medium">
                                 @if($empresaLocal->nit)
@@ -52,6 +51,7 @@
                     
                 </div>
             </div>
+
             @if (auth()->user()->id_rol === 1)
                 <div x-data="empresaModal()" x-on:cerrar-modal-empresa.window="cerrar()"
                     class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -68,7 +68,7 @@
                                 <i class="fas fa-building text-3xl text-blue-600"></i>
                             </div>
 
-                            <h3 class="text-xl font-bold text-gray-800 mb-2">Perfil de Empresa</h3>
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Perfil de empresa</h3>
                             <p class="text-gray-500 text-sm mb-6 leading-relaxed">
                                 Gestiona la identidad corporativa, dirección y datos fiscales de tu organización.
                             </p>
@@ -76,7 +76,7 @@
                             <button @click="open = true; cargarEmpresa();"
                                 class="w-full py-2.5 px-4 bg-gray-900 hover:bg-blue-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transform active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
                                 <i class="fas fa-edit text-xs"></i>
-                                <span>Administrar Datos</span>
+                                <span>Administrar datos</span>
                             </button>
                         </div>
                     </div>
@@ -106,9 +106,8 @@
                                             <i class="fas fa-building text-blue-600"></i>
                                         </div>
                                         <div>
-                                            <h3 class="text-lg font-bold text-gray-900">Configuración de Empresa</h3>
-                                            <p class="text-xs text-gray-500">Actualiza la información legal y de contacto
-                                            </p>
+                                            <h3 class="text-lg font-bold text-gray-900">Configuración de empresa</h3>
+                                            <p class="text-xs text-gray-500">Actualiza la información legal y de contacto</p>
                                         </div>
                                     </div>
                                     <button @click="open = false"
@@ -123,15 +122,14 @@
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
                                             <div class="col-span-2 md:col-span-1">
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre
-                                                    Comercial</label>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre comercial</label>
                                                 <div class="relative">
                                                     <div
                                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                         <i class="fas fa-signature text-gray-400"></i>
                                                     </div>
                                                     <input type="text" id="nombre" name="nombre"
-                                                        placeholder="Ej: Mi Empresa S.A."
+                                                        placeholder="Ej: Mi empresa S.A."
                                                         class="pl-10 w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-colors">
                                                 </div>
                                             </div>
@@ -151,8 +149,7 @@
                                             </div>
 
                                             <div class="col-span-2">
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Dirección
-                                                    Física</label>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Dirección física</label>
                                                 <div class="relative">
                                                     <div
                                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -165,8 +162,7 @@
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Registro
-                                                    Fiscal</label>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Registro fiscal</label>
                                                 <div class="relative">
                                                     <div
                                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -190,8 +186,7 @@
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">DUI
-                                                    (Representante)</label>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">DUI (representante)</label>
                                                 <div class="relative">
                                                     <div
                                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -203,8 +198,7 @@
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Correo
-                                                    Electrónico</label>
+                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Correo electrónico</label>
                                                 <div class="relative">
                                                     <div
                                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -218,15 +212,12 @@
                                             <div
                                                 class="col-span-2 border-t border-gray-100 pt-6 mt-2 grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                                                {{-- 1. LOGO PRINCIPAL --}}
+                                                {{-- Logo principal --}}
                                                 <div>
-                                                    <label class="block text-sm font-semibold text-gray-700 mb-3">Logo
-                                                        Principal <span class="text-xs text-gray-400 font-normal">(Menú,
-                                                            Login y reportes)</span></label>
+                                                    <label class="block text-sm font-semibold text-gray-700 mb-3">Logo principal <span class="text-xs text-gray-400 font-normal">(menú, login y reportes)</span></label>
                                                     <div class="flex items-center gap-4">
                                                         <div
                                                             class="w-16 h-16 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden shrink-0 shadow-sm p-1">
-                                                            {{-- LÓGICA BLADE PARA LOGO --}}
                                                             <img id="previewLogo"
                                                                 src="{{ isset($empresaGlobal) && $empresaGlobal->logo ? Storage::url($empresaGlobal->logo) : '' }}"
                                                                 class="w-full h-full object-contain {{ isset($empresaGlobal) && $empresaGlobal->logo ? '' : 'hidden' }}">
@@ -236,26 +227,23 @@
                                                         <div class="flex-grow">
                                                             <label
                                                                 class="cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-1.5 px-3 rounded-lg shadow-sm text-xs transition-all inline-block">
-                                                                <i class="fas fa-upload mr-1 text-blue-500"></i> Subir Logo
+                                                                <i class="fas fa-upload mr-1 text-blue-500"></i> Subir logo
                                                                 <input type="file" id="logo" name="logo" class="hidden"
                                                                     accept="image/png, image/jpeg, image/jpg"
                                                                     onchange="document.getElementById('previewLogo').src = window.URL.createObjectURL(this.files[0]); document.getElementById('previewLogo').classList.remove('hidden'); document.getElementById('iconDefaultLogo').classList.add('hidden');">
                                                             </label>
-                                                            <p class="text-[10px] text-gray-400 mt-1">Horizontal o
-                                                                Rectangular. (Máx 2MB)</p>
+                                                            <p class="text-[10px] text-gray-400 mt-1">Horizontal o rectangular (máx. 2MB)</p>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {{-- 2. FAVICON (PESTAÑA) --}}
+                                                {{-- Favicon --}}
                                                 <div>
-                                                    <label class="block text-sm font-semibold text-gray-700 mb-3">Icono de
-                                                        Pestaña <span
-                                                            class="text-xs text-gray-400 font-normal">(Favicon)</span></label>
+                                                    <label class="block text-sm font-semibold text-gray-700 mb-3">Icono de pestaña <span
+                                                            class="text-xs text-gray-400 font-normal">(favicon)</span></label>
                                                     <div class="flex items-center gap-4">
                                                         <div
                                                             class="w-16 h-16 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden shrink-0 shadow-sm p-2">
-                                                            {{-- LÓGICA BLADE PARA FAVICON --}}
                                                             <img id="previewFavicon"
                                                                 src="{{ isset($empresaGlobal) && $empresaGlobal->favicon ? Storage::url($empresaGlobal->favicon) : '' }}"
                                                                 class="w-full h-full object-contain {{ isset($empresaGlobal) && $empresaGlobal->favicon ? '' : 'hidden' }}">
@@ -265,15 +253,13 @@
                                                         <div class="flex-grow">
                                                             <label
                                                                 class="cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-1.5 px-3 rounded-lg shadow-sm text-xs transition-all inline-block">
-                                                                <i class="fas fa-upload mr-1 text-indigo-500"></i> Subir
-                                                                Icono
+                                                                <i class="fas fa-upload mr-1 text-indigo-500"></i> Subir icono
                                                                 <input type="file" id="favicon" name="favicon"
                                                                     class="hidden"
                                                                     accept="image/png, image/x-icon, image/ico"
                                                                     onchange="document.getElementById('previewFavicon').src = window.URL.createObjectURL(this.files[0]); document.getElementById('previewFavicon').classList.remove('hidden'); document.getElementById('iconDefaultFav').classList.add('hidden');">
                                                             </label>
-                                                            <p class="text-[10px] text-gray-400 mt-1">Cuadrado sin fondo.
-                                                                Solo PNG (Ej: 512x512px)</p>
+                                                            <p class="text-[10px] text-gray-400 mt-1">Cuadrado sin fondo. Solo PNG (ej: 512x512px)</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -289,7 +275,7 @@
                                             <button type="submit"
                                                 class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2">
                                                 <i class="fas fa-save"></i>
-                                                Guardar Cambios
+                                                Guardar cambios
                                             </button>
                                         </div>
                                     </form>
@@ -318,12 +304,10 @@
 </x-app-layout>
 
 <script>
-    // --- TU LÓGICA DE JQUERY INTACTA (Solo cambié console.logs por algo más limpio) ---
     $(document).ready(function () {
         $('#formEmpresa').submit(function (e) {
             e.preventDefault();
 
-            // Añadir feedback visual al botón de guardar (opcional)
             let $btn = $(this).find('button[type="submit"]');
             let originalText = $btn.html();
             $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
@@ -339,7 +323,7 @@
                 headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                 success: function (data) {
                     $('.error-text').remove();
-                    $('input').removeClass('border-red-500 focus:border-red-500 focus:ring-red-500'); // Limpiar clases rojas
+                    $('input').removeClass('border-red-500 focus:border-red-500 focus:ring-red-500');
 
                     if (data.success) {
                         alertify.success(data.message);
@@ -356,10 +340,8 @@
                         let errors = xhr.responseJSON.errors;
                         $.each(errors, function (key, value) {
                             let input = $('[name="' + key + '"]');
-                            // Agregamos borde rojo y quitamos el azul
                             input.addClass('border-red-500 focus:border-red-500 focus:ring-red-500').removeClass('border-gray-300 focus:ring-blue-500 focus:border-blue-500');
 
-                            // Insertamos el error debajo del div relativo (padre del input)
                             input.parent().after('<p class="error-text text-red-500 text-xs font-semibold mt-1 ml-1 flex items-center"><i class="fas fa-exclamation-circle mr-1"></i>' + value[0] + '</p>');
                         });
                         alertify.error('Por favor revisa los errores en el formulario.');
@@ -381,12 +363,11 @@
                 this.open = false;
             },
             cargarEmpresa() {
-                // Pequeño reset visual antes de cargar
                 $('#formEmpresa')[0].reset();
                 $('.error-text').remove();
                 $('input').removeClass('border-red-500 focus:border-red-500 focus:ring-red-500');
 
-                // 🌟 RESTAURAR PREVIEWS DE IMÁGENES A SU ESTADO EN SERVIDOR
+                // Restaurar vistas previas de imágenes
                 let urlLogo = "{{ isset($empresaGlobal) && $empresaGlobal->logo ? Storage::url($empresaGlobal->logo) : '' }}";
                 let urlFavicon = "{{ isset($empresaGlobal) && $empresaGlobal->favicon ? Storage::url($empresaGlobal->favicon) : '' }}";
 
@@ -406,7 +387,6 @@
                     $('#iconDefaultFav').removeClass('hidden');
                 }
 
-                // Llamada AJAX original
                 $.ajax({
                     url: "{{ route('empresas.show') }}",
                     type: "GET",
@@ -422,7 +402,7 @@
                             $('#dui').val(e.dui ?? '');
                             $('#correo').val(e.correo ?? '');
                         } else {
-                            alertify.warning('Complete los datos de su nueva empresa.');
+                            alertify.warning('Completa los datos de tu nueva empresa.');
                         }
                     },
                     error: function (xhr) {

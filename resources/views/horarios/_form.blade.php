@@ -1,25 +1,25 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-    <!-- Hora inicio -->
+    {{-- Hora de inicio --}}
     <div>
         <x-input-label value="Hora de inicio (24h)" />
         <x-text-input type="time" name="hora_ini" id="hora_ini" value="{{ old('hora_ini', $horario->hora_ini ?? '') }}"
             class="mt-1 w-full" required />
     </div>
 
-    <!-- Hora fin -->
+    {{-- Hora de fin --}}
     <div>
         <x-input-label value="Hora de fin (24h)" />
         <x-text-input type="time" name="hora_fin" id="hora_fin" value="{{ old('hora_fin', $horario->hora_fin ?? '') }}"
             class="mt-1 w-full" required />
     </div>
 
-    <!-- Permitido marcación -->
+    {{-- Tipo de horario --}}
     <div>
         <x-input-label value="Tipo de horario" />
         <select name="permitido_marcacion" id="permitido_marcacion" class="mt-1 w-full rounded-md border-gray-300"
             onchange="actualizarMensaje()" required>
-            <option value="">Seleccione...</option>
+            <option value="">Selecciona...</option>
             <option value="1" {{ old('permitido_marcacion', $horario->permitido_marcacion ?? '') == '1' ? 'selected' : '' }}>
                 Horario de sucursal
             </option>
@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <!-- Estado -->
+    {{-- Estado --}}
     <div>
         <x-input-label value="Estado" />
         <select name="estado" class="mt-1 w-full rounded-md border-gray-300" required>
@@ -41,7 +41,7 @@
         </select>
     </div>
 
-    <!-- Tolerancia -->
+    {{-- Tolerancia --}}
     <div>
         <x-input-label value="Tolerancia (minutos)" />
         <x-text-input type="number" min="0" name="tolerancia" id="tolerancia"
@@ -53,7 +53,7 @@
 
 
     <div class="md:col-span-2">
-        <x-input-label value="Días laborales (Inicios de)" />
+        <x-input-label value="Días laborales (inicios de)" />
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-lg border mt-1">
             @foreach ($dias as $dia)
                 <label class="flex items-center gap-2 p-2 bg-white rounded-md border hover:bg-gray-100 cursor-pointer shadow-sm">
@@ -67,7 +67,7 @@
             <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
         @enderror
     </div>
-    <!-- Turno (centrado y al final) -->
+    {{-- Turno --}}
     <div class="col-md-4">
 
         <x-input-label value="Turno" />

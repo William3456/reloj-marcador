@@ -18,19 +18,19 @@
 </head>
 <body>
     @php
-        // 🌟 LÓGICA DE TEXTOS DINÁMICOS PARA EL ADMINISTRADOR
+        // Lógica de textos dinámicos para el administrador
         $origen = $permiso->app_creacion;
 
         if ($origen == 1) {
             $claseCss = 'panel';
-            $titulo = "Notificación de Nuevo Permiso";
+            $titulo = "Notificación de nuevo permiso";
             $mensaje = "Se ha registrado y asignado un nuevo permiso en el sistema para el empleado <strong>{$empleado->nombres} {$empleado->apellidos}</strong>.";
-            $textoBoton = "Ver Permiso en el Directorio";
+            $textoBoton = "Ver permiso en el directorio";
         } else {
             $claseCss = '';
-            $titulo = "Nueva Solicitud Pendiente";
+            $titulo = "Nueva solicitud pendiente";
             $mensaje = "El empleado <strong>{$empleado->nombres} {$empleado->apellidos}</strong> ha registrado una nueva solicitud de permiso desde la App que requiere tu revisión.";
-            $textoBoton = "Revisar Solicitud en el Sistema";
+            $textoBoton = "Revisar solicitud en el sistema";
         }
     @endphp
 
@@ -44,9 +44,9 @@
             
             <div class="details">
                 <p><strong>Sucursal:</strong> {{ $empleado->sucursal->nombre ?? 'N/A' }}</p>
-                <p><strong>Cód. Empleado:</strong> {{ $empleado->cod_trabajador }}</p>
+                <p><strong>Cód. empleado:</strong> {{ $empleado->cod_trabajador }}</p>
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 10px 0;">
-                <p><strong>Tipo Permiso:</strong> {{ $permiso->tipoPermiso->nombre ?? 'General' }}</p>
+                <p><strong>Tipo permiso:</strong> {{ $permiso->tipoPermiso->nombre ?? 'General' }}</p>
                 <p><strong>Motivo:</strong> {{ $permiso->motivo }}</p>
                 
                 {{-- Mostramos los datos condicionales si existen --}}
@@ -58,7 +58,7 @@
                     </p>
                 @endif
 
-                {{--  NUEVO: HORARIO DEL PERMISO --}}
+                {{-- Horario del permiso --}}
                 @if($permiso->hora_ini && $permiso->hora_fin)
                     <p><strong>Horario:</strong> {{ \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') }} a {{ \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') }}</p>
                 @endif
@@ -70,7 +70,7 @@
                     <p><strong>Rango GPS:</strong> {{ $permiso->cantidad_mts }} mts</p>
                 @endif
 
-                <p><strong>Fecha Registro:</strong> {{ $permiso->created_at->format('d/m/Y h:i A') }}</p>
+                <p><strong>Fecha de registro:</strong> {{ $permiso->created_at->format('d/m/Y h:i A') }}</p>
             </div>
 
             <center>
@@ -78,7 +78,7 @@
             </center>
         </div>
         <div class="footer">
-            <p>Sistema de Control de Asistencia</p>
+            <p>Sistema de control de asistencia</p>
         </div>
     </div>
 </body>

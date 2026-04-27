@@ -1,32 +1,32 @@
 @php
     $esEditar = isset($permiso);
 
-    // LÓGICA DE UBICACIÓN LIBRE
-    // 1. Valor por defecto: 0 (No)
+    // Lógica de ubicación libre
+    // Valor por defecto: 0 (no)
     $valorUbicacionLibre = 0;
 
     if (old('ubicacion_libre') !== null) {
-        // 2. Si hay un old (recarga por validación), usamos ese valor
+        // Si hay un old (recarga por validación), usamos ese valor
         $valorUbicacionLibre = old('ubicacion_libre');
     } elseif ($esEditar) {
-        // 3. En EDITAR: Si cantidad_mts es NULL, Ubicación Libre es "Sí" (1), sino "No" (0)
+        // En editar: si cantidad_mts es NULL, ubicación libre es "sí" (1), sino "no" (0)
         $valorUbicacionLibre = is_null($permiso->cantidad_mts) ? 1 : 0;
     }
 @endphp
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    {{-- ===================== INFORMACIÓN DE ORIGEN (Solo en Edit) ===================== --}}
+    {{-- Información de origen (solo en edición) --}}
     @if ($esEditar)
         <div class="col-span-1 md:col-span-2 mb-2 p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-wrap gap-6 items-center">
             <div>
-                <span class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Origen del Permiso</span>
+                <span class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Origen del permiso</span>
                 @if($permiso->app_creacion == 2)
                     <span class="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">
-                        <i class="fa-solid fa-mobile-screen mr-1.5"></i> App Móvil
+                        <i class="fa-solid fa-mobile-screen mr-1.5"></i> App móvil
                     </span>
                 @else
                     <span class="inline-flex items-center px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200">
-                        <i class="fa-solid fa-user-tie mr-1.5"></i> Panel de Control
+                        <i class="fa-solid fa-user-tie mr-1.5"></i> Panel de control
                     </span>
                 @endif
             </div>
@@ -34,26 +34,26 @@
             <div class="w-px h-8 bg-gray-200 hidden md:block"></div>
 
             <div>
-                <span class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Estado de Solicitud</span>
+                <span class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Estado de solicitud</span>
                 @if($permiso->estado_solicitud == 1)
-                    <span class="inline-flex items-center px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-lg border border-yellow-200">En Revisión</span>
+                    <span class="inline-flex items-center px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-lg border border-yellow-200">En revisión</span>
                 @elseif($permiso->estado_solicitud == 2)
                     <span class="inline-flex items-center px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-200">Aprobado</span>
                 @elseif($permiso->estado_solicitud == 3)
                     <span class="inline-flex items-center px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200">Rechazado</span>
                 @else
-                    <span class="inline-flex items-center px-2.5 py-1 bg-gray-200 text-gray-600 text-xs font-bold rounded-lg border border-gray-300">Asignación Directa</span>
+                    <span class="inline-flex items-center px-2.5 py-1 bg-gray-200 text-gray-600 text-xs font-bold rounded-lg border border-gray-300">Asignación directa</span>
                 @endif
             </div>
         </div>
     @endif
 
-    {{-- ===================== Sucursal ===================== --}}
+    {{-- Sucursal --}}
     <div>
         <x-input-label for="id_sucursal" value="Sucursal" />
         <select id="id_sucursal" {{ $esEditar ? 'disabled' : '' }} class="mt-1 block w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500
                     {{ $esEditar ? 'bg-gray-100 cursor-not-allowed opacity-75' : '' }}">
-            <option value="">Seleccione una sucursal</option>
+            <option value="">Selecciona una sucursal</option>
             @foreach ($sucursales as $sucursal)
                 <option value="{{ $sucursal->id }}" @selected(old('id_sucursal', $permiso->empleado->id_sucursal ?? null) == $sucursal->id)>
                     {{ $sucursal->nombre }}
@@ -68,7 +68,7 @@
         @enderror
     </div>
 
-    {{-- ===================== Empleado ===================== --}}
+    {{-- Empleado --}}
     <div>
         <x-input-label for="id_empleado" value="Empleado" />
         <select id="id_empleado" {{ $esEditar ? 'disabled' : '' }} class="mt-1 block w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500
@@ -78,7 +78,7 @@
                     {{ $permiso->empleado->cod_trabajador }} - {{ $permiso->empleado->nombres }}
                 </option>
             @else
-                <option value="">Seleccione un empleado</option>
+                <option value="">Selecciona un empleado</option>
             @endif
         </select>
         @if ($esEditar)
@@ -89,16 +89,16 @@
         @enderror
     </div>
 
-    {{-- ===================== Tipo permiso ===================== --}}
+    {{-- Tipo de permiso --}}
     <div class="md:col-span-2">
         <x-input-label for="id_tipo_permiso" value="Tipo de permiso" />
         <select id="tipo_permiso" name="id_tipo_permiso" required class="mt-1 block w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-            <option value="">Seleccione un tipo</option>
+            <option value="">Selecciona un tipo</option>
             @foreach ($tiposPermiso as $tipo)
                 <option value="{{ $tipo->id }}" 
                     data-codigo="{{ $tipo->codigo }}"
                     data-distancia="{{ $tipo->requiere_distancia }}"
-                    {{-- LÓGICA DE DATAS DINÁMICOS --}}
+                    {{-- Lógica de datas dinámicos --}}
                     data-fechas="{{ $tipo->codigo === 'PERMISO_POR_HORAS' ? 0 : $tipo->requiere_fechas }}" 
                     data-fechaunica="{{ $tipo->codigo === 'PERMISO_POR_HORAS' ? 1 : 0 }}"
                     data-horas="{{ $tipo->codigo === 'PERMISO_POR_HORAS' ? 1 : 0 }}"
@@ -114,7 +114,7 @@
         @enderror
     </div>
 
-    {{-- ===================== Motivo ===================== --}}
+    {{-- Motivo --}}
     <div class="md:col-span-2">
         <x-input-label for="motivo" value="Motivo" />
         <textarea id="motivo" name="motivo" required rows="2" class="mt-1 w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ej: Permiso autorizado por jefatura">{{ old('motivo', $permiso?->motivo) }}</textarea>
@@ -131,17 +131,17 @@
         </select>
     </div>
 
-    {{-- ===================== NUEVO CAMPO: Ubicación Libre ===================== --}}
+    {{-- Campo: ubicación libre --}}
     <div id="campo_ubicacion_libre" class="hidden">
         <x-input-label for="ubicacion_libre" value="¿Ubicación libre?" />
         <select id="ubicacion_libre" name="ubicacion_libre" class="mt-1 block w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
             <option value="0" @selected($valorUbicacionLibre == 0)>No</option>
             <option value="1" @selected($valorUbicacionLibre == 1)>Sí</option>
         </select>
-        <p class="text-xs text-gray-500 mt-1">Si selecciona "Sí", no se validará el rango de metros.</p>
+        <p class="text-xs text-gray-500 mt-1">Si seleccionas "Sí", no se validará el rango de metros.</p>
     </div>
 
-    {{-- ===================== Campos dinámicos ===================== --}}
+    {{-- Campos dinámicos --}}
     
     {{-- Distancia --}}
     <div id="campo_distancia" class="hidden">
@@ -149,13 +149,13 @@
         <x-text-input id="cantidad_mts" name="cantidad_mts" type="number" min="1" value="{{ old('cantidad_mts', $permiso?->cantidad_mts) }}" class="mt-1 block w-full" />
     </div>
 
-    {{-- Valor Minutos --}}
+    {{-- Valor minutos --}}
     <div id="campo_valor" class="hidden">
         <x-input-label for="valor" value="Valor del permiso (minutos)" />
         <x-text-input id="valor" name="valor" type="number" min="1" value="{{ old('valor', $permiso?->valor) }}" class="mt-1 block w-full" />
     </div>
 
-    {{-- 🌟 NUEVO: FECHA ÚNICA Y RANGO DE HORAS --}}
+    {{-- Fecha única y rango de horas --}}
     <div id="campo_fecha_unica" class="hidden">
         <x-input-label for="fecha_unica" value="Fecha del permiso" />
         <x-text-input id="fecha_unica" name="fecha_inicio" type="date" value="{{ old('fecha_inicio', $permiso?->fecha_inicio) }}" class="mt-1 block w-full" min="{{ !$esEditar ? now()->toDateString() : '' }}" />
@@ -164,17 +164,17 @@
     <div id="campo_horas" class="hidden md:col-span-2">
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <x-input-label for="hora_ini" value="Hora de Salida" />
+                <x-input-label for="hora_ini" value="Hora de salida" />
                 <x-text-input id="hora_ini" name="hora_ini" type="time" value="{{ old('hora_ini', $permiso?->hora_ini ? \Carbon\Carbon::parse($permiso->hora_ini)->format('H:i') : '') }}" class="mt-1 block w-full" />
             </div>
             <div>
-                <x-input-label for="hora_fin_permiso" value="Hora de Regreso" />
+                <x-input-label for="hora_fin_permiso" value="Hora de regreso" />
                 <x-text-input id="hora_fin_permiso" name="hora_fin" type="time" value="{{ old('hora_fin', $permiso?->hora_fin ? \Carbon\Carbon::parse($permiso->hora_fin)->format('H:i') : '') }}" class="mt-1 block w-full" />
             </div>
         </div>
     </div>
 
-    {{-- Rango de Fechas Normal --}}
+    {{-- Rango de fechas normal --}}
     <div id="campo_fecha_inicio_rango" class="hidden">
         <x-input-label for="fecha_inicio_rango" value="Fecha inicio" />
         <x-text-input id="fecha_inicio_rango" name="fecha_inicio" type="date" value="{{ old('fecha_inicio', $permiso?->fecha_inicio) }}" min="{{ !$esEditar ? now()->toDateString() : '' }}" class="mt-1 block w-full" />
@@ -214,7 +214,7 @@
 
         const opt = tipo.options[tipo.selectedIndex];
         
-        // 1. Ubicación Libre (Por el código en vez de value 1)
+        // Ubicación libre
         const esFueraRango = (opt.dataset.codigo === 'FUERA_RANGO');
         toggle('campo_ubicacion_libre', esFueraRango);
 
@@ -231,7 +231,7 @@
             else inputDistancia.removeAttribute('required');
         }
 
-        // 2. Fechas Rango Normal
+        // Fechas rango normal
         const reqFechas = (opt.dataset.fechas === '1');
         toggle('campo_fecha_inicio_rango', reqFechas);
         toggle('campo_fecha_fin_rango', reqFechas);
@@ -244,13 +244,13 @@
             document.getElementById('fecha_fin').removeAttribute('required');
         }
 
-        // 3. Fecha Única
+        // Fecha única
         const reqFechaUnica = (opt.dataset.fechaunica === '1');
         toggle('campo_fecha_unica', reqFechaUnica);
         if(reqFechaUnica) document.getElementById('fecha_unica').setAttribute('required', 'true');
         else document.getElementById('fecha_unica').removeAttribute('required');
 
-        // 4. Horas Rango
+        // Horas rango
         const reqHoras = (opt.dataset.horas === '1');
         toggle('campo_horas', reqHoras);
         if(reqHoras){
@@ -261,7 +261,7 @@
             document.getElementById('hora_fin_permiso').removeAttribute('required');
         }
 
-        // Resto de campos
+        // Otros campos
         toggle('campo_dias', opt.dataset.dias === '1');
         toggle('campo_valor', opt.dataset.valor === '1');
     }
@@ -288,7 +288,7 @@
 
                 $.getJSON('/api/empleados/sucursal/' + sucursalID, function (data) {
                     let sel = $('#id_empleado');
-                    sel.empty().append('<option value="">Seleccione un empleado</option>');
+                    sel.empty().append('<option value="">Selecciona un empleado</option>');
                     data.forEach(e => {
                         sel.append(`<option value="${e.id}">${e.cod_trabajador} - ${e.nombres}</option>`);
                     });

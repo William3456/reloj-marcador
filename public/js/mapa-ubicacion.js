@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", function () {
         center: { lat: 13.6929, lng: -89.2182 },
         zoom: 13,
     });
+
     map.setOptions({
         restriction: {
             latLngBounds: elSalvadorBounds,
@@ -27,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 position: { lat, lng },
                 map: map,
                 draggable: true,
-                title: "Ubicación seleccionada"
+                title: "Ubicación"
             });
 
             marker.addListener('dragend', function () {
@@ -48,7 +49,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         geocoder.geocode({ location: { lat, lng } }, function (results, status) {
             if (status === "OK" && results[0]) {
-
                 const place = results[0];
                 const components = place.address_components || [];
 
@@ -57,12 +57,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     return comp ? comp.long_name : "";
                 };
 
-                // NUEVO: buscar nombre de lugar real si existe
+                // Identificación de lugar o establecimiento
                 const nombreLugar =
-                    get("establishment") ||     // Universidades, hospitales, centros comerciales
-                    get("point_of_interest") || // Restaurantes, locales, tiendas
-                    get("premise") ||           // Edificios o conjuntos
-                    place.name || "";           // fallback
+                    get("establishment") || 
+                    get("point_of_interest") || 
+                    get("premise") || 
+                    place.name || "";
 
                 const calle = get("route");
                 const numero = get("street_number");
@@ -71,7 +71,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const departamento = get("administrative_area_level_1");
                 const pais = get("country");
 
-                // Construcción de la dirección en una sola línea, como pediste
                 let texto = [
                     nombreLugar,
                     [calle, numero].filter(Boolean).join(" "),
@@ -81,25 +80,25 @@ document.addEventListener("DOMContentLoaded", function () {
                     pais
                 ].filter(Boolean).join(", ");
 
-                //document.getElementById("direccion").value = texto; //Habilitar si es necesario, obtiene la dirección completa en texto para mostrarlo en textarea
+                // document.getElementById("direccion").value = texto;
             }
         });
     }
 
-    // Botón “Mi ubicación”
+    // Botón de ubicación actual
     document.getElementById("btnMiUbicacion").addEventListener("click", function () {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function (position) {
                 setMarker(position.coords.latitude, position.coords.longitude);
             }, function () {
-                alert("No se pudo obtener tu ubicación.");
+                alert("No se pudo obtener la ubicación.");
             });
         } else {
-            alert("Tu navegador no soporta geolocalización.");
+            alert("El navegador no soporta geolocalización.");
         }
     });
 
-    // Obtener ubicación automáticamente
+    // Lógica de inicio (Edición vs Creación)
     if (document.getElementById('esEditar').value === "0") {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function (position) {
@@ -110,29 +109,25 @@ document.addEventListener("DOMContentLoaded", function () {
         let lat = parseFloat(document.getElementById('latitud').value);
         let lng = parseFloat(document.getElementById('longitud').value);
 
-        // Validar que SI existen coords válidas en edición
         if (!isNaN(lat) && !isNaN(lng)) {
             setMarker(lat, lng);
         } else {
-            console.warn("Latitud o longitud inválidas en edición, usando posición por defecto.");
+            console.warn("Coordenadas inválidas en modo edición.");
         }
     }
 
-    // Clic en el mapa → coloca marcador
+    // Evento de clic en mapa para posicionar marcador
     map.addListener("click", function (e) {
         setMarker(e.latLng.lat(), e.latLng.lng());
     });
 
-    // === Buscador  ===
-
-    // Define el punto de corte (breakpoint) para considerar 'móvil'
-    const MOBILE_BREAKPOINT = 767; // Ancho máximo en píxeles para aplicar estilos móviles
+    // Configuración del buscador dinámico
+    const MOBILE_BREAKPOINT = 767;
     const TOP_PC = '20px';
     const TOP_MOBILE = '60px';
 
-    // --- 1. Contenedor Principal ---
     const inputContainer = document.createElement("div");
-    inputContainer.id = "map-search-container"; // ID para referencia en la función
+    inputContainer.id = "map-search-container";
     inputContainer.style.position = "absolute";
     inputContainer.style.left = "50%";
     inputContainer.style.transform = "translateX(-50%)";
@@ -141,28 +136,19 @@ document.addEventListener("DOMContentLoaded", function () {
     inputContainer.style.justifyContent = "center";
     inputContainer.style.alignItems = "center";
     inputContainer.style.height = "40px";
-
-    // Estilos de ancho compactos y responsive (PC y móvil)
     inputContainer.style.width = "80%";
     inputContainer.style.maxWidth = "320px";
     inputContainer.style.minWidth = "200px";
-
-    // Clase de Tailwind CSS (Asegúrate de tener Tailwind configurado)
     inputContainer.className = "bg-white rounded-full shadow-lg pointer-events-auto relative";
 
-    // --- 2. Función de Posicionamiento Dinámico (TOP) ---
     function setResponsiveTopPosition() {
-        // Si el ancho de la ventana es menor o igual al punto de corte (móvil)
         if (window.innerWidth <= MOBILE_BREAKPOINT) {
-            inputContainer.style.top = TOP_MOBILE; // 60px en móvil
+            inputContainer.style.top = TOP_MOBILE;
         } else {
-            // Pantalla grande (PC)
-            inputContainer.style.top = TOP_PC; // 20px en PC
+            inputContainer.style.top = TOP_PC;
         }
     }
 
-
-    // --- 3. Icono de Búsqueda (Absoluto) ---
     const icon = document.createElement("span");
     icon.style.position = "absolute";
     icon.style.left = "12px";
@@ -170,23 +156,19 @@ document.addEventListener("DOMContentLoaded", function () {
     icon.style.transform = "translateY(-50%)";
     icon.style.display = "flex";
     icon.style.alignItems = "center";
-    icon.style.pointerEvents = "none"; // Permite el clic a través del icono
+    icon.style.pointerEvents = "none";
     icon.innerHTML = `
- <svg class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-  viewBox="0 0 24 24" stroke="currentColor">
-  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-   d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"/>
- </svg>`;
+        <svg class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"/>
+        </svg>`;
     inputContainer.appendChild(icon);
 
-
-    // --- 4. Campo de Input ---
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Buscar ubicación...";
     input.style.width = "100%";
     input.style.height = "100%";
-    input.style.padding = "0 12px 0 40px"; // Deja espacio para el icono
+    input.style.padding = "0 12px 0 40px";
     input.style.borderRadius = "999px";
     input.style.border = "none";
     input.style.outline = "none";
@@ -194,18 +176,10 @@ document.addEventListener("DOMContentLoaded", function () {
     input.className = "pointer-events-auto bg-transparent";
     inputContainer.appendChild(input);
 
-
-    // --- 5. Implementación y Listeners ---
-
-    // Adjuntarlo dentro del DIV del mapa (esencial para el modo Fullscreen)
-    // **ATENCIÓN: Asegúrate de que la variable `map` esté definida antes de ejecutar esto.**
     if (typeof map !== 'undefined' && map.getDiv) {
         map.getDiv().appendChild(inputContainer);
-    } else {
-        console.error("Error: La variable 'map' de Google Maps no está definida o accesible.");
     }
 
-    // Configuración del Autocomplete (requiere la librería 'places' de Google Maps)
     const autocomplete = new google.maps.places.Autocomplete(input, {
         fields: ["geometry", "formatted_address", "address_components", "name"],
         componentRestrictions: { country: "sv" }
@@ -215,76 +189,56 @@ document.addEventListener("DOMContentLoaded", function () {
     autocomplete.addListener("place_changed", function () {
         const place = autocomplete.getPlace();
         if (!place.geometry) return;
-        // Asume que 'setMarker' es una función definida en tu código para manejar el marcador.
-        if (typeof setMarker === 'function') {
-            setMarker(place.geometry.location.lat(), place.geometry.location.lng());
-        }
+        setMarker(place.geometry.location.lat(), place.geometry.location.lng());
     });
 
-
-    // Ejecutar la comprobación inmediatamente al cargar
     setResponsiveTopPosition();
-
-    // Ejecutar la comprobación cada vez que la ventana cambie de tamaño
     window.addEventListener('resize', setResponsiveTopPosition);
 
-    // ------------------------
-    // BOTÓN MI UBICACIÓN
-    // ------------------------
-    const btnMiUbicacion = document.createElement("button");
-    btnMiUbicacion.innerHTML = `
-<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-<path stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-5.686 6-10a6 6 0 10-12 0c0 4.314 6 10 6 10z" />
-<circle cx="12" cy="11" r="2" />
-</svg>`;
-
-    // === Estilos: gris sólido, moderno y visible ===
-    btnMiUbicacion.className = `
-bg-gray-600 hover:bg-gray-700 text-white
-p-3 rounded-full shadow-lg pointer-events-auto
-transition-all duration-200 border border-gray-700
-`;
-    btnMiUbicacion.style.backgroundColor = '#6b7280'; // gris sólido (Tailwind gray-500)
-    btnMiUbicacion.style.opacity = '1';
-    btnMiUbicacion.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-
-    btnMiUbicacion.type = "button";
-
-    // === Ubicación del botón en el mapa ===
-    map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(btnMiUbicacion);
-
-    // === Evento de clic ===
-    btnMiUbicacion.addEventListener("click", () => {
-        if (navigator.geolocation) {
-            // Animación de carga
-            btnMiUbicacion.innerHTML = `
-        <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    // Botón flotante de ubicación
+    const btnUbicacionFlotante = document.createElement("button");
+    btnUbicacionFlotante.innerHTML = `
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-5.686 6-10a6 6 0 10-12 0c0 4.314 6 10 6 10z" />
+            <circle cx="12" cy="11" r="2" />
         </svg>`;
+
+    btnUbicacionFlotante.className = "bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg pointer-events-auto transition-all duration-200 border border-gray-700";
+    btnUbicacionFlotante.style.backgroundColor = '#6b7280';
+    btnUbicacionFlotante.style.opacity = '1';
+    btnUbicacionFlotante.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    btnUbicacionFlotante.type = "button";
+
+    map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(btnUbicacionFlotante);
+
+    btnUbicacionFlotante.addEventListener("click", () => {
+        if (navigator.geolocation) {
+            btnUbicacionFlotante.innerHTML = `
+                <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>`;
 
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    const { latitude, longitude } = pos.coords;
-                    setMarker(latitude, longitude);
-                    btnMiUbicacion.innerHTML = `
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-5.686 6-10a6 6 0 10-12 0c0 4.314 6 10 6 10z" />
-                <circle cx="12" cy="11" r="2" />
-                </svg>`;
+                    setMarker(pos.coords.latitude, pos.coords.longitude);
+                    btnUbicacionFlotante.innerHTML = `
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-5.686 6-10a6 6 0 10-12 0c0 4.314 6 10 6 10z" />
+                            <circle cx="12" cy="11" r="2" />
+                        </svg>`;
                 },
                 () => {
                     alert("No se pudo obtener la ubicación actual.");
-                    btnMiUbicacion.innerHTML = `
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-5.686 6-10a6 6 0 10-12 0c0 4.314 6 10 6 10z" />
-                <circle cx="12" cy="11" r="2" />
-                </svg>`;
+                    btnUbicacionFlotante.innerHTML = `
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-5.686 6-10a6 6 0 10-12 0c0 4.314 6 10 6 10z" />
+                            <circle cx="12" cy="11" r="2" />
+                        </svg>`;
                 }
             );
         } else {
-            alert("Tu navegador no soporta geolocalización.");
+            alert("El navegador no soporta geolocalización.");
         }
     });
-
 });

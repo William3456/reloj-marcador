@@ -16,7 +16,7 @@
             </div>
         @endif
 
-        {{-- Grid de Empresas --}}
+        {{-- Grid de empresas --}}
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             
             @foreach($empresas as $empresa)
@@ -39,19 +39,19 @@
                     $colorFondoIcono = $esPro ? 'bg-yellow-100 text-yellow-600' : ($estaVencida ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600');
                 @endphp
 
-                {{-- Tarjeta de la Empresa (Con efecto especial si es la actual) --}}
+                {{-- Tarjeta de la empresa (con efecto especial si es la actual) --}}
                 <div class="relative bg-white rounded-2xl border-t-4 {{ $colorBorde }} flex flex-col overflow-hidden transition-all duration-300
                      {{ $esEmpresaActual ? ' shadow-2xl shadow-indigo-200/50 scale-[1.02] z-10' : 'shadow-sm hover:shadow-md' }}" 
                      x-data="{ tipoLicencia: '{{ $empresa->tipo_licencia }}' }">
                     
-                    {{-- 🌟 BADGE FLOTANTE PARA LA SESIÓN ACTUAL --}}
+                    {{-- Badge flotante para la sesión actual --}}
                     @if($esEmpresaActual)
                         <div class="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black px-3 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm flex items-center">
-                            <i class="fa-solid fa-location-dot mr-1.5 animate-bounce"></i> Sesión Actual
+                            <i class="fa-solid fa-location-dot mr-1.5 animate-bounce"></i> Sesión actual
                         </div>
                     @endif
 
-                    {{-- Cabecera de la Tarjeta --}}
+                    {{-- Cabecera de la tarjeta --}}
                     <div class="p-5 border-b border-gray-100 flex items-start gap-4">
                         <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 {{ $colorFondoIcono }}">
                             <i class="fa-solid {{ $esPro ? 'fa-crown' : ($estaVencida ? 'fa-lock' : 'fa-stopwatch') }} text-xl"></i>
@@ -62,46 +62,46 @@
                                 <i class="fa-solid fa-globe mr-1"></i> {{ $empresa->dominio }}
                             </p>
                             
-                            {{-- Badge de Estado --}}
+                            {{-- Badge de estado --}}
                             <div class="mt-3">
                                 @if($esPro)
                                     <span class="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                                        LICENCIA PRO
+                                        Licencia PRO
                                     </span>
                                 @elseif($diasRestantes < 0)
                                     <span class="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                                        VENCIDA HACE {{ abs($diasRestantes) }} DÍAS
+                                        Vencida hace {{ abs($diasRestantes) }} días
                                     </span>
                                 @elseif($diasRestantes === 0)
-                                    {{-- 🌟 CORRECCIÓN: HOY --}}
+                                    {{-- Hoy --}}
                                     <span class="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 animate-pulse">
-                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> ¡ÚLTIMO DÍA DE PRUEBA!
+                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> ¡Último día de prueba!
                                     </span>
                                 @else
                                     <span class="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                        DEMO: {{ $diasRestantes }} DÍAS RESTANTES
+                                        Demo: {{ $diasRestantes }} días restantes
                                     </span>
                                 @endif
                             </div>
                         </div>
                     </div>
 
-                    {{-- Formulario de Actualización --}}
+                    {{-- Formulario de actualización --}}
                     <form action="{{ route('empresas.update_licencia', $empresa->id) }}" method="POST" class="p-5 flex flex-col flex-grow {{ $esEmpresaActual ? 'bg-indigo-50/30' : 'bg-gray-50/30' }}">
                         @csrf
                         @method('PUT')
 
                         <div class="space-y-4 flex-grow">
-                            {{-- Select Tipo Licencia --}}
+                            {{-- Select tipo licencia --}}
                             <div>
-                                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Licencia</label>
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de licencia</label>
                                 <select name="tipo_licencia" x-model="tipoLicencia" class="w-full text-sm rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2">
-                                    <option value="0">Prueba (Demo)</option>
+                                    <option value="0">Prueba (demo)</option>
                                     <option value="1">Permanente (PRO)</option>
                                 </select>
                             </div>
 
-                            {{-- Input Fecha --}}
+                            {{-- Input fecha --}}
                             <div x-show="tipoLicencia == '0'" x-cloak x-transition>
                                 <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Vence el:</label>
                                 <div class="relative">
@@ -117,7 +117,7 @@
                             </div>
                         </div>
 
-                        {{-- Botón Guardar --}}
+                        {{-- Botón guardar --}}
                         <div class="mt-5 pt-4 border-t {{ $esEmpresaActual ? 'border-indigo-100' : 'border-gray-100' }}">
                             <button type="submit" class="w-full bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-400 font-bold py-2.5 px-4 rounded-lg shadow-sm transition-all text-sm flex items-center justify-center group active:scale-95">
                                 <i class="fa-solid fa-save mr-2 text-blue-400 group-hover:text-blue-600 transition-colors"></i> Actualizar

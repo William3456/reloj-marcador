@@ -1,13 +1,13 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-    {{-- 1. Nombre --}}
+    {{-- Nombre --}}
     <div>
         <x-input-label value="Nombre de sucursal" />
         <x-text-input type="text" value="{{ old('nombre', $sucursal->nombre ?? '') }}" name="nombre" class="mt-1 w-full"
             required />
     </div>
 
-    {{-- 2. Dirección --}}
+    {{-- Dirección --}}
     <div>
         <x-input-label value="Dirección" />
         <textarea name="direccion" id="direccion"
@@ -15,47 +15,41 @@
             rows="2" required>{{ old('direccion', $sucursal->direccion ?? '') }}</textarea>
     </div>
 
-    {{-- 3. Correo --}}
+    {{-- Correo --}}
     <div>
         <x-input-label value="Correo encargado" />
         <x-text-input type="email" name="correo_encargado"
             value="{{ old('correo_encargado', $sucursal->correo_encargado ?? '') }}" class="mt-1 w-full" required />
     </div>
 
-    {{-- 4. Teléfono --}}
+    {{-- Teléfono --}}
     <div>
         <x-input-label value="Teléfono" />
         <x-text-input id="telefono" type="text" name="telefono" maxlength="9"
             value="{{ old('telefono', $sucursal->telefono ?? '') }}" class="mt-1 w-full" required />
     </div>
 
-    {{-- 5. Empresa --}}
+    {{-- Empresa --}}
     <div>
         <x-input-label value="Empresa" />
         <select name="id_empresa"
             class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             required>
             @foreach ($empresas as $empresa)
-                <option value="{{ $empresa->id }}" {{ old('id_empresa') == $empresa->id ? 'selected' : '' }}>
+                <option value="{{ $empresa->id }}" {{ old('id_empresa', $sucursal->id_empresa ?? '') == $empresa->id ? 'selected' : '' }}>
                     {{ $empresa->nombre }}
                 </option>
             @endforeach
         </select>
     </div>
 
-
-
-
-    {{-- 7. RANGO DE MARCACIÓN (Tooltip Flotante) --}}
-    {{-- Eliminamos el div wrapper extra para que este ocupe su propia celda en el grid --}}
-    {{-- 7. RANGO DE MARCACIÓN --}}
+    {{-- Rango de marcación --}}
     <div>
         <x-input-label value="Rango de marcación (mts)" />
 
         <x-text-input type="number" value="{{ old('rango_marcacion_mts', $sucursal->rango_marcacion_mts ?? '') }}"
             name="rango_marcacion_mts" class="w-full mt-1" placeholder="Ej: 20" required />
 
-        {{-- Ayuda estática (estilo similar al de GPS pero sin desplegar) --}}
         <div class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
             <div class="flex items-start gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500 mt-0.5 shrink-0" fill="none"
@@ -64,14 +58,14 @@
                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p>
-                    <strong>Zona Permitida:</strong> Define qué tan lejos de la coordenada exacta permites marcar
+                    <strong>Zona permitida:</strong> Define qué tan lejos de la coordenada exacta permites marcar
                     (independientemente de la señal GPS).
                 </p>
             </div>
         </div>
     </div>
 
-    {{-- 8. MARGEN DE ERROR GPS (Ayuda Desplegable) --}}
+    {{-- Margen de error GPS --}}
     <div>
         <div class="flex items-center justify-between mb-1">
             <x-input-label value="Rango de error de GPS (mts)" />
@@ -80,7 +74,6 @@
         <x-text-input type="number" value="{{ old('margen_error_gps_mts', $sucursal->margen_error_gps_mts ?? '') }}"
             name="margen_error_gps_mts" class="w-full mt-1" placeholder="Ej 30" required />
 
-        {{-- Detalles desplegables (Acordeón) --}}
         <details
             class="mt-2 group text-sm text-gray-600 bg-blue-50 rounded-lg border border-blue-100 open:bg-white open:shadow-sm transition-all duration-300 relative z-10">
             <summary
@@ -99,10 +92,9 @@
                     señal del GPS "rebota".
                 </p>
 
-                {{-- Recomendación destacada --}}
                 <div
                     class="mb-3 p-2 bg-blue-100 text-blue-800 rounded text-center text-xs font-bold border border-blue-200">
-                    💡 ¿No está seguro? Un valor estándar seguro es 30.
+                    Si no estás seguro, un valor estándar recomendado es 30.
                 </div>
 
                 <div class="overflow-hidden rounded border border-gray-200">
@@ -115,7 +107,7 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             <tr>
-                                <td class="px-2 py-1">Aire libre / Parqueo</td>
+                                <td class="px-2 py-1">Aire libre / parqueo</td>
                                 <td class="px-2 py-1 font-mono text-blue-600 text-right">5 - 10</td>
                             </tr>
                             <tr>
@@ -123,12 +115,12 @@
                                 <td class="px-2 py-1 font-mono text-blue-600 text-right">15 - 20</td>
                             </tr>
                             <tr>
-                                <td class="px-2 py-1 bg-yellow-50 font-bold text-yellow-800">Edificio cerrado / Bodega
+                                <td class="px-2 py-1 bg-yellow-50 font-bold text-yellow-800">Edificio cerrado / bodega
                                 </td>
                                 <td class="px-2 py-1 font-mono text-blue-600 text-right bg-yellow-50 font-bold">30</td>
                             </tr>
                             <tr>
-                                <td class="px-2 py-1 bg-orange-50">Centro Comercial / Sótano</td>
+                                <td class="px-2 py-1 bg-orange-50">Centro comercial / sótano</td>
                                 <td class="px-2 py-1 font-mono text-blue-600 text-right bg-orange-50">50 - 80</td>
                             </tr>
                         </tbody>
@@ -137,20 +129,21 @@
             </div>
         </details>
     </div>
-    {{-- 9. Cantidad de Empleados --}}
+
+    {{-- Cantidad de empleados --}}
     <div>
         <x-input-label value="Cantidad de empleados" />
         <x-text-input type="number" value="{{ old('cant_empleados', $sucursal->cant_empleados ?? '') }}"
             name="cant_empleados" class="mt-1 w-full" required />
     </div>
 
-    {{-- 10. Estado --}}
+    {{-- Estado --}}
     <div>
         <x-input-label value="Estado" />
         <select name="estado"
             class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             required>
-            <option value="" {{ old('estado') === null ? 'selected' : '' }}>Seleccione...</option>
+            <option value="" {{ old('estado') === null ? 'selected' : '' }}>Selecciona...</option>
             @foreach ($estados as $estado)
                 <option value="{{ $estado->id }}" {{ old('estado', $sucursal->estado ?? '') == (string) $estado->id ? 'selected' : '' }}>
                     {{ $estado->nombre_estado }}
@@ -159,7 +152,7 @@
         </select>
     </div>
 
-    {{-- 11. Días laborales (Ocupa 2 columnas) --}}
+    {{-- Días laborales --}}
     <div class="md:col-span-2">
         <x-input-label value="Días laborales" />
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-lg border mt-1">
@@ -177,7 +170,7 @@
         @enderror
     </div>
 
-    {{-- 12. Mapa (Ocupa 2 columnas) --}}
+    {{-- Mapa --}}
     <div class="md:col-span-2">
         <x-mapa :lat="old('latitud', $sucursal->latitud ?? '')" :lng="old('longitud', $sucursal->longitud ?? '')" />
     </div>
@@ -187,7 +180,7 @@
 @push('scripts')
     <script>
         document.getElementById('telefono').addEventListener('input', function (e) {
-            let valor = e.target.value.replace(/\D/g, ''); // solo números
+            let valor = e.target.value.replace(/\D/g, ''); // Solo números
             if (valor.length > 4) {
                 valor = valor.slice(0, 4) + ' ' + valor.slice(4, 8);
             }

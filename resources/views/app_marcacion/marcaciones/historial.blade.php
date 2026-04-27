@@ -1,4 +1,4 @@
-<x-app-layout title="Mi Historial">
+<x-app-layout title="Mi historial">
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Historial</h2>
@@ -39,7 +39,7 @@
                             d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z">
                         </path>
                     </svg>
-                    Filtrar Historial
+                    Filtrar historial
                 </button>
             </div>
         </form>
@@ -114,7 +114,7 @@
                                 <div class="w-12 h-12 bg-blue-50 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
                                     <i class="fa-regular fa-calendar-check text-xl"></i>
                                 </div>
-                                <h3 class="text-sm font-bold text-gray-800">Día Libre</h3>
+                                <h3 class="text-sm font-bold text-gray-800">Día libre</h3>
                                 <p class="text-xs text-gray-500 mt-1">No hay registros ni turnos programados.</p>
                             </div>
                         @else
@@ -130,7 +130,7 @@
                                         @if($h)
                                             <i class="fa-regular fa-clock mr-1"></i> Turno {{ $index + 1 }} • {{ substr($h->hora_ini, 0, 5) }} - {{ substr($h->hora_fin, 0, 5) }}
                                         @else
-                                            <i class="fa-solid fa-plus mr-1"></i> Turno Extra
+                                            <i class="fa-solid fa-plus mr-1"></i> Turno extra
                                         @endif
                                     </span>
                                     <span class="text-[9px] font-bold px-2 py-0.5 rounded border {{ $t->estado->clase }}">
@@ -287,7 +287,7 @@
                                         </div>
                                         <div class="ml-4 flex-grow">
                                             <p class="text-sm font-bold {{ str_contains($t->estado->clase, 'red') ? 'text-red-700' : (str_contains($t->estado->clase, 'blue') ? 'text-blue-700' : 'text-gray-500') }}">
-                                                {{ str_contains($t->estado->clase, 'red') ? 'Turno Perdido' : (str_contains($t->estado->clase, 'blue') ? 'Día Exonerado' : 'Programado') }}
+                                                {{ str_contains($t->estado->clase, 'red') ? 'Turno perdido' : (str_contains($t->estado->clase, 'blue') ? 'Día exonerado' : 'Programado') }}
                                             </p>
                                             <p class="text-[10px] {{ str_contains($t->estado->clase, 'red') ? 'text-red-500' : 'text-gray-400' }}">
                                                 {{ str_contains($t->estado->clase, 'red') ? 'No asististe' : 'Sin registros de GPS/Foto' }}
@@ -351,14 +351,14 @@
                         <i class="fa-solid fa-file-contract text-sm"></i>
                     </div>
                     <div>
-                        <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Permisos Aplicados:</h4>
+                        <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Permisos aplicados:</h4>
                         <p id="modal-permiso-texto" class="text-sm font-bold text-blue-800 leading-snug">---</p>
                     </div>
                 </div>
 
                 {{-- Foto --}}
                 <div class="mb-6 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner min-h-[14rem]">
-                    <img id="modal-img" src="" class="w-full h-56 object-cover" alt="Evidencia" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+Evidencia';">
+                    <img id="modal-img" src="" class="w-full h-56 object-cover" alt="Evidencia" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+evidencia';">
                 </div>
 
                 {{-- Tarjeta de Ubicación --}}
@@ -370,7 +370,7 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sucursal Asignada</p>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sucursal asignada</p>
                             <p id="modal-sucursal-texto" class="text-sm font-bold text-gray-900">---</p>
                         </div>
                     </div>
@@ -382,7 +382,7 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dirección GPS Detectada</p>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dirección GPS detectada</p>
                             <p id="modal-direccion-gps" class="text-sm font-bold text-gray-900 leading-tight">Obteniendo dirección...</p>
                         </div>
                     </div>

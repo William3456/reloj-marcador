@@ -1,10 +1,10 @@
 $(document).ready(function () {
 
-    // 1. Variables de Estado Globales
+    // Variables de estado
     let rows_selected = []; // Memoria de IDs seleccionados
-    let totalCambios = 0;   // Contador de acciones (Asignar/Eliminar)
+    let totalCambios = 0;   // Contador de acciones (asignar/eliminar)
 
-    // Función para actualizar la UI del contador de cambios
+    // Actualizar la interfaz del contador de cambios
     function actualizarBadgeCambios() {
         let badge = $('#contadorCambios');
         let numSpan = $('#numCambios');
@@ -19,8 +19,7 @@ $(document).ready(function () {
         }
     }
 
-    // 🌟 MOVIDA ARRIBA: Función auxiliar para saber qué días tiene un empleado actualmente en la UI
-    // La movemos aquí para que el render de DataTables pueda usarla.
+    // Función auxiliar para obtener los días de remoto actuales en la interfaz
     function obtenerDiasRemotoActuales(data) {
         if (data.remoto_accion === 'asignar') return data.remoto_pendiente || [];
         if (data.remoto_accion === 'eliminar') return [];
@@ -56,7 +55,7 @@ $(document).ready(function () {
                 render: function (horarios, type, row, meta) {
                     let html = '<div class="flex flex-col gap-2">';
 
-                    // PARTE 1: HORARIOS PRESENCIALES
+                    // Horarios presenciales
                     if (!horarios || horarios.length === 0) {
                         html += '<div class="p-2 text-gray-400 text-xs italic bg-gray-50 rounded text-center">Sin asignación</div>';
                     } else {
@@ -98,7 +97,7 @@ $(document).ready(function () {
                         });
                     }
 
-                    // 🌟 PARTE 2: LÓGICA DE HOME OFFICE (Actualizado para Badges Individuales)
+                    // Trabajo remoto (Home office)
                     let diasRemoto = obtenerDiasRemotoActuales(row);
 
                     if (diasRemoto && diasRemoto.length > 0) {
@@ -144,7 +143,7 @@ $(document).ready(function () {
         }
     });
 
-    // Asegurar estructura de datos
+    // Asegurar estructura de datos de los registros
     tabla.rows().every(function () {
         let data = this.data();
         if (!data.horarios) { data.horarios = []; this.data(data); }
@@ -152,9 +151,7 @@ $(document).ready(function () {
         if (!data.horarios_eliminados) data.horarios_eliminados = [];
     });
 
-    // ==========================================
-    // LÓGICA DE SELECCIÓN (CHECKBOXES)
-    // ==========================================
+    // Gestión de selección (checkboxes)
     function actualizarContadorSeleccionados() {
         let count = rows_selected.length;
         let span = $('#contadorSeleccionados');
@@ -195,9 +192,7 @@ $(document).ready(function () {
         e.stopPropagation();
     });
 
-    // ==========================================
-    // CAMBIO DE SUCURSAL (RESET)
-    // ==========================================
+    // Carga de datos por sucursal
     function cargarDatosSucursal() {
         let sucursalID = $('#sucursal').val();
 
@@ -245,7 +240,7 @@ $(document).ready(function () {
                         }
 
                         htmlHoras.push(`<div class="${separatorClass} flex flex-col justify-center h-full">${labelHtml}<span class="text-gray-700 font-medium">${h.horas_laborales ?? '-'}</span></div>`);
-                        htmlTolerancia.push(`<div class="${separatorClass} flex flex-col justify-center h-full">${labelHtml}<span class="text-gray-600">${(h.tolerancia ?? '0') + ' Min.'}</span></div>`);
+                        htmlTolerancia.push(`<div class="${separatorClass} flex flex-col justify-center h-full">${labelHtml}<span class="text-gray-600">${(h.tolerancia ?? '0') + ' min.'}</span></div>`);
                         htmlRangos.push(`<div class="${separatorClass} flex flex-col justify-center">${labelHtml}<span class="font-bold text-gray-800 text-sm">${h.hora_ini ?? '-'} - ${h.hora_fin ?? '-'}</span>${diasTextoCorto ? `<span class="text-[10px] text-gray-500 leading-tight mt-0.5">${diasTextoCorto}</span>` : ''}</div>`);
 
                         listaHidden.push({ inicio: h.hora_ini ?? '00:00', fin: h.hora_fin ?? '00:00', dias: h.dias });
@@ -271,16 +266,14 @@ $(document).ready(function () {
                 });
                 tabla.clear().rows.add(data).draw();
             },
-            error: function () { alertify.error('Error cargando empleados'); }
+            error: function () { alertify.error('Error al cargar empleados'); }
         });
     }
 
     if ($('#sucursal').val()) cargarDatosSucursal();
     $('#sucursal').on('change', cargarDatosSucursal);
 
-    // ==========================================
-    // LÓGICA DE HORARIOS (Presenciales)
-    // ==========================================
+    // Gestión de horarios presenciales
     $('#btnAgregarHorario').click(function () {
         let select = $('#horario option:selected');
         let horarioID = select.val();
@@ -295,7 +288,7 @@ $(document).ready(function () {
             origen: 'Nuevo'
         };
 
-        if (rows_selected.length === 0) { alertify.error('Seleccione al menos un empleado'); return; }
+        if (rows_selected.length === 0) { alertify.error('Selecciona al menos un empleado'); return; }
         if (!horarioDentroDeSucursal(horarioObj.hora_ini, horarioObj.hora_fin, horarioObj.dias)) {
             alertify.error('El horario o el día no está permitido en esta sucursal');
             return;
@@ -356,16 +349,12 @@ $(document).ready(function () {
                 totalCambios++;
                 actualizarBadgeCambios();
                 row.data(data).invalidate().draw(false);
-                alertify.success('Eliminado');
+                alertify.success('Horario removido');
             }, function () { }
         ).set('labels', { ok: 'Sí, eliminar', cancel: 'Cancelar' });
     });
 
-    // ==========================================
-    // LÓGICA DE TRABAJO REMOTO
-    // ==========================================
-
-    // AGREGAR / UNIR DÍAS
+    // Gestión de trabajo remoto (Home office)
     $('#btnAsignarRemoto').click(function (e) {
         e.preventDefault();
 
@@ -374,8 +363,8 @@ $(document).ready(function () {
             selectedDays.push($(this).val());
         });
 
-        if (rows_selected.length === 0) { alertify.error('Seleccione al menos un empleado en la tabla'); return; }
-        if (selectedDays.length === 0) { alertify.error('Seleccione al menos un día para el Home Office'); return; }
+        if (rows_selected.length === 0) { alertify.error('Selecciona al menos un empleado en la tabla'); return; }
+        if (selectedDays.length === 0) { alertify.error('Selecciona al menos un día para el Home office'); return; }
 
         let cambiosEnEstaAccion = 0;
 
@@ -386,16 +375,14 @@ $(document).ready(function () {
             if ($.inArray(rowId, rows_selected) !== -1) {
                 let diasActuales = obtenerDiasRemotoActuales(data);
                 
-                // 🌟 MAGIA AQUÍ: Unimos los días actuales con los seleccionados, y eliminamos duplicados
+                // Unimos días actuales con los seleccionados sin duplicados
                 let nuevosDias = [...new Set([...diasActuales, ...selectedDays])].sort();
                 let sortedActuales = diasActuales.slice().sort();
 
-                // Validamos si la unión resultó en exactamente los mismos días que ya tenía
                 if (JSON.stringify(nuevosDias) === JSON.stringify(sortedActuales)) {
-                    return; // Saltamos este empleado, ya los tenía
+                    return; 
                 }
 
-                // Asignamos la nueva lista unificada
                 data.remoto_pendiente = nuevosDias;
                 data.remoto_accion = 'asignar';
                 totalCambios++;
@@ -413,25 +400,21 @@ $(document).ready(function () {
         }
     });
 
-    // 🌟 NUEVO: ELIMINAR DÍA INDIVIDUAL DESDE LA "X"
+    // Eliminar día individual de Home office
     $('#tablaTrabajadores tbody').on('click', '.btnEliminarDiaRemoto', function (e) {
-        e.stopPropagation(); // Evitar que seleccione la fila al hacer clic en la 'x'
+        e.stopPropagation(); 
         let btn = $(this);
         let row = tabla.row(btn.closest('tr'));
         let data = row.data();
         let diaAEliminar = btn.data('dia');
 
         let diasActuales = obtenerDiasRemotoActuales(data);
-        
-        // Filtramos el array para quitar el día seleccionado
         let nuevosDias = diasActuales.filter(d => d !== diaAEliminar);
 
         if (nuevosDias.length === 0) {
-            // Si ya no le quedan días, la acción debe ser eliminar el registro por completo
             data.remoto_accion = 'eliminar';
             data.remoto_pendiente = [];
         } else {
-            // Si aún le quedan días, la acción es asignar la nueva lista recortada
             data.remoto_accion = 'asignar';
             data.remoto_pendiente = nuevosDias;
         }
@@ -441,10 +424,10 @@ $(document).ready(function () {
         row.data(data).invalidate().draw(false);
     });
 
-    // ELIMINAR TODOS LOS DÍAS MASIVAMENTE
+    // Eliminar Home office masivamente
     $('#btnEliminarRemoto').click(function (e) {
         e.preventDefault();
-        if (rows_selected.length === 0) { alertify.error('Seleccione al menos un empleado'); return; }
+        if (rows_selected.length === 0) { alertify.error('Selecciona al menos un empleado'); return; }
 
         let cambiosEnEstaAccion = 0;
 
@@ -470,13 +453,11 @@ $(document).ready(function () {
             tabla.draw(false);
             actualizarBadgeCambios();
         } else {
-            alertify.warning('Los empleados seleccionados no tenían Home Office asignado.');
+            alertify.warning('Los empleados seleccionados no tenían Home office asignado.');
         }
     });
 
-    // ==========================================
-    // UTILS Y RANGOS
-    // ==========================================
+    // Funciones de validación
     function horariosSeSobreponen(ini1, fin1, dias1, ini2, fin2, dias2) {
         const clean = (t) => t ? t.substring(0, 5) : '';
         const horasChocan = clean(ini1) < clean(fin2) && clean(fin1) > clean(ini2);
@@ -534,9 +515,7 @@ $(document).ready(function () {
         });
     }
 
-    // ==========================================
-    // SUBMIT GLOBAL AL CONTROLADOR
-    // ==========================================
+    // Envío del formulario masivo
     $('#formHorario').on('submit', function (e) {
         e.preventDefault();
         $('.dinamico').remove();
@@ -549,7 +528,7 @@ $(document).ready(function () {
 
             let nuevos = data.horarios_nuevos || [];
             let eliminados = data.horarios_eliminados || [];
-            let rAccion = data.remoto_accion; // 'asignar' o 'eliminar'
+            let rAccion = data.remoto_accion; 
 
             if (nuevos.length > 0 || eliminados.length > 0 || rAccion) {
                 itemsProcesados++;
@@ -573,7 +552,7 @@ $(document).ready(function () {
             }
         });
 
-        if (itemsProcesados === 0) { alertify.error('No hay cambios pendientes de Horarios o Remoto'); return; }
+        if (itemsProcesados === 0) { alertify.error('No hay cambios pendientes de horarios o remoto'); return; }
 
         alertify.confirm('Confirmar asignaciones', `Se procesarán cambios masivos para ${itemsProcesados} empleados. ¿Continuar?`,
             function () { form.submit(); },

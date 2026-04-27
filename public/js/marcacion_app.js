@@ -1,7 +1,6 @@
-const MODO_PRUEBAS = false; // Cambiar a true solo para desarrollo
-const PRECISION_REQUERIDA = 100; // Metros aceptables
+const MODO_PRUEBAS = false; 
+const PRECISION_REQUERIDA = 100; 
 
-// Ubicación fija de prueba
 const UBICACION_FAKE = {
     latitude: 13.76696,
     longitude: -89.24584,
@@ -19,11 +18,9 @@ const btnMarcarModal = document.getElementById('btn-marcar-modal');
 const statusGpsModal = document.getElementById('gps-status-modal');
 const gpsAccuracyTextModal = document.getElementById('gps-accuracy-modal');
 
-//  NUEVO: Leer si el día de hoy es Home Office
 const inputEsRemoto = document.getElementById('es_hoy_remoto');
 const esHoyRemoto = inputEsRemoto && inputEsRemoto.value === '1';
 
-// Variables de estado
 let gpsValido = false;
 let fotoValida = false;
 
@@ -31,7 +28,6 @@ function toggleModal(modalID) {
     document.getElementById(modalID).classList.toggle("hidden");
 }
 
-// --- RELOJ EN TIEMPO REAL ---
 function actualizarReloj() {
     const ahora = new Date();
     const horas = String(ahora.getHours()).padStart(2, '0');
@@ -43,7 +39,6 @@ function actualizarReloj() {
 setInterval(actualizarReloj, 1000);
 actualizarReloj();
 
-// --- GEOLOCALIZACIÓN ---
 const options = {
     enableHighAccuracy: true,
     timeout: 15000,
@@ -57,7 +52,6 @@ if (MODO_PRUEBAS) {
 } else {
     statusGps.textContent = "GPS no soportado en este navegador";
     statusGps.className = "text-sm text-red-600 font-bold";
-    // Si es remoto, lo perdonamos aunque no haya soporte
     if (esHoyRemoto) aplicarEstiloRemoto(true);
 }
 
@@ -71,16 +65,14 @@ function aplicarUbicacionFake() {
     });
 }
 
-// 🌟 FUNCIÓN AUXILIAR PARA PINTAR DE MORADO
 function aplicarEstiloRemoto(sinGps = false) {
-    gpsValido = true; // Forzamos la validación a true
+    gpsValido = true; 
     
     const claseContenedor = 'flex items-center justify-between p-3 rounded-lg border bg-purple-50 border-purple-200 transition-colors mb-4';
-    const textoGps = '<i class="fa-solid fa-house-laptop mr-1"></i> Trabajo Remoto Habilitado';
+    const textoGps = '<i class="fa-solid fa-house-laptop mr-1"></i> Trabajo remoto habilitado';
     const claseTextoGps = 'text-sm font-bold text-purple-700';
-    const textoAcc = sinGps ? '<span class="text-purple-500 font-bold uppercase text-[10px]">Sin GPS (Permitido)</span>' : '<span class="text-purple-500 font-bold uppercase text-[10px]">Rango Liberado</span>';
+    const textoAcc = sinGps ? '<span class="text-purple-500 font-bold uppercase text-[10px]">Sin GPS (permitido)</span>' : '<span class="text-purple-500 font-bold uppercase text-[10px]">Rango liberado</span>';
 
-    // Para el formulario principal
     if (statusGps) {
         const contenedor = statusGps.closest('.flex.items-center.justify-between');
         if (contenedor) contenedor.className = claseContenedor;
@@ -89,7 +81,6 @@ function aplicarEstiloRemoto(sinGps = false) {
     }
     if (gpsAccuracyText) gpsAccuracyText.innerHTML = textoAcc;
 
-    // Para el modal de olvido de salida
     if (statusGpsModal) {
         const contenedorM = statusGpsModal.closest('.flex.items-center.justify-between');
         if (contenedorM) contenedorM.className = claseContenedor;
@@ -109,7 +100,6 @@ function success(position) {
     const lng = position.coords.longitude;
     const acc = Math.round(position.coords.accuracy);
 
-    // Llenamos los inputs ocultos siempre que haya coordenadas
     if(inputLat) inputLat.value = lat;
     if(inputLng) inputLng.value = lng;
     const modalLat = document.querySelector('.lat-bloqueo');
@@ -117,13 +107,11 @@ function success(position) {
     if (modalLat) modalLat.value = lat;
     if (modalLng) modalLng.value = lng;
 
-    // 🌟 INTERVENCIÓN DE HOME OFFICE
     if (esHoyRemoto) {
         aplicarEstiloRemoto(false);
-        return; // Detenemos la validación estricta de metros
+        return;
     }
 
-    // 1. Mostrar Precisión al Usuario visualmente (Normal)
     let colorPrecision = 'text-red-500';
     if (acc <= PRECISION_REQUERIDA) colorPrecision = 'text-green-600';
     else if (acc <= PRECISION_REQUERIDA * 2) colorPrecision = 'text-orange-500';
@@ -131,16 +119,14 @@ function success(position) {
     if(gpsAccuracyText) gpsAccuracyText.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
     if(gpsAccuracyTextModal) gpsAccuracyTextModal.innerHTML = `<span class="${colorPrecision} font-bold"><i class="fa-solid fa-satellite-dish"></i> Margen de error: ${acc} metros</span>`;
 
-    // 2. Evaluar si la precisión es aceptable
     if (acc <= PRECISION_REQUERIDA) {
         gpsValido = true;
-
         if(statusGps) {
-            statusGps.textContent = "Ubicación Precisa Confirmada";
+            statusGps.textContent = "Ubicación confirmada";
             statusGps.className = "text-sm font-bold text-green-700";
         }
         if(statusGpsModal) {
-            statusGpsModal.textContent = "Ubicación Precisa Confirmada";
+            statusGpsModal.textContent = "Ubicación confirmada";
             statusGpsModal.className = "text-sm font-bold text-green-700";
         }
         const iconContainer = document.getElementById('gps-icon');
@@ -148,7 +134,6 @@ function success(position) {
 
     } else {
         gpsValido = false;
-
         if(statusGps) {
             statusGps.innerHTML = `Mejorando señal... <span class="text-xs text-orange-600">(Acércate a una ventana)</span>`;
             statusGps.className = "text-sm font-bold text-orange-500 animate-pulse";
@@ -167,7 +152,6 @@ function success(position) {
 function error(err) {
     console.warn('GPS Error: ' + err.message);
     
-    // 🌟 Si es Home Office, lo dejamos marcar aunque rechace el GPS o falle
     if (esHoyRemoto) {
         aplicarEstiloRemoto(true);
         return;
@@ -190,7 +174,6 @@ function error(err) {
 function actualizarEstadoBoton() {
     if (enviandoFormulario) return;
     
-    // 1. Botón Principal
     if (btnMarcar) {
         if (gpsValido && fotoValida) {
             btnMarcar.disabled = false;
@@ -201,7 +184,6 @@ function actualizarEstadoBoton() {
         }
     }
 
-    // 2. Botón del Modal de Olvido
     if (btnMarcarModal) {
         if (gpsValido && fotoValida) {
             btnMarcarModal.disabled = false;
@@ -213,7 +195,6 @@ function actualizarEstadoBoton() {
     }
 }
 
-// --- FOTOGRAFÍA ---
 function comprimirImagen(file, inputElement, previewElement, placeholderElement) {
     if (!file || !file.type.match(/image.*/)) return;
 
@@ -268,7 +249,6 @@ function previewImageModal(event) {
     if (input.files && input.files[0]) comprimirImagen(input.files[0], input, preview, placeholder);
 }
 
-
 let mapHistorial;
 let markerHistorial;
 
@@ -281,8 +261,6 @@ function abrirDetalleHistorial(elemento) {
     const lat = parseFloat(elemento.getAttribute('data-lat'));
     const lng = parseFloat(elemento.getAttribute('data-lng'));
     const badgesHtml = elemento.getAttribute('data-badges');
-    
-    // NUEVO: Recibimos las horas
     const horasPermiso = elemento.getAttribute('data-horas-permiso');
 
     document.getElementById('md-titulo').innerText = tipo;
@@ -291,7 +269,6 @@ function abrirDetalleHistorial(elemento) {
     document.getElementById('md-sucursal').innerText = sucursal;
     document.getElementById('md-badges-container').innerHTML = badgesHtml;
 
-    // 🌟 NUEVO: Mostrar u ocultar la caja de horas
     const boxPermiso = document.getElementById('md-permiso-box');
     const txtHoras = document.getElementById('md-permiso-horas');
 
@@ -299,7 +276,7 @@ function abrirDetalleHistorial(elemento) {
         if (horasPermiso && horasPermiso.trim() !== "" && horasPermiso !== "null") {
             txtHoras.innerText = horasPermiso;
             boxPermiso.classList.remove('hidden');
-            boxPermiso.classList.add('inline-flex'); // Aseguramos que se muestre compacto
+            boxPermiso.classList.add('inline-flex'); 
         } else {
             boxPermiso.classList.add('hidden');
             boxPermiso.classList.remove('inline-flex');
@@ -338,7 +315,6 @@ function initMapHistorial(lat, lng) {
     }
 }
 
-// --- LÓGICA DE LOADER Y BLOQUEO DE DOBLE CLICK ---
 let enviandoFormulario = false;
 
 function activarLoader(btnId) {

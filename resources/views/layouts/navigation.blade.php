@@ -21,7 +21,7 @@
 
         <a href="{{ route('dashboard') }}" class="flex items-center space-x-2 overflow-hidden whitespace-nowrap">
             @if(isset($empresaGlobal) && $empresaGlobal->logo)
-                <img src="{{ Storage::url($empresaGlobal->logo) }}" alt="Logo Empresa"
+                <img src="{{ Storage::url($empresaGlobal->logo) }}" alt="Logo de la empresa"
                     class="block h-8 w-auto object-contain shrink-0 rounded">
             @else
                 <x-application-logo class="block h-8 w-auto fill-current text-blue-600 shrink-0" />
@@ -60,7 +60,7 @@
             </div>
 
             <p x-show="sidebarExpanded" x-cloak class="text-xs text-gray-500 font-medium mt-0.5 truncate">
-                {{ optional(Auth::user()->rol)->rol_name ?? 'Sin Rol' }}
+                {{ optional(Auth::user()->rol)->rol_name ?? 'Sin rol' }}
             </p>
         </a>
     </div>
@@ -101,8 +101,7 @@
 
                     <div class="flex items-center">
                         <i class="fas fa-user-shield w-5 text-center shrink-0"></i>
-                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Mis
-                            Permisos</span>
+                        <span x-show="sidebarExpanded" x-cloak class="ml-3 font-medium whitespace-nowrap">Mis permisos</span>
                     </div>
 
                     <i x-show="sidebarExpanded" x-cloak
@@ -111,7 +110,7 @@
 
                     <div x-show="!sidebarExpanded" x-cloak
                         class="absolute left-full ml-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
-                        Mis Permisos
+                        Mis permisos
                     </div>
                 </button>
 
@@ -209,8 +208,7 @@
                 </button>
                 <div x-show="open && sidebarExpanded" x-cloak class="mt-1 ml-9 space-y-1 border-l-2 border-gray-200 pl-2">
                     <a href="{{ route('sucursales.index') }}"
-                        class="block py-2 text-sm {{ request()->routeIs('sucursales.index') ? $activeLinkClass : $inactiveLinkClass }}">Lista
-                        sucursales</a>
+                        class="block py-2 text-sm {{ request()->routeIs('sucursales.index') ? $activeLinkClass : $inactiveLinkClass }}">Lista de sucursales</a>
                     @if ($role == 1)
                         <a href="{{ route('sucursales.create') }}"
                             class="block py-2 text-sm {{ request()->routeIs('sucursales.create') ? $activeLinkClass : $inactiveLinkClass }}">Añadir
@@ -386,7 +384,7 @@
             :class="sidebarExpanded ? 'px-4 py-2' : 'justify-center py-3'">
 
             <i class="fas fa-sign-out-alt w-5 text-center shrink-0"></i>
-            <span x-show="sidebarExpanded" x-cloak class="ml-3 whitespace-nowrap">Cerrar Sesión</span>
+            <span x-show="sidebarExpanded" x-cloak class="ml-3 whitespace-nowrap">Cerrar sesión</span>
 
             <div x-show="!sidebarExpanded" x-cloak
                 class="absolute left-full ml-2 bg-red-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap pointer-events-none shadow-lg">
@@ -466,13 +464,13 @@
         modalTitle: '', 
         modalMessage: '', 
         buttonText: '' 
-     }" @open-confirm-modal.window="
+      }" @open-confirm-modal.window="
         open = true; 
         actionUrl = $event.detail.url;
         modalTitle = $event.detail.title;
         modalMessage = $event.detail.message;
         buttonText = $event.detail.buttonText;
-     " x-show="open" style="display: none;"
+      " x-show="open" style="display: none;"
     class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"

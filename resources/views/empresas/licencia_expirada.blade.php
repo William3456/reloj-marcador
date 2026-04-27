@@ -50,7 +50,7 @@
             </div>
 
             <a href="mailto:soporte@tecnologiassv.org" class="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition-all">
-                <i class="fa-solid fa-headset mr-2"></i> Contactar a Soporte
+                <i class="fa-solid fa-headset mr-2"></i> Contactar a soporte
             </a>
 
             @if(Auth::check())

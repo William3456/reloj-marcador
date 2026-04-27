@@ -20,12 +20,12 @@
     <div class="container">
         
         <div class="header">
-            <h2>Acceso al Sistema</h2>
+            <h2>Acceso al sistema</h2>
         </div>
         
         <div class="content">
             <p>Hola,</p>
-            <p>Se ha creado exitosamente tu acceso al <strong>Sistema de Marcaciones</strong>. A continuación, te proporcionamos tus credenciales de ingreso:</p>
+            <p>Se ha creado exitosamente tu acceso al <strong>sistema de marcaciones</strong>. A continuación, te proporcionamos tus credenciales de ingreso:</p>
             
             <div class="details">
                 <p style="margin-top: 0;"><strong>Usuario:</strong> <span style="color: #1d4ed8; font-weight:bold;">{{ $email }}</span></p>
@@ -33,16 +33,16 @@
             </div>
 
             <div class="warning-box">
-                ⚠️ Por tu seguridad, inicia sesión y cambia esta contraseña inmediatamente.
+                Por tu seguridad, inicia sesión y cambia esta contraseña inmediatamente.
             </div>
             
             <center>
-                <a href="https://{{ $hostName }}/login" class="btn">Iniciar Sesión Ahora</a>
+                <a href="https://{{ $hostName }}/login" class="btn">Iniciar sesión ahora</a>
             </center>
         </div>
         
         <div class="footer">
-            <p>Saludos,<br><strong style="color: #475569;">Sistema de Marcaciones</strong></p>
+            <p>Saludos,<br><strong style="color: #475569;">Sistema de marcaciones</strong></p>
             <p style="margin-top: 10px; font-size: 10px;">Este es un mensaje automático, por favor no respondas a este correo.</p>
         </div>
         

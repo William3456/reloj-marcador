@@ -2,7 +2,7 @@
     <div>
         <x-input-label value="Sucursal" />
         <select id="sucursal" name="id_sucursal" class="w-full border-gray-300 rounded-md" required>
-            <option value="">Seleccione…</option>
+            <option value="">Selecciona...</option>
             @foreach ($sucursales as $s)
                 <option value="{{ $s->id }}" {{ old('id_sucursal', $depto->sucursal_id ?? '') == $s->id ? 'selected' : '' }}>
                     {{ $s->nombre }}
@@ -12,8 +12,8 @@
         @error('id_sucursal') <p class="text-red-500 text-sm">{{ $message }}</p> @enderror
     </div>
     <div>
-        <x-input-label value="Nombre departamento" />
-        <x-text-input name="name" value="{{ old('nombres', $depto->nombre_depto ?? '') }}" class="w-full" required />
+        <x-input-label value="Nombre del departamento" />
+        <x-text-input name="name" value="{{ old('name', $depto->nombre_depto ?? '') }}" class="w-full" required />
     </div>
     <div>
         <x-input-label value="Estado" />

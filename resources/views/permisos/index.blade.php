@@ -2,11 +2,11 @@
 
     <x-slot name="header">
         <h2 class="font-bold text-xl text-gray-800 leading-tight">
-            {{ __('Gestión de Permisos') }}
+            {{ __('Gestión de permisos') }}
         </h2>
     </x-slot>
 
-    {{-- 🌟 ESTADO GLOBAL DE ALPINE PARA LOS MODALES DE APROBACIÓN --}}
+    {{-- Estado global de Alpine para los modales de aprobación --}}
     <div class="py-6 bg-gray-50 min-h-screen" 
          x-data="{ 
             showProcessModal: false, 
@@ -18,7 +18,7 @@
          
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-            {{-- Alertas Compactas --}}
+            {{-- Alertas compactas --}}
             @if (session('success'))
                 <div class="mb-4 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-green-700 shadow-sm flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-check-circle"></i>
@@ -31,16 +31,14 @@
                 </div>
             @endif
 
-            {{-- =========================================================================
-                 🌟 SECCIÓN 1: SOLICITUDES PENDIENTES (APP MÓVIL)
-                 ========================================================================= --}}
+            {{-- Sección 1: solicitudes pendientes (app móvil) --}}
             @if($pendientes->count() > 0)
                 <div class="mb-8">
                     <h3 class="text-lg font-black text-gray-800 mb-4 flex items-center gap-2 tracking-tight">
                         <div class="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center">
                             <i class="fa-solid fa-bell animate-pulse"></i> 
                         </div>
-                        Por Aprobar
+                        Por aprobar
                         <span class="bg-red-500 text-white text-xs px-2.5 py-0.5 rounded-full shadow-sm">{{ $pendientes->count() }}</span>
                     </h3>
 
@@ -48,7 +46,7 @@
                         @foreach($pendientes as $pendiente)
                             <div class="bg-white rounded-xl border border-yellow-200 shadow-sm overflow-hidden flex flex-col relative">
                                 
-                                {{-- Cabecera Tarjeta Pendiente --}}
+                                {{-- Cabecera de tarjeta pendiente --}}
                                 <div class="bg-yellow-50/50 px-4 py-3 border-b border-yellow-100 flex justify-between items-start">
                                     <div class="flex items-center gap-2">
                                         <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
@@ -62,7 +60,7 @@
                                     <span class="text-[10px] font-bold text-gray-400">{{ ucfirst($pendiente->created_at->locale('es')->isoFormat('DD MMM')) }}</span>
                                 </div>
 
-                                {{-- Cuerpo Tarjeta Pendiente --}}
+                                {{-- Cuerpo de tarjeta pendiente --}}
                                 <div class="p-4 flex-grow">
                                     <span class="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-[10px] font-bold uppercase rounded mb-2">
                                         {{ $pendiente->tipo->nombre ?? 'General' }}
@@ -81,7 +79,7 @@
                                             </span>
                                         @endif
                                         
-                                        {{-- 🌟 NUEVO: HORARIO DEL PERMISO --}}
+                                        {{-- Horario del permiso --}}
                                         @if($pendiente->hora_ini && $pendiente->hora_fin)
                                             <span class="flex items-center bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100">
                                                 <i class="fa-regular fa-clock mr-1"></i> 
@@ -103,7 +101,7 @@
                                     </div>
                                 </div>
 
-                                {{-- Botones de Acción --}}
+                                {{-- Botones de acción --}}
                                 <div class="grid grid-cols-2 border-t border-gray-100">
                                     <button @click="showProcessModal = true; processAction = 'rechazar'; processFormUrl = '{{ route('permisos.procesar', $pendiente->id) }}'; processName = '{{ $pendiente->empleado->nombres }} {{ $pendiente->empleado->apellidos }}'; processTipo = '{{ $pendiente->tipo->nombre }}';" 
                                             class="py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors border-r border-gray-100">
@@ -120,17 +118,15 @@
                 </div>
             @endif
 
-            {{-- =========================================================================
-                 SECCIÓN 2: DIRECTORIO NORMAL (ACORDEONES)
-                 ========================================================================= --}}
+            {{-- Sección 2: directorio normal (acordeones) --}}
             <div class="mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-folder-open text-gray-400"></i>
-                <h3 class="text-lg font-black text-gray-800 tracking-tight">Directorio de Permisos</h3>
+                <h3 class="text-lg font-black text-gray-800 tracking-tight">Directorio de permisos</h3>
             </div>
 
             <div class="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
 
-                {{-- Toolbar Compacto --}}
+                {{-- Toolbar compacto --}}
                 <div class="px-4 py-3 border-b border-gray-100 bg-white flex flex-col md:flex-row items-center justify-between gap-3">
                     <div class="relative w-full md:w-80 group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -142,18 +138,18 @@
 
                     <a href="{{ route('permisos.create') }}"
                         class="inline-flex items-center px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wide rounded-lg shadow-sm transition-all">
-                        <i class="fa-solid fa-plus mr-1.5"></i> Nuevo Permiso
+                        <i class="fa-solid fa-plus mr-1.5"></i> Nuevo permiso
                     </a>
                 </div>
 
-                {{-- Contenedor de Listas --}}
+                {{-- Contenedor de listas --}}
                 <div class="p-4 bg-gray-50 space-y-3">
 
                     @foreach($sucursales as $index => $sucursal)
                         <div x-data="{ open: {{ $index === 0 ? 'true' : 'false' }} }" x-ref="accordion"
                             class="bg-white border border-gray-200 rounded-lg shadow-sm sucursal-accordion">
 
-                            {{-- Header Acordeón Compacto --}}
+                            {{-- Cabecera de acordeón compacto --}}
                             <button type="button" class="w-full flex justify-between items-center px-4 py-2.5 text-left hover:bg-gray-50 transition-colors" @click="open = !open">
                                 <div class="flex items-center gap-2">
                                     <i class="fa-solid fa-building text-blue-500 text-sm"></i>
@@ -163,12 +159,12 @@
                                 <i class="fa-solid fa-chevron-down text-gray-400 text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
                             </button>
 
-                            {{-- Contenido Acordeón --}}
+                            {{-- Contenido de acordeón --}}
                             <div x-show="open" x-collapse class="border-t border-gray-100 sucursal-content">
                                 <div class="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                                     @foreach($sucursal->empleados as $empleado)
 
-                                        {{-- CARD COMPACTA EMPLEADO --}}
+                                        {{-- Tarjeta compacta de empleado --}}
                                         <div class="empleado-card group bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md hover:border-blue-400 transition-all duration-200 cursor-pointer"
                                             data-nombre="{{ $empleado->nombres }} {{ $empleado->apellidos }}"
                                             data-codigo="{{ $empleado->cod_trabajador }}" x-data="{ showModal: false }"
@@ -209,7 +205,7 @@
                                                 </span>
                                             </div>
 
-                                            {{-- MODAL DETALLE EMPLEADO --}}
+                                            {{-- Modal de detalle de empleado --}}
                                             <template x-teleport="body">
                                                 <div x-show="showModal" style="display: none;"
                                                     class="fixed inset-0 z-[9990] flex items-center justify-center bg-gray-900/40 backdrop-blur-[2px] p-4"
@@ -219,7 +215,7 @@
                                                     <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col transform transition-all"
                                                         @click.away="showModal = false" @click.stop>
 
-                                                        {{-- Header Modal --}}
+                                                        {{-- Cabecera del modal --}}
                                                         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-lg">
                                                             <div class="flex items-center gap-2">
                                                                 <div class="w-7 h-7 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold uppercase">
@@ -235,7 +231,7 @@
                                                             </button>
                                                         </div>
 
-                                                        {{-- Body Modal --}}
+                                                        {{-- Cuerpo del modal --}}
                                                         <div class="p-4 overflow-y-auto custom-scrollbar bg-gray-50/30">
                                                             @forelse($empleado->permisos as $permiso)
                                                                 <div class="bg-white border border-gray-200 rounded-lg p-3 mb-2 shadow-sm hover:border-blue-300 transition-colors">
@@ -247,7 +243,6 @@
                                                                                 </span>
                                                                                 <span class="w-1.5 h-1.5 rounded-full {{ $permiso->estado ? 'bg-green-500' : 'bg-gray-400' }}" title="{{ $permiso->estado ? 'Activo' : 'Inactivo' }}"></span>
                                                                                 
-                                                                                {{-- Etiqueta de Origen --}}
                                                                                 @if($permiso->app_creacion == 2)
                                                                                     <span class="text-[9px] font-bold text-blue-500 bg-blue-50 border border-blue-100 px-1 rounded" title="Solicitado por el empleado">APP</span>
                                                                                 @endif
@@ -265,7 +260,7 @@
                                                                                     </span>
                                                                                 @endif
 
-                                                                                {{-- 🌟 NUEVO: HORARIO DEL PERMISO --}}
+                                                                                {{-- Horario del permiso --}}
                                                                                 @if($permiso->hora_ini && $permiso->hora_fin)
                                                                                     <span class="flex items-center bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100">
                                                                                         <i class="fa-regular fa-clock mr-1"></i> 
@@ -325,9 +320,7 @@
             </div>
         </div>
 
-        {{-- =========================================================================
-             🌟 MODAL DE PROCESAMIENTO (APROBAR / RECHAZAR) CON TELEPORT
-             ========================================================================= --}}
+        {{-- Modal de procesamiento (aprobar / rechazar) con teleport --}}
         <template x-teleport="body">
             <div x-show="showProcessModal" style="display: none;"
                  class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4"
@@ -341,7 +334,7 @@
                     </div>
 
                     <div class="p-5 text-center">
-                        <h3 class="text-lg font-bold text-gray-900 mb-1" x-text="processAction === 'aprobar' ? '¿Aprobar Permiso?' : '¿Rechazar Permiso?'"></h3>
+                        <h3 class="text-lg font-bold text-gray-900 mb-1" x-text="processAction === 'aprobar' ? '¿Aprobar permiso?' : '¿Rechazar permiso?'"></h3>
                         <p class="text-sm text-gray-500 mb-4">
                             Estás a punto de <strong x-text="processAction" :class="processAction === 'aprobar' ? 'text-emerald-600' : 'text-red-600'"></strong> la solicitud de <strong class="text-gray-800" x-text="processTipo"></strong> para <strong class="text-gray-800" x-text="processName"></strong>.
                         </p>
@@ -355,7 +348,7 @@
                                 <button type="button" @click="showProcessModal = false" class="flex-1 bg-gray-100 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-200 transition-colors text-sm">
                                     Cancelar
                                 </button>
-                                <button type="submit" class="flex-1 text-white font-bold py-2.5 rounded-xl shadow-md transition-transform active:scale-95 text-sm" :class="processAction === 'aprobar' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'" x-text="processAction === 'aprobar' ? 'Sí, Aprobar' : 'Sí, Rechazar'">
+                                <button type="submit" class="flex-1 text-white font-bold py-2.5 rounded-xl shadow-md transition-transform active:scale-95 text-sm" :class="processAction === 'aprobar' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'" x-text="processAction === 'aprobar' ? 'Sí, aprobar' : 'Sí, rechazar'">
                                 </button>
                             </div>
                         </form>

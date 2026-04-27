@@ -6,7 +6,7 @@
     <div class="py-6 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            {{-- 1. MENSAJES DE ALERTA --}}
+            {{-- Mensajes de alerta --}}
             @if (session('success') || session('error'))
                 <div class="rounded-lg shadow-sm p-4 mb-4 border-l-4 {{ session('success') ? 'bg-green-50 border-green-500 text-green-700' : 'bg-red-50 border-red-500 text-red-700' }}">
                     <div class="flex items-center">
@@ -25,10 +25,10 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {{-- 2. COLUMNA IZQUIERDA: CONFIGURACIÓN (Sucursal, Horario y Remoto) --}}
+                    {{-- Columna izquierda: configuración (sucursal, horario y remoto) --}}
                     <div class="lg:col-span-1 space-y-6">
                         
-                        {{-- TARJETA DE CONFIGURACIÓN CON TABS --}}
+                        {{-- Tarjeta de configuración con tabs --}}
                         <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden" x-data="{ tabActiva: 'horarios' }">
                             
                             <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
@@ -37,7 +37,7 @@
                                 </h3>
                             </div>
 
-                            {{-- TABS NAV --}}
+                            {{-- Tabs nav --}}
                             <div class="flex border-b border-gray-200 bg-white">
                                 <button type="button" @click="tabActiva = 'horarios'"
                                         :class="tabActiva === 'horarios' ? 'text-blue-600 border-blue-600 bg-blue-50/50' : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'"
@@ -53,7 +53,7 @@
                             </div>
                             
                             <div class="p-5 space-y-5">
-                                {{-- Selector Sucursal (GLOBAL PARA AMBAS PESTAÑAS) --}}
+                                {{-- Selector sucursal (global para ambas pestañas) --}}
                                 <div>
                                     <label for="sucursal" class="block text-xs font-bold text-gray-500 uppercase mb-1">Sucursal *</label>
                                     <div class="relative">
@@ -70,10 +70,10 @@
                                     @error('id_sucursal') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                                 </div>
 
-                                {{-- TAB 1: FORMULARIO HORARIOS --}}
+                                {{-- Tab 1: formulario horarios --}}
                                 <div x-show="tabActiva === 'horarios'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" class="space-y-5">
                                     <div>
-                                        <label for="horario" class="block text-xs font-bold text-gray-500 uppercase mb-1">Horario a Asignar *</label>
+                                        <label for="horario" class="block text-xs font-bold text-gray-500 uppercase mb-1">Horario a asignar *</label>
                                         <div class="relative">
                                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <i class="fas fa-clock text-gray-400"></i>
@@ -94,13 +94,13 @@
 
                                     <button type="button" id="btnAgregarHorario" 
                                         class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
-                                        <i class="fas fa-plus-circle mr-2"></i> Asignar Nuevo Horario
+                                        <i class="fas fa-plus-circle mr-2"></i> Asignar nuevo horario
                                     </button>
                                 </div>
 
-                                {{-- TAB 2: FORMULARIO HOME OFFICE --}}
+                                {{-- Tab 2: formulario home office --}}
                                 <div x-show="tabActiva === 'remoto'" style="display: none;" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0">
-                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Días de Trabajo Remoto</label>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Días de trabajo remoto</label>
 
                                     <div class="flex justify-between items-center mb-6">
                                         @php
@@ -121,7 +121,7 @@
                                         <button type="button" id="btnAsignarRemoto" class="flex-grow bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 text-sm">
                                             <i class="fa-solid fa-house-circle-check"></i> Asignar remoto
                                         </button>
-                                        <button type="button" id="btnEliminarRemoto" class="w-12 bg-white border border-red-200 text-red-500 hover:bg-red-50 font-bold py-2 rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center tooltip" title="Quitar Home Office a seleccionados">
+                                        <button type="button" id="btnEliminarRemoto" class="w-12 bg-white border border-red-200 text-red-500 hover:bg-red-50 font-bold py-2 rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center tooltip" title="Quitar home office a seleccionados">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     </div>
@@ -129,11 +129,11 @@
                             </div>
                         </div>
 
-                        {{-- TARJETA DE DETALLES (Info visual) --}}
+                        {{-- Tarjeta de detalles (info visual) --}}
                         <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
                             <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
                                 <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                                    <i class="fas fa-info-circle mr-2 text-blue-500"></i> Info. Sucursal
+                                    <i class="fas fa-info-circle mr-2 text-blue-500"></i> Info. sucursal
                                 </h3>
                             </div>
                             <div class="p-4 grid grid-cols-2 gap-4">
@@ -163,12 +163,12 @@
 
                     </div>
 
-                    {{-- 3. COLUMNA DERECHA: LISTA DE TRABAJADORES --}}
+                    {{-- Columna derecha: lista de trabajadores --}}
                     <div class="lg:col-span-2">
                         <div class="bg-white shadow-sm rounded-xl border border-gray-200 h-full flex flex-col">
                             <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                                 <h3 class="text-base font-bold text-gray-800 flex items-center">
-                                    <i class="fas fa-users text-gray-400 mr-2"></i> Selección de Personal
+                                    <i class="fas fa-users text-gray-400 mr-2"></i> Selección de personal
                                 </h3>
                                 
                                 <div class="flex gap-2">
@@ -195,7 +195,7 @@
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Código</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Empleado</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Puesto</th>
-                                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Horario Actual</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Horario actual</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -204,10 +204,10 @@
                                 </div>
                             </div>
 
-                            {{-- Footer de Acción --}}
+                            {{-- Footer de acción --}}
                             <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
                                 <x-primary-button class="ml-3 px-6 py-3 text-sm shadow-lg transform hover:-translate-y-0.5 transition-all">
-                                    <i class="fas fa-check-circle mr-2"></i> Confirmar Asignación
+                                    <i class="fas fa-check-circle mr-2"></i> Confirmar asignación
                                 </x-primary-button>
                             </div>
                         </div>

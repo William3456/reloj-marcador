@@ -1,6 +1,6 @@
 @extends('layouts.pdf_layout')
 
-@section('title', 'Directorio de Empleados')
+@section('title', 'Directorio de empleados')
 
 @section('content')
     <style>
@@ -27,19 +27,19 @@
         .val-col { text-align: right; font-weight: bold; font-size: 12px; color: #0f172a;}
     </style>
 
-    {{-- Encabezado Formal --}}
+    {{-- Encabezado formal --}}
     <table class="header-table">
         <tr>
             <td style="width: 60%;">
-                <h2 class="title">Directorio de Empleados</h2>
+                <h2 class="title">Directorio de empleados</h2>
                 <div class="meta-data">
-                    <strong>Fecha de Emisión:</strong> {{ now()->format('d/m/Y H:i A') }}<br>
-                    <strong>Sucursal Filtrada:</strong> {{ $filtros['sucursal'] }}
+                    <strong>Fecha de emisión:</strong> {{ now()->format('d/m/Y H:i A') }}<br>
+                    <strong>Sucursal filtrada:</strong> {{ $filtros['sucursal'] }}
                 </div>
             </td>
             <td style="width: 40%; text-align: right; vertical-align: bottom;">
                 <div style="font-size: 11px; color: #64748b; background-color: #f8fafc; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">
-                    <strong style="color: #0f172a;">Parámetros de Búsqueda:</strong><br>
+                    <strong style="color: #0f172a;">Parámetros de búsqueda:</strong><br>
                     Estado: {{ $filtros['estado'] }} | Acceso: {{ $filtros['login'] }}<br>
                     Puesto: {{ $filtros['puesto'] }}<br>
                     Depto: {{ $filtros['departamento'] }}
@@ -48,15 +48,15 @@
         </tr>
     </table>
 
-    {{-- Tabla Principal --}}
+    {{-- Tabla principal --}}
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 7%;">Cód.</th>
-                <th style="width: 20%;">Nombre Completo</th>
+                <th style="width: 20%;">Nombre completo</th>
                 <th style="width: 14%;">Sucursal</th>
-                <th style="width: 17%;">Área / Puesto</th>
-                <th style="width: 17%;">Horarios / Días</th>
+                <th style="width: 17%;">Área / puesto</th>
+                <th style="width: 17%;">Horarios / días</th>
                 <th style="width: 11%; text-align: center;">Rol</th>
                 <th style="width: 7%; text-align: center;">Acceso</th>
                 <th style="width: 7%; text-align: center;">Estado</th>
@@ -74,7 +74,7 @@
                     </td>
                     
                     <td style="color: #475569;">
-                        {{ $empleado->sucursal->nombre ?? 'Sin Asignar' }}
+                        {{ $empleado->sucursal->nombre ?? 'Sin asignar' }}
                     </td>
                     
                     <td>
@@ -82,10 +82,8 @@
                         <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase; margin-top: 2px;">{{ $empleado->departamento->nombre_depto ?? 'N/A' }}</div>
                     </td>
 
-                    {{-- CELDA DE HORARIOS --}}
-                    {{-- CELDA DE HORARIOS --}}
+                    {{-- Horarios --}}
                     <td>
-                        {{-- Horarios Presenciales --}}
                         @if($empleado->horarios && $empleado->horarios->isNotEmpty())
                             @php
                                 $horariosUnicos = $empleado->horarios->unique('id');
@@ -110,7 +108,7 @@
                             <span style="color: #94a3b8; font-style: italic; font-size: 9px;">Sin asignar</span>
                         @endif
 
-                        {{-- TRABAJO REMOTO PDF --}}
+                        {{-- Trabajo remoto --}}
                         @php
                             $esRemotoActivo = false;
                             $diasRemotoStr = '';
@@ -136,7 +134,7 @@
                         @if($esRemotoActivo && !empty($diasRemotoStr))
                             <div style="margin-top: 4px; padding: 4px; background-color: #faf5ff; border: 1px solid #e9d5ff; border-radius: 4px;">
                                 <div style="font-size: 8px; font-weight: bold; color: #6b21a8; text-transform: uppercase;">
-                                    REMOTO
+                                    Remoto
                                 </div>
                                 <div style="font-size: 8px; color: #9333ea; font-weight: bold; text-transform: uppercase; margin-top: 2px;">
                                     {{ $diasRemotoStr }}
@@ -155,17 +153,17 @@
 
                     <td style="text-align: center;">
                         @if($empleado->login == 1)
-                            <span class="badge badge-blue">SÍ</span>
+                            <span class="badge badge-blue">Sí</span>
                         @else
-                            <span class="badge badge-gray">NO</span>
+                            <span class="badge badge-gray">No</span>
                         @endif
                     </td>
 
                     <td style="text-align: center;">
                         @if($empleado->estado == 1)
-                            <span class="badge badge-green">ACTIVO</span>
+                            <span class="badge badge-green">Activo</span>
                         @else
-                            <span class="badge badge-red">INACTIVO</span>
+                            <span class="badge badge-red">Inactivo</span>
                         @endif
                     </td>
                 </tr>
@@ -179,30 +177,30 @@
         </tbody>
     </table>
 
-    {{-- Widget de Resumen --}}
+    {{-- Resumen del directorio --}}
     @if(count($empleados) > 0)
         <div class="summary-wrapper">
             <table class="summary-table">
                 <thead>
                     <tr>
-                        <th colspan="2">RESUMEN DEL DIRECTORIO</th>
+                        <th colspan="2">Resumen del directorio</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Total Empleados Listados</td>
+                        <td>Total empleados listados</td>
                         <td class="val-col">{{ count($empleados) }}</td>
                     </tr>
                     <tr>
-                        <td style="color: #166534;">Empleados Activos</td>
+                        <td style="color: #166534;">Empleados activos</td>
                         <td class="val-col" style="color: #166534;">{{ $empleados->where('estado', 1)->count() }}</td>
                     </tr>
                     <tr>
-                        <td style="color: #991b1b;">Empleados Inactivos</td>
+                        <td style="color: #991b1b;">Empleados inactivos</td>
                         <td class="val-col" style="color: #991b1b;">{{ $empleados->where('estado', 0)->count() }}</td>
                     </tr>
                     <tr>
-                        <td style="color: #1d4ed8;">Con Acceso al Sistema</td>
+                        <td style="color: #1d4ed8;">Con acceso al sistema</td>
                         <td class="val-col" style="color: #1d4ed8;">{{ $empleados->where('login', 1)->count() }}</td>
                     </tr>
                 </tbody>

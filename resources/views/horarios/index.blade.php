@@ -34,10 +34,10 @@
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Días</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora inicio</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora fin</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora de inicio</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Hora de fin</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Horas laborales</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Tipo horario</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Tipo de horario</th>
                                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Tolerancia (min)</th>
                                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Salida requerida</th>
                                 <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Estado</th>
@@ -71,16 +71,16 @@
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
 
-                                                                                            <button type="button"
-                                                    @click="$dispatch('open-confirm-modal', { 
-                                                        url: '{{ route('horarios.delete', $h->id) }}',
-                                                        title: '¿Eliminar horario?',
-                                                        message: 'El horario se eliminará definitivamente del sistema',
-                                                        buttonText: 'Eliminar'
-                                                    })"
-                                                    class="text-red-500 hover:text-red-700 p-1" title="Eliminar">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
+                                            <button type="button"
+                                                @click="$dispatch('open-confirm-modal', { 
+                                                    url: '{{ route('horarios.delete', $h->id) }}',
+                                                    title: '¿Eliminar horario?',
+                                                    message: 'El horario se eliminará definitivamente del sistema',
+                                                    buttonText: 'Eliminar'
+                                                })"
+                                                class="text-red-500 hover:text-red-700 p-1" title="Eliminar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -95,7 +95,7 @@
     </div>
 
     @push('scripts')
-        {{-- DataTables --}}
+        {{-- Configuración de datatables --}}
         <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
         <script>
             new DataTable('#tablaHorarios', {

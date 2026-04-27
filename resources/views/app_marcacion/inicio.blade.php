@@ -22,7 +22,6 @@
                 $empleadoLogueado = Auth::user()->empleado;
                 
                 if ($empleadoLogueado) {
-                    // 🌟 CORRECCIÓN: Buscamos explícitamente el registro activo en la BD
                     $config = \App\Models\Empleado\HomeOffice::where('id_empleado', $empleadoLogueado->id)
                                     ->where('es_actual', 1)
                                     ->first();
@@ -51,15 +50,15 @@
                 }
             @endphp
 
-            {{-- RELOJ --}}
+            {{-- Reloj --}}
             <div class="bg-white shadow-lg rounded-2xl p-6 text-center {{ $esHoyRemoto ? 'border-t-4 border-purple-600' : 'border-t-4 border-blue-600' }} relative overflow-hidden">
                 <div class="absolute top-3 right-3 opacity-10">
                     <svg class="w-12 h-12 {{ $esHoyRemoto ? 'text-purple-800' : 'text-blue-800' }}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
                 </div>
                 
-                {{-- 🌟 2. MOSTRAR SI ES DÍA REMOTO EN EL HEADER 🌟 --}}
+                {{-- Mostrar si es día remoto en el header --}}
                 <div class="flex items-center justify-center gap-2 mb-1 relative z-10">
-                    <p class="text-gray-500 text-xs uppercase tracking-widest font-bold">Hora Actual</p>
+                    <p class="text-gray-500 text-xs uppercase tracking-widest font-bold">Hora actual</p>
                     @if($esHoyRemoto)
                         <span class="bg-purple-100 text-purple-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 border border-purple-200">
                             <i class="fa-solid fa-house-laptop"></i> Remoto
@@ -73,7 +72,7 @@
                 </p>
             </div>
 
-            {{-- MENSAJES --}}
+            {{-- Mensajes --}}
             @if (session('success'))
                 <div class="p-4 rounded-xl bg-green-50 border-l-4 border-green-500 text-green-700 shadow-sm mb-6"><p class="font-bold">¡Excelente!</p><p class="text-sm">{{ session('success') }}</p></div>
             @elseif (session('error'))
@@ -86,9 +85,9 @@
             @endif
 
             {{-- =========================================================== --}}
-            {{-- LÓGICA VISUAL PRINCIPAL --}}
+            {{-- Lógica visual principal --}}
             {{-- =========================================================== --}}
-            {{-- CASO 0: PERMISO ACTIVO (EXIME MARCACIÓN) --}}
+            {{-- Caso 0: Permiso activo (exime marcación) --}}
             @if(isset($permisoActivo) && $permisoActivo)
 
                 <div class="bg-green-500 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
@@ -101,7 +100,7 @@
                         <p class="text-xs text-green-200 mt-4">No es necesario marcar asistencia.</p>
                     </div>
                 </div>
-            {{-- CASO 1: ESPERA (Hay turno futuro, pero falta mucho) --}}
+            {{-- Caso 1: Espera (hay turno futuro, pero falta mucho) --}}
             @elseif(isset($tiempoRestante) && !$habilitarEntrada)
                 <div class="bg-indigo-600 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
                     <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500 rounded-full opacity-50 blur-xl"></div>
@@ -129,7 +128,7 @@
                         <p class="text-xs text-red-200 mt-4 font-bold bg-red-800/30 inline-block px-3 py-1 rounded-lg">No registraste asistencia el día de hoy.</p>
                     </div>
                 </div>
-            {{-- CASO 2: JORNADA FINALIZADA (No hay turno futuro y ya se trabajó hoy) --}}
+            {{-- Caso 2: Jornada finalizada (No hay turno futuro y ya se trabajó hoy) --}}
             @elseif($jornadaTerminada)
                 <div class="bg-green-600 rounded-2xl shadow-xl overflow-hidden text-white relative mb-4">
                     <div class="p-8 text-center relative z-10">
@@ -142,7 +141,7 @@
                     </div>
                 </div>
 
-            {{-- CASO 3: FORMULARIO ACTIVO (Entrada habilitada o Salida pendiente) --}}
+            {{-- Caso 3: Formulario activo (entrada habilitada o salida pendiente) --}}
             @else
                 @if($candidatos->isNotEmpty() || $entradaActiva) {{-- Solo mostrar form si hay turnos --}}
                     <div class="bg-white shadow-xl rounded-2xl overflow-hidden mb-6">
@@ -156,14 +155,14 @@
                             <input type="hidden" name="latitud" id="latitud">
                             <input type="hidden" name="longitud" id="longitud">
                             <input type="hidden" name="ubicacion" id="ubicacion_texto">
-                            {{-- 🌟 PASAMOS LA VARIABLE A JAVASCRIPT MEDIANTE UN INPUT HIDDEN --}}
+                            {{-- Pasamos la variable a JavaScript mediante un input hidden --}}
                             <input type="hidden" id="es_hoy_remoto" value="{{ $esHoyRemoto ? '1' : '0' }}">
 
                             <div class="mb-6">
-                                <label class="block text-sm font-bold text-gray-700 mb-3">Tipo de Registro</label>
+                                <label class="block text-sm font-bold text-gray-700 mb-3">Tipo de registro</label>
                                 
                                 @if(!$entradaActiva)
-                                    {{-- BOTÓN ENTRADA --}}
+                                    {{-- Botón entrada --}}
                                     <label class="cursor-pointer group relative">
                                         <input type="radio" name="tipo_marcacion" value="1" class="peer sr-only" checked>
                                         <div class="flex flex-col items-center justify-center p-6 border-2 border-blue-100 bg-blue-50 rounded-xl transition-all duration-200 peer-checked:border-blue-500 peer-checked:shadow-md hover:bg-blue-100">
@@ -175,7 +174,7 @@
                                         </div>
                                     </label>
                                 @elseif($entradaActiva && $horarioRequiereSalida == 1)
-                                    {{-- BOTÓN SALIDA --}}
+                                    {{-- Botón salida --}}
                                     <label class="cursor-pointer group relative">
                                         <input type="radio" name="tipo_marcacion" value="2" class="peer sr-only" checked>
                                         <div class="flex flex-col items-center justify-center p-6 border-2 border-red-100 bg-red-50 rounded-xl transition-all duration-200 peer-checked:border-red-500 peer-checked:shadow-md hover:bg-red-100">
@@ -188,7 +187,7 @@
                                     </label>
                                 @else
                                     <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-                                        <h3 class="text-lg font-bold text-green-800">Asistencia Registrada</h3>
+                                        <h3 class="text-lg font-bold text-green-800">Asistencia registrada</h3>
                                         <p class="text-green-600 text-sm">Entrada: {{ $entradaActiva->created_at->format('H:i') }}</p>
                                     </div>
                                 @endif
@@ -196,7 +195,7 @@
 
                             @if($mostrarForm)
                                 <div class="space-y-6">
-                                    {{-- 🌟 3. AQUÍ ES DONDE ESTÁ EL CONTENEDOR DEL GPS --}}
+                                    {{-- Contenedor del GPS --}}
                                     <div id="contenedor-gps-info" class="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 transition-colors">
                                         <div class="flex items-center">
                                             <span id="gps-status" class="text-sm text-gray-500 font-medium">Buscando GPS...</span>
@@ -212,12 +211,12 @@
                                             <input type="file" name="ubi_foto" id="input-foto" accept="image/*" capture="user" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="previewImage(event)">
                                         </div>
                                     </div>
-                                    <button type="submit" id="btn-marcar" disabled class="w-full text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-xl text-lg px-5 py-4 text-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">Registrar Marcación</button>
+                                    <button type="submit" id="btn-marcar" disabled class="w-full text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-xl text-lg px-5 py-4 text-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">Registrar marcación</button>
                                 </div>
                             @endif
                         </form>
                 @else
-                        {{-- CASO: DÍA LIBRE (Sin turnos asignados hoy) --}}
+                        {{-- Caso: Día libre (sin turnos asignados hoy) --}}
                     <div class="bg-gray-100 rounded-2xl p-8 text-center border-2 border-dashed border-gray-300">
                         <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -231,20 +230,20 @@
             @endif
 
             {{-- =========================================================== --}}
-            {{-- SECCIÓN RESUMEN (DISEÑO HISTORIAL) --}}
+            {{-- Sección resumen (diseño historial) --}}
             {{-- =========================================================== --}}
             @if($historialHoy->isNotEmpty())
                 
                 <div class="mt-8 mb-2">
-                    <h4 class="font-bold text-gray-700 text-sm px-2 mb-2 uppercase tracking-wider">Actividad de Hoy</h4>
+                    <h4 class="font-bold text-gray-700 text-sm px-2 mb-2 uppercase tracking-wider">Actividad de hoy</h4>
                 </div>
 
-                {{-- Agrupamos por Horario para simular la vista de Turnos --}}
+                {{-- Agrupamos por horario para simular la vista de turnos --}}
                 @php
                     // 1. Extraemos los IDs de las ENTRADAS que sí se hicieron hoy
                     $entradasHoyIds = $historialHoy->where('tipo_marcacion', 1)->pluck('id')->toArray();
 
-                    // 2. Agrupamos por ID de horario, aislando los "Olvidos" de días anteriores
+                    // 2. Agrupamos por ID de horario, aislando los "olvidos" de días anteriores
                     $registrosPorTurno = $historialHoy->groupBy(function($item) use ($entradasHoyIds) {
                         // Si es Salida (2), tiene un ID de Entrada, y esa entrada NO está en las de hoy...
                         if ($item->tipo_marcacion == 2 && $item->id_marcacion_entrada && !in_array($item->id_marcacion_entrada, $entradasHoyIds)) {
@@ -258,20 +257,20 @@
                     
                     @foreach($registrosPorTurno as $horarioId => $registros)
                         @php
-                            // Identificamos si este grupo es un Olvido del Pasado
+                            // Identificamos si este grupo es un olvido del pasado
                             $esOlvidoPasado = str_starts_with($horarioId, 'olvido_pasado_');
                             
                             if ($esOlvidoPasado) {
-                                $tituloTurno = 'Registro Atrasado (Cierre de Turno)';
+                                $tituloTurno = 'Registro atrasado (cierre de turno)';
                             } else {
                                 $horarioRef = $registros->first()->horario;
                                 $tituloTurno = $horarioRef 
                                     ? 'Turno • ' . \Carbon\Carbon::parse($horarioRef->hora_ini)->format('H:i') . ' - ' . \Carbon\Carbon::parse($horarioRef->hora_fin)->format('H:i')
-                                    : 'Marcaciones Adicionales';
+                                    : 'Marcaciones adicionales';
                             }
                         @endphp
 
-                        {{-- CABECERA DEL TURNO --}}
+                        {{-- Cabecera del turno --}}
                         <div class="px-4 py-1.5 border-b border-gray-100 border-t {{ $loop->first ? 'border-t-0' : 'border-t-gray-100' }} flex justify-between items-center {{ $esOlvidoPasado ? 'bg-red-50' : 'bg-gray-50/50' }}">
                             <span class="text-[10px] font-bold uppercase tracking-wider {{ $esOlvidoPasado ? 'text-red-500' : 'text-gray-400' }}">
                                 @if($esOlvidoPasado) <i class="fa-solid fa-triangle-exclamation mr-1 animate-pulse"></i> @endif
@@ -279,7 +278,7 @@
                             </span>
                         </div>
 
-                        {{-- LISTA DE MARCACIONES DEL TURNO --}}
+                        {{-- Lista de marcaciones del turno --}}
                         @foreach($registros->sortBy('created_at') as $reg)
                             @php
                                 $tipoTexto = $reg->tipo_marcacion == 1 ? 'Entrada' : 'Salida';
@@ -287,10 +286,10 @@
                                 // Si es el olvido pasado, el icono será rojo intenso para destacar
                                 $iconoBg = $reg->tipo_marcacion == 1 ? 'bg-green-100 text-green-600' : ($esOlvidoPasado ? 'bg-red-600 text-white shadow-md' : 'bg-red-100 text-red-600');
                                 
-                                // Recolector dinámico de Badges
+                                // Recolector dinámico de badges
                                 $badges = [];
                                 
-                                // 🌟 BADGE DE HOME OFFICE (Se añade primero para que resalte)
+                                // Badge de home office (Se añade primero para que resalte)
                                 if ($reg->es_remoto) {
                                     $badges[] = [
                                         'texto' => '<i class="fa-solid fa-house-laptop mr-1"></i> Remoto', 
@@ -298,24 +297,24 @@
                                     ];
                                 }
 
-                                // Estado Nativo (Tarde / Olvido normal de hoy)
+                                // Estado nativo (tarde / olvido normal de hoy)
                                 if($reg->tipo_marcacion == 1 && $reg->fuera_horario) { 
                                     $badges[] = ['texto' => 'Tarde', 'color' => 'bg-orange-100 text-orange-700 border-orange-200']; 
                                 } elseif($reg->tipo_marcacion == 2 && $reg->fuera_horario && !$esOlvidoPasado) { 
-                                    $badges[] = ['texto' => 'Olvido/Extra', 'color' => 'bg-red-100 text-red-700 border-red-200']; 
+                                    $badges[] = ['texto' => 'Olvido/extra', 'color' => 'bg-red-100 text-red-700 border-red-200']; 
                                 }
 
-                                // BADGE ESPECIAL PARA OLVIDOS DE OTROS DÍAS
+                                // Badge especial para olvidos de otros días
                                 if ($esOlvidoPasado) {
                                     $fechaEntradaAntigua = \Illuminate\Support\Facades\DB::table('marcaciones_empleados')
                                                             ->where('id', $reg->id_marcacion_entrada)
                                                             ->value('created_at');
                                     
-                                    $textoFecha = $fechaEntradaAntigua ? \Carbon\Carbon::parse($fechaEntradaAntigua)->format('d/m/Y') : 'Día Anterior';
+                                    $textoFecha = $fechaEntradaAntigua ? \Carbon\Carbon::parse($fechaEntradaAntigua)->format('d/m/Y') : 'Día anterior';
                                     $badges[] = ['texto' => 'Turno del: ' . $textoFecha, 'color' => 'bg-red-600 text-white border-red-700 shadow-sm'];
                                 }
 
-                                // Permisos Múltiples
+                                // Permisos múltiples
                                 if(isset($reg->permisos)) {
                                     foreach($reg->permisos as $permiso) {
                                         $nombrePermiso = $permiso->tipoPermiso->nombre ?? 'Permiso';
@@ -323,10 +322,10 @@
                                     }
                                 }
 
-                                // 🌟 TEXTO DINÁMICO DE UBICACIÓN
-                                $textoUbicacion = $reg->es_remoto ? 'Home office (Remoto)' : ($reg->sucursal->nombre ?? 'Ubicación GPS');
+                                // Texto dinámico de ubicación
+                                $textoUbicacion = $reg->es_remoto ? 'Home office (remoto)' : ($reg->sucursal->nombre ?? 'Ubicación GPS');
 
-                                // Convertir a HTML crudo para enviarlo al Modal
+                                // Convertir a HTML crudo para enviarlo al modal
                                 $badgesHtml = '';
                                 foreach($badges as $b) {
                                     $badgesHtml .= '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded border '.$b['color'].'">'.$b['texto'].'</span>';
@@ -362,7 +361,7 @@
                                     @endif
                                 </div>
 
-                                {{-- Textos y Múltiples Badges --}}
+                                {{-- Textos y múltiples badges --}}
                                 <div class="ml-4 flex-grow">
                                     <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
                                         <p class="text-sm font-bold text-gray-800 mr-1">{{ $tipoTexto }}</p>
@@ -382,7 +381,7 @@
                     @endforeach
                 </div>
             @endif
-{{-- MODAL DETALLE HISTORIAL (Idéntico al de Historial) --}}
+{{-- Modal detalle historial (idéntico al de historial) --}}
     <div id="modal-detalle-historial" class="fixed inset-0 z-[120] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="cerrarDetalleHistorial()"></div>
 
@@ -395,12 +394,12 @@
            {{-- Encabezado --}}
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    {{-- 🌟 Título, Badges y Horas en la misma línea --}}
+                    {{-- Título, badges y horas en la misma línea --}}
                     <div class="flex items-center flex-wrap gap-2 mb-1">
                         <h3 id="md-titulo" class="text-2xl font-black text-gray-800 uppercase tracking-tight">---</h3>
                         <div id="md-badges-container" class="flex items-center flex-wrap gap-1"></div>
                         
-                        {{-- CAJA DE HORAS (Ahora junto a los permisos) --}}
+                        {{-- Caja de horas (ahora junto a los permisos) --}}
                         <div id="md-permiso-box" class="hidden inline-flex items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">
                             <i class="fa-regular fa-clock"></i>
                             <span id="md-permiso-horas">---</span>
@@ -422,10 +421,10 @@
 
             {{-- Foto --}}
             <div class="mb-4 bg-gray-100 rounded-2xl overflow-hidden border border-gray-100 shadow-inner">
-                <img id="md-img" src="" class="w-full h-48 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+Evidencia';" />
+                <img id="md-img" src="" class="w-full h-48 object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/94a3b8?text=Sin+evidencia';" />
             </div>
 
-            {{-- Info Ubicación --}}
+            {{-- Info ubicación --}}
             <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
                 <div class="flex items-center mb-3 pb-3 border-b border-gray-100">
                     <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600 mr-3">
@@ -443,7 +442,7 @@
         {{-- Footer fijo --}}
         <div class="p-4 bg-gray-50 border-t border-gray-100 flex-shrink-0">
             <button onclick="cerrarDetalleHistorial()" class="w-full py-3 bg-gray-800 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform">
-                Cerrar Detalle
+                Cerrar detalle
             </button>
         </div>
     </div>
@@ -451,19 +450,19 @@
         </div>
     </div>
 
-    {{-- MODIFICACIÓN 2: Modal de Información de Sucursal --}}
+    {{-- Modificación 2: Modal de información de sucursal --}}
 <div id="modal-sucursal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         {{-- Backdrop oscuro --}}
         <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('modal-sucursal')"></div>
 
-        {{-- Contenedor del Modal --}}
+        {{-- Contenedor del modal --}}
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
                 <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-xs w-full max-w-sm">
                     
-                    {{-- Cabecera Modal --}}
+                    {{-- Cabecera modal --}}
                     <div class="bg-blue-600 px-4 py-3 sm:px-6 flex justify-between items-center">
-                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Información Laboral</h3>
+                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Información laboral</h3>
                         <button onclick="toggleModal('modal-sucursal')" class="text-white hover:text-gray-200 focus:outline-none">
                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -471,10 +470,10 @@
                         </button>
                     </div>
 
-{{-- Cuerpo del Modal COMPACTO --}}
+{{-- Cuerpo del modal compacto --}}
 <div class="px-4 py-4 space-y-4">
     
-    {{-- Icono y Nombre Sucursal --}}
+    {{-- Icono y nombre sucursal --}}
     <div class="text-center">
         <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 mb-2">
             <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -482,18 +481,18 @@
             </svg>
         </div>
         <h4 class="text-base font-bold text-gray-900 leading-tight">
-            {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin Sucursal' }}
+            {{ Auth::user()->empleado->sucursal->nombre ?? 'Sin sucursal' }}
         </h4>
         <p class="text-xs text-gray-500">
             {{ Auth::user()->empleado->sucursal->direccion ?? '' }}
         </p>
     </div>
     
-    {{-- CAJA CONTENEDORA --}}
+    {{-- Caja contenedora --}}
     <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
 
         {{-- ======================================================= --}}
-        {{-- SECCIÓN:  3. PERMISOS VIGENTES Y FUTUROS --}}
+        {{-- Sección:  3. Permisos vigentes y futuros --}}
         {{-- ======================================================= --}}
         @php
             $hoyCarbon = \Carbon\Carbon::today();
@@ -512,7 +511,7 @@
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-orange-700 font-bold text-[10px] uppercase tracking-wide">
-                        <i class="fa-solid fa-file-contract mr-1"></i> Permisos Activos o Futuros
+                        <i class="fa-solid fa-file-contract mr-1"></i> Permisos activos o futuros
                     </span>
                 </div>
 
@@ -529,14 +528,14 @@
                         
                         <div class="bg-white border-l-4 {{ $esHoy ? 'border-orange-500 shadow-sm' : 'border-blue-400 opacity-90' }} rounded-r px-3 py-2 border-y border-r border-gray-200">
                             
-                            {{-- Título y Badge --}}
+                            {{-- Título y badge --}}
                             <div class="flex justify-between items-start mb-1">
                                 <span class="text-xs font-bold text-gray-800 leading-tight">
                                     {{ $permiso->tipoPermiso->nombre ?? 'Permiso' }}
                                 </span>
                                 @if($esHoy)
                                     <span class="text-[8px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full animate-pulse uppercase">
-                                        ACTIVO HOY
+                                        Activo hoy
                                     </span>
                                 @elseif($esFuturo)
                                     <span class="text-[8px] bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded-full uppercase border border-blue-100">
@@ -556,7 +555,7 @@
                                 </span>
                             </div>
                             
-                            {{--  NUEVO: Horarios del permiso (Si aplican) --}}
+                            {{-- Horarios del permiso (si aplican) --}}
                             @if($permiso->hora_ini && $permiso->hora_fin)
                                 <div class="text-[10px] text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
                                     <i class="fa-regular fa-clock text-indigo-500"></i>
@@ -566,7 +565,7 @@
                                 </div>
                             @endif
                             
-                            {{-- Valores Adicionales (Ocultar el tiempo en minutos si ya tenemos rango de horas) --}}
+                            {{-- Valores adicionales (ocultar el tiempo en minutos si ya tenemos rango de horas) --}}
                             @if(!($permiso->hora_ini && $permiso->hora_fin))
                                 <div class="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                                     <span>
@@ -586,7 +585,7 @@
                                 </div>
                             @endif
 
-                            {{-- Motivo (Opcional, cortado si es muy largo) --}}
+                            {{-- Motivo (opcional, cortado si es muy largo) --}}
                             @if($permiso->motivo)
                                 <p class="text-[9px] text-gray-400 mt-1 italic truncate">
                                     {{ $permiso->motivo }}
@@ -602,19 +601,19 @@
         {{-- ======================================================= --}}
 
 
-        {{-- 1. SECCIÓN: MIS TURNOS --}}
+        {{-- 1. Sección: mis turnos --}}
         <div class="mb-3 mt-2">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-blue-700 font-bold text-[10px] uppercase tracking-wide">
-                    <i class="fa-solid fa-user-clock mr-1"></i> Mis Turnos
+                    <i class="fa-solid fa-user-clock mr-1"></i> Mis turnos
                 </span>
             </div>
             
-            {{-- GRID: 1 col en móvil, 2 en pantallas más grandes --}}
+            {{-- Grid: 1 col en móvil, 2 en pantallas más grandes --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 @forelse($horariosActivos->sortBy('hora_ini') as $miHorario)
                     @php
-                        // --- LÓGICA PARA DETECTAR TURNO ACTUAL ---
+                        // --- Lógica para detectar turno actual ---
                         $esTurnoActual = false;
                         $now = \Carbon\Carbon::now();
                         $hoySlug = \Str::slug($now->locale('es')->isoFormat('ddd')); 
@@ -669,9 +668,9 @@
 
         <div class="border-t border-gray-200 my-2"></div>
 
-        {{-- 2. SECCIÓN: HORARIOS SUCURSAL --}}
+        {{-- 2. Sección: horarios sucursal --}}
         <div class="mb-2">
-            <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención General:</span>
+            <span class="text-gray-500 font-medium text-[10px] uppercase block mb-2">Atención general:</span>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 @forelse(Auth::user()->empleado->sucursal->horarios as $h)
                     <div class="bg-white border border-gray-200 rounded px-2 py-1.5 shadow-sm opacity-80">
@@ -692,7 +691,7 @@
             </div>
         </div>
 
-        {{-- 3. TELÉFONO COMPACTO --}}
+        {{-- 3. Teléfono compacto --}}
         <div class="mt-3 bg-white border border-gray-200 rounded p-2 flex justify-between items-center">
             <span class="text-gray-500 text-xs">Teléfono:</span>
             <span class="font-bold text-gray-800 text-xs flex items-center">
@@ -703,7 +702,7 @@
     </div>
 </div>
 
-                    {{-- Footer Modal --}}
+                    {{-- Footer modal --}}
                     <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                         <button type="button" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto" onclick="toggleModal('modal-sucursal')">
                             Cerrar
@@ -714,7 +713,7 @@
         </div>
     </div>
 
-{{-- MODAL BLOQUEANTE: Marcación Pendiente --}}
+{{-- Modal bloqueante: marcación pendiente --}}
 @if(isset($mostrarModalBloqueo) && $mostrarModalBloqueo)
 <div id="modal-bloqueo" class="fixed inset-0 z-[100] overflow-y-auto">
     <div class="fixed inset-0 bg-gray-900 bg-opacity-95 backdrop-blur-md"></div>
@@ -777,7 +776,7 @@
 
                     <button type="submit" id="btn-marcar-modal" disabled class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-700 transition-all active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        REGISTRAR SALIDA AHORA
+                        Registrar salida ahora
                     </button>
                 </form>
             </div>
