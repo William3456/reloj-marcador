@@ -394,7 +394,7 @@ class MarcacionController extends Controller
         //  VERIFICACIÓN DE TRABAJO REMOTO PARA EL DÍA DE HOY
         // =========================================================
         $esRemoto = false;
-        
+        $tienePermisoTeletrabajo = false;
         // 1. Buscamos explícitamente el registro ACTIVO para este empleado
         $configRemoto = HomeOffice::where('id_empleado', $empleado->id)
                             ->where('es_actual', true)
@@ -414,17 +414,22 @@ class MarcacionController extends Controller
                 }
             }
         }
+        $permisosActivos = $this->validaPermisos();
+        if ($permisosActivos['teletrabajo']) {
+            $tienePermisoTeletrabajo = true;
+        }
+        $liberarGPS = ($esRemoto || $tienePermisoTeletrabajo);
         
-        $validacionGPS = $this->validarGPS($validated, $sucursal, $validacionTiempo['es_olvido'], $esRemoto);
+        $validacionGPS = $this->validarGPS($validated, $sucursal, $validacionTiempo['es_olvido'], $liberarGPS);
         
         if (isset($validacionGPS['error'])) {
             return back()->withErrors(['error' => $validacionGPS['error']]);
         }
 
         // =========================================================
-        // 🌟 MAGIA DINÁMICA DE PERMISOS PARA GUARDAR EN BD
+        // MAGIA DINÁMICA DE PERMISOS PARA GUARDAR EN BD
         // =========================================================
-        $permisosActivos = $this->validaPermisos();
+        
         $permisosTotales = [];
 
         foreach ($permisosActivos['permisos'] as $codigo => $permiso) {
