@@ -27,7 +27,7 @@ class MarcacionController extends Controller
     public function __construct()
     {
         // =========================================================================
-        // 🧪 ZONA DE PRUEBAS - NIVEL DE CLASE
+        // 馃И ZONA DE PRUEBAS - NIVEL DE CLASE
         // =========================================================================
         // \Carbon\Carbon::setTestNow(now()->setTime(17, 15, 0));
          //Carbon::setTestNow(now()->addDay(6)->setTime(13, 01, 12));
@@ -162,7 +162,7 @@ class MarcacionController extends Controller
                     return false;
                 }
 
-                // Leemos los días del histórico (si hay) o del maestro
+                // Leemos los d铆as del hist贸rico (si hay) o del maestro
                 $diasTurno = ($asig->historico && ! empty($asig->historico->dias)) ? $asig->historico->dias : $asig->horario->dias;
 
                 if (empty($diasTurno)) {
@@ -172,11 +172,11 @@ class MarcacionController extends Controller
                 return in_array($diaSemana, array_map(fn ($d) => Str::slug($d), $diasTurno));
 
             })->map(function ($asig) {
-                // Clonamos para no alterar los datos de otros días en el bucle
+                // Clonamos para no alterar los datos de otros d铆as en el bucle
                 $newAsig = clone $asig;
                 $newHorario = clone $asig->horario;
 
-                // MAGIA: Si la asignación tiene un histórico, usamos esas horas
+                // MAGIA: Si la asignaci贸n tiene un hist贸rico, usamos esas horas
                 if ($newAsig->historico) {
                     $newHorario->hora_ini = $newAsig->historico->hora_entrada; // Ojo: verifica si es hora_entrada o hora_ini
                     $newHorario->hora_fin = $newAsig->historico->hora_salida;
@@ -194,7 +194,7 @@ class MarcacionController extends Controller
             $turnosProcesados = [];
             $turnosDelDia = collect();
 
-            // RONDA 1: Match Exacto (Histórico o Normal)
+            // RONDA 1: Match Exacto (Hist贸rico o Normal)
             foreach ($turnosEsperados as $asig) {
                 $marcacion = $marcacionesLibres->first(function ($m) use ($asig) {
                     if ($m->id_horario_historico_empleado && $asig->id_horario_historico) {
@@ -256,7 +256,7 @@ class MarcacionController extends Controller
                 $turnosDelDia->push((object) ['horario' => null, 'marcacion' => $mExtra, 'estado' => $estadoExtra]);
             }
 
-            // Agregar al arreglo si tiene datos o si es el día actual (si se requiere)
+            // Agregar al arreglo si tiene datos o si es el d铆a actual (si se requiere)
             $esHoy = $fechaObj->isSameDay($hoy);
             if ($turnosDelDia->isNotEmpty() || $turnosEsperados->isNotEmpty() || ($incluirHoyVacio && $esHoy)) {
                 $diasProcesados[$fechaStr] = [
@@ -334,7 +334,7 @@ class MarcacionController extends Controller
             } else {
                 $horaInicioTurno = Carbon::parse($fechaObj->format('Y-m-d').' '.($horario ? $horario->hora_ini : '00:00'));
                 if ($fechaObj->isFuture() || ($fechaObj->isToday() && $hoy->lt($horaInicioTurno))) {
-                    $estado->texto = 'Próximo';
+                    $estado->texto = 'Pr贸ximo';
                     $estado->clase = 'bg-gray-100 text-gray-600 border-gray-200';
                     $estado->borde = 'bg-gray-300';
                 } else {
@@ -349,7 +349,7 @@ class MarcacionController extends Controller
     }
 
     // =========================================================================
-    // 5. PROCESO DE MARCACIÓN (STORE)
+    // 5. PROCESO DE MARCACI脫N (STORE)
     // =========================================================================
 
     public function store(Request $request)
@@ -378,12 +378,12 @@ class MarcacionController extends Controller
 
         // Validaciones de Negocio
         if (! $this->isDiaLaboralSucursal($sucursal, $diaSemana)) {
-            return back()->withErrors(['error' => "La sucursal no labora los días $diaSemana."]);
+            return back()->withErrors(['error' => "La sucursal no labora los d铆as $diaSemana."]);
         }
 
         $horarioHoy = $this->determinarHorario($empleado, $sucursal, $diaSemana, $validated['tipo_marcacion'], $entradaAbierta);
         if (! $horarioHoy) {
-            return back()->withErrors(['error' => "No se encontró un horario asignado para el $diaSemana."]);
+            return back()->withErrors(['error' => "No se encontr贸 un horario asignado para el $diaSemana."]);
         }
 
         $validacionTiempo = $this->validarTiemposTurno($horarioHoy, $fechaReferencia, $validated['tipo_marcacion'], $entradaAbierta);
@@ -391,24 +391,24 @@ class MarcacionController extends Controller
             return back()->withErrors(['error' => $validacionTiempo['error']]);
         }
         // =========================================================
-        //  VERIFICACIÓN DE TRABAJO REMOTO PARA EL DÍA DE HOY
+        //  VERIFICACI脫N DE TRABAJO REMOTO PARA EL D脥A DE HOY
         // =========================================================
         $esRemoto = false;
         $tienePermisoTeletrabajo = false;
-        // 1. Buscamos explícitamente el registro ACTIVO para este empleado
+        // 1. Buscamos expl铆citamente el registro ACTIVO para este empleado
         $configRemoto = HomeOffice::where('id_empleado', $empleado->id)
                             ->where('es_actual', true)
                             ->first();
 
         if ($configRemoto) {
-            // 2. Nos aseguramos de tener un array válido (por si acaso viene como string JSON)
+            // 2. Nos aseguramos de tener un array v谩lido (por si acaso viene como string JSON)
             $diasAsignados = is_string($configRemoto->dias) ? json_decode($configRemoto->dias, true) : $configRemoto->dias;
             
             if (is_array($diasAsignados)) {
-                // Convertimos todo a minúsculas por seguridad
+                // Convertimos todo a min煤sculas por seguridad
                 $diasRemoto = array_map('mb_strtolower', $diasAsignados);
                 
-                // Comparamos si el día de hoy está en su lista
+                // Comparamos si el d铆a de hoy est谩 en su lista
                 if (in_array(mb_strtolower($diaSemana), $diasRemoto)) {
                     $esRemoto = true;
                 }
@@ -427,18 +427,18 @@ class MarcacionController extends Controller
         }
 
         // =========================================================
-        // MAGIA DINÁMICA DE PERMISOS PARA GUARDAR EN BD
+        // MAGIA DIN脕MICA DE PERMISOS PARA GUARDAR EN BD
         // =========================================================
         
         $permisosTotales = [];
 
         foreach ($permisosActivos['permisos'] as $codigo => $permiso) {
-            // Regla dinámica 1: LLEGADA_TARDE solo se guarda en Entrada (1)
+            // Regla din谩mica 1: LLEGADA_TARDE solo se guarda en Entrada (1)
             if ($codigo === 'LLEGADA_TARDE' && $validated['tipo_marcacion'] == 2) {
                 continue;
             }
 
-            // Regla dinámica 2: SALIDA_TEMPRANA solo se guarda en Salida (2)
+            // Regla din谩mica 2: SALIDA_TEMPRANA solo se guarda en Salida (2)
             if ($codigo === 'SALIDA_TEMPRANA' && $validated['tipo_marcacion'] == 1) {
                 continue;
             }
@@ -447,7 +447,7 @@ class MarcacionController extends Controller
             $permisosTotales[] = $permiso->id;
         }
         
-        // Transacción Base de Datos
+        // Transacci贸n Base de Datos
         $marcacion = $this->guardarRegistro($validated, $empleado, $sucursal, $horarioHoy, $validacionTiempo, $validacionGPS['distancia'], $entradaAbierta, $diaSemana, $permisosTotales, $esRemoto);
 
         // Foto
@@ -467,7 +467,7 @@ class MarcacionController extends Controller
             'tipo_marcacion' => 'required|in:1,2',
             'ubi_foto' => 'required|image|max:5120',
         ], [
-            'latitud.required' => 'Ubicación no detectada.',
+            'latitud.required' => 'Ubicaci贸n no detectada.',
             'ubi_foto.required' => 'Debes tomar la foto de evidencia.',
         ]);
     }
@@ -500,7 +500,7 @@ class MarcacionController extends Controller
         $ahora = now();
 
         // ---------------------------------------------------------
-        // ESCENARIO 1: SALIDA (USAR ID GUARDADO) - ¡INFALIBLE!
+        // ESCENARIO 1: SALIDA (USAR ID GUARDADO) - 隆INFALIBLE!
         // ---------------------------------------------------------
         if ($tipoMarcacion == 2 && $entradaAbierta) {
             if ($entradaAbierta->id_horario) {
@@ -523,22 +523,22 @@ class MarcacionController extends Controller
         }
 
         // ---------------------------------------------------------
-        // ESCENARIO 2: ENTRADA (SELECCIÓN INTELIGENTE + NOCTURNOS)
+        // ESCENARIO 2: ENTRADA (SELECCI脫N INTELIGENTE + NOCTURNOS)
         // ---------------------------------------------------------
 
-        // PASO 1: Obtener horarios del día actual
+        // PASO 1: Obtener horarios del d铆a actual
         $candidatosHoy = $empleado->horarios()->whereJsonContains('dias', $diaSemana)->get();
         if ($candidatosHoy->isEmpty()) {
             $candidatosHoy = $sucursal->horarios()->whereJsonContains('dias', $diaSemana)->get();
         }
 
-        // PASO 2: Obtener horarios del DÍA ANTERIOR (Magia Nocturna)
-        // Si son las 2 AM del Martes, debemos buscar si el Lunes había un turno nocturno
+        // PASO 2: Obtener horarios del D脥A ANTERIOR (Magia Nocturna)
+        // Si son las 2 AM del Martes, debemos buscar si el Lunes hab铆a un turno nocturno
         $ayer = $ahora->copy()->subDay();
         $diaAyerEspanol = $this->getDiaSemanaEspanol($ayer);
         $diaAyerSlug = Str::slug(substr($diaAyerEspanol, 0, 3)); // 'lun', 'mar', etc.
 
-        $candidatosAyer = $empleado->horarios()->whereJsonContains('dias', $diaAyerEspanol)->get(); // Ajusta según cómo guardes en BD (ej: si guardas "Lunes" o "lun")
+        $candidatosAyer = $empleado->horarios()->whereJsonContains('dias', $diaAyerEspanol)->get(); // Ajusta seg煤n c贸mo guardes en BD (ej: si guardas "Lunes" o "lun")
         if ($candidatosAyer->isEmpty()) {
             $candidatosAyer = $sucursal->horarios()->whereJsonContains('dias', $diaAyerEspanol)->get();
         }
@@ -554,18 +554,18 @@ class MarcacionController extends Controller
         $mejorCandidato = null;
         $minutosDiferencia = PHP_INT_MAX;
 
-        // EVALUACIÓN A: Buscar si la hora actual "CAE DENTRO" de un turno nocturno de AYER
-        // (Ej: Son las 01:00 AM del martes, y el lunes tenía turno de 20:00 a 08:00)
+        // EVALUACI脫N A: Buscar si la hora actual "CAE DENTRO" de un turno nocturno de AYER
+        // (Ej: Son las 01:00 AM del martes, y el lunes ten铆a turno de 20:00 a 08:00)
         foreach ($turnosNocturnosDeAyer as $hNoche) {
             $inicioAyer = Carbon::parse($ayer->format('Y-m-d').' '.$hNoche->hora_ini);
             $finHoy = Carbon::parse($ahora->format('Y-m-d').' '.$hNoche->hora_fin); // Como es la hora fin, ya es "hoy"
 
             if ($ahora->between($inicioAyer->copy()->subMinutes(60), $finHoy)) {
-                return $hNoche; // ¡Cayó exactamente dentro del turno de la madrugada!
+                return $hNoche; // 隆Cay贸 exactamente dentro del turno de la madrugada!
             }
         }
 
-        // EVALUACIÓN B: Buscar si "CAIGO DENTRO" de algún turno de HOY
+        // EVALUACI脫N B: Buscar si "CAIGO DENTRO" de alg煤n turno de HOY
         foreach ($candidatosHoy as $h) {
             $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
             $fin = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_fin);
@@ -578,7 +578,7 @@ class MarcacionController extends Controller
             }
         }
 
-        // EVALUACIÓN C: Si no caigo en ninguno, buscar el MÁS CERCANO en el futuro HOY
+        // EVALUACI脫N C: Si no caigo en ninguno, buscar el M脕S CERCANO en el futuro HOY
         if ($candidatosHoy->isNotEmpty()) {
             foreach ($candidatosHoy as $h) {
                 $inicio = Carbon::parse($ahora->format('Y-m-d').' '.$h->hora_ini);
@@ -598,7 +598,7 @@ class MarcacionController extends Controller
         $permisos = $this->validaPermisos();
 
         if (collect([$permisos['sin_marcacion'], $permisos['incapacidad']])->filter()->first()) {
-            return ['error' => 'Permiso activo exime marcación.'];
+            return ['error' => 'Permiso activo exime marcaci贸n.'];
         }
 
         $fechaBase = $fechaReferencia->format('Y-m-d');
@@ -609,7 +609,7 @@ class MarcacionController extends Controller
             $finTurno->addDay();
         }
 
-        // Ya no declaramos 'permisos_aplicados' aquí
+        // Ya no declaramos 'permisos_aplicados' aqu铆
         $resultado = ['fuera_horario' => null, 'es_olvido' => false];
 
         if ($tipoMarcacion == 1) {
@@ -621,7 +621,7 @@ class MarcacionController extends Controller
                 // 1. Fallback base: Tolerancia del turno del empleado
                 $toleranciaAplicar = $horario->tolerancia;
 
-                // 2. REGLA PRIORITARIA: Buscar tolerancia de la sucursal (Turno más cercano)
+                // 2. REGLA PRIORITARIA: Buscar tolerancia de la sucursal (Turno m谩s cercano)
                 if ($sucursal && $sucursal->horarios && $sucursal->horarios->isNotEmpty()) {
 
                     $horarioSucursal = $sucursal->horarios->sortBy(function ($hs) use ($inicioTurno) {
@@ -636,7 +636,7 @@ class MarcacionController extends Controller
                     }
                 }
 
-                // 3. EXCEPCIÓN SUPREMA: Permiso de Llegada Tarde
+                // 3. EXCEPCI脫N SUPREMA: Permiso de Llegada Tarde
                 // (Si existe, suma los minutos a la tolerancia, pero ya no guarda el ID)
                 if (isset($permisos['llegada_tarde']) && $permisos['llegada_tarde']) {
                     $toleranciaAplicar += (int) $permisos['llegada_tarde']->valor;
@@ -650,18 +650,18 @@ class MarcacionController extends Controller
                 if ($horaMarcaje->greaterThan($horaLimite)) {
                     $resultado['fuera_horario'] = 1;
                 } else {
-                    $resultado['fuera_horario'] = 0; // Guardamos 0 explícito para evitar NULLs
+                    $resultado['fuera_horario'] = 0; // Guardamos 0 expl铆cito para evitar NULLs
                 }
 
             } else {
-                return ['error' => 'Tu jornada para este turno ya finalizó.'];
+                return ['error' => 'Tu jornada para este turno ya finaliz贸.'];
             }
         } else {
             if ($entradaAbierta) {
                 $limiteOlvido = $finTurno->copy()->addHour();
                 $momentoMinimo = $finTurno->copy();
 
-                // Si tiene salida temprana, restamos los minutos al límite inferior
+                // Si tiene salida temprana, restamos los minutos al l铆mite inferior
                 if ($permisos['salida_temprana']) {
                     $momentoMinimo->subMinutes($permisos['salida_temprana']->valor);
                 }
@@ -680,15 +680,15 @@ class MarcacionController extends Controller
 
     private function validarGPS($validated, $sucursal, $esOlvido, $esRemoto = false)
     {
-        // 1. Si es una regularización de olvido de un día pasado, la distancia no importa
+        // 1. Si es una regularizaci贸n de olvido de un d铆a pasado, la distancia no importa
         if ($validated['tipo_marcacion'] == 2 && $esOlvido) {
             return ['distancia' => 0];
         }
 
-        // 2. Calculamos la distancia REAL sin importar qué pase después
+        // 2. Calculamos la distancia REAL sin importar qu茅 pase despu茅s
         $distancia = $this->distanciaEnMetros($validated['latitud'], $validated['longitud'], $sucursal->latitud, $sucursal->longitud);
 
-        // 3. LÓGICA HOME OFFICE: Si hoy le toca remoto, lo dejamos pasar con su distancia real
+        // 3. L脫GICA HOME OFFICE: Si hoy le toca remoto, lo dejamos pasar con su distancia real
         if ($esRemoto) {
             return ['distancia' => $distancia];
         }
@@ -697,13 +697,13 @@ class MarcacionController extends Controller
         $permisos = $this->validaPermisos();
         $rango = $sucursal->rango_marcacion_mts;
 
-        // Si tiene permiso fuera de rango, hacemos la matemática
+        // Si tiene permiso fuera de rango, hacemos la matem谩tica
         if ($permisos['fuera_rango']) {
             $rango = $permisos['fuera_rango']->cantidad_mts === null ? PHP_INT_MAX : $rango + $permisos['fuera_rango']->cantidad_mts;
         }
 
         if ($distancia > ($rango + $sucursal->margen_error_gps_mts)) {
-            return ['error' => "Estás fuera del rango permitido ($distancia mts)."];
+            return ['error' => "Est谩s fuera del rango permitido ($distancia mts)."];
         }
 
         return ['distancia' => $distancia];
@@ -763,11 +763,11 @@ class MarcacionController extends Controller
             $rutaMini = "marcaciones_empleados/$nombre";
             $rutaFull = "marcaciones_empleados/full/$nombre";
 
-            // 1. GUARDADO ULTRA RÁPIDO: Guardamos el archivo que ya viene comprimido por JS directamente.
-            // Esto evita la "doble compresión" y no gasta memoria RAM del servidor.
+            // 1. GUARDADO ULTRA R脕PIDO: Guardamos el archivo que ya viene comprimido por JS directamente.
+            // Esto evita la "doble compresi贸n" y no gasta memoria RAM del servidor.
             Storage::disk('public')->put($rutaFull, file_get_contents($file));
 
-            // 2. CREAR MINIATURA: Usamos Intervention Image SOLO para la fotito pequeña de las tablas.
+            // 2. CREAR MINIATURA: Usamos Intervention Image SOLO para la fotito peque帽a de las tablas.
             $manager = new ImageManager(new Driver);
             $encodedMini = $manager->read($file)->scaleDown(width: 400)->toJpeg(70);
             Storage::disk('public')->put($rutaMini, (string) $encodedMini);
@@ -779,7 +779,7 @@ class MarcacionController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Error procesando foto marcación ID {$marcacion->id}: ".$e->getMessage());
+            Log::error("Error procesando foto marcaci贸n ID {$marcacion->id}: ".$e->getMessage());
         }
     }
 
@@ -854,7 +854,7 @@ class MarcacionController extends Controller
         $normalizarDia = fn ($dia) => substr(Str::slug($dia), 0, 3);
         $hoyNorm = $normalizarDia($diaSemana);
 
-        // 1. Obtener los horarios específicos asignados al empleado para el día de hoy
+        // 1. Obtener los horarios espec铆ficos asignados al empleado para el d铆a de hoy
         $candidatosRaw = $empleado->horarios()
             ->wherePivot('es_actual', 1)
             ->get()
@@ -865,8 +865,8 @@ class MarcacionController extends Controller
             $candidatosRaw = $sucursal->horarios->filter(fn ($h) => in_array($hoyNorm, array_map($normalizarDia, $h->dias ?? [])));
         }
 
-        // 3. Retornamos los turnos ordenados cronológicamente.
-        // (Se eliminó el cruce restrictivo con la sucursal para que respete horarios como el de 14:00 a 17:30)
+        // 3. Retornamos los turnos ordenados cronol贸gicamente.
+        // (Se elimin贸 el cruce restrictivo con la sucursal para que respete horarios como el de 14:00 a 17:30)
         return $candidatosRaw->sortBy('hora_ini')->values();
     }
 
@@ -913,11 +913,11 @@ class MarcacionController extends Controller
             return ['habilitarEntrada' => false, 'proximoHorario' => $siguienteTurno, 'tiempoRestante' => $siguienteTurno->locale('es')->diffForHumans($ahora, ['parts' => 2, 'join' => true, 'syntax' => Carbon::DIFF_ABSOLUTE]), 'jornadaTerminada' => false, 'ausenteTotal' => false];
         }
 
-        // --- NUEVA LÓGICA DE FIN DE DÍA ---
+        // --- NUEVA L脫GICA DE FIN DE D脥A ---
         // Si hay turnos asignados pero NO hay marcaciones, es ausencia total.
         $ausenteTotal = $candidatos->isNotEmpty() && $historialHoy->isEmpty();
 
-        // Si hay turnos y SÍ hay marcaciones (completó su día, o al menos vino a 1 turno)
+        // Si hay turnos y S脥 hay marcaciones (complet贸 su d铆a, o al menos vino a 1 turno)
         $jornadaTerminada = $candidatos->isNotEmpty() && $historialHoy->isNotEmpty();
 
         return [
